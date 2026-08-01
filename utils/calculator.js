@@ -1,18 +1,12 @@
 /**
  * Textile Fabric Costing Calculator
  * Replicates all 25 formulas from the Excel costing sheet.
- * Formats weights & fabric specs to 4 decimals, costs & bags to 2 decimals, FCL to integer.
+ * Exact Excel Number Formatting:
+ * - Weights & Fabric Specs: 4 decimals (formatCode: 0.0000)
+ * - Costing: 2 decimals (formatCode: 0.00)
+ * - Yarn Bags & Container: Whole integer rounded (formatCode: 0, numFmtId=1)
  *
  * @param {Object} inputs
- * @param {number} inputs.warpCount   - Warp yarn count (e.g. 30)
- * @param {number} inputs.weftCount   - Weft yarn count (e.g. 31)
- * @param {number} inputs.reed        - Reed (ends per inch, e.g. 76)
- * @param {number} inputs.pick        - Pick (picks per inch, e.g. 66)
- * @param {number} inputs.width       - Width in inches (e.g. 112)
- * @param {number} inputs.warpRate    - Warp yarn rate per 40-lb bag (e.g. 123)
- * @param {number} inputs.weftRate    - Weft yarn rate per 40-lb bag (e.g. 123)
- * @param {number} inputs.conversionRate - Conversion rate per pick (e.g. 0.55)
- * @param {number} inputs.quantity    - Order quantity in meters (e.g. 40000)
  * @returns {Object} All calculated values
  */
 
@@ -66,7 +60,7 @@ function calculate(inputs) {
   const totalCostYard = warpCostYard + weftCostYard + manfCostYard;
   const totalCostMeter = warpCostMeter + weftCostMeter + manfCostMeter;
 
-  // ── Yarn Bags & Container ───────────────────────────────
+  // ── Yarn Bags & Container (Whole Integers / 0 decimals) ──
   const yarnBagsWarp = warpWeightMeter / 40 * quantity / 100;
   const yarnBagsWeft = weftWeightMeter / 40 * quantity / 100;
   const totalYarnBags = yarnBagsWarp + yarnBagsWeft;
@@ -95,9 +89,9 @@ function calculate(inputs) {
     manfCostMeter: r2(manfCostMeter),
     totalCostYard: r2(totalCostYard),
     totalCostMeter: r2(totalCostMeter),
-    yarnBagsWarp: r2(yarnBagsWarp),
-    yarnBagsWeft: r2(yarnBagsWeft),
-    totalYarnBags: r2(totalYarnBags),
+    yarnBagsWarp: r0(yarnBagsWarp),
+    yarnBagsWeft: r0(yarnBagsWeft),
+    totalYarnBags: r0(totalYarnBags),
     qtyInFCL: r0(qtyInFCL),
   };
 }

@@ -448,9 +448,9 @@ function updatePreview() {
   $('preTotalCostY').textContent = fmt(r.totalCostYard);
   $('preTotalCostM').textContent = fmt(r.totalCostMeter);
 
-  $('preBagsWarp').textContent = fmt(r.yarnBagsWarp);
-  $('preBagsWeft').textContent = fmt(r.yarnBagsWeft);
-  $('preTotalBags').textContent = fmt(r.totalYarnBags);
+  $('preBagsWarp').textContent = fmtInt(r.yarnBagsWarp);
+  $('preBagsWeft').textContent = fmtInt(r.yarnBagsWeft);
+  $('preTotalBags').textContent = fmtInt(r.totalYarnBags);
   $('preFCL').textContent = fmtInt(r.qtyInFCL);
 }
 
@@ -586,9 +586,9 @@ async function openDetail(id) {
                   <tr class="total-row"><td>Total Fabric Cost</td><td>${fmt(inv.totalCostYard)}</td><td>${fmt(inv.totalCostMeter)}</td></tr>
 
                   <tr class="section-row"><td colspan="3">📦 Yarn &amp; Container</td></tr>
-                  <tr><td>Yarn Bags (Warp)</td><td colspan="2">${fmt(inv.yarnBagsWarp)}</td></tr>
-                  <tr><td>Yarn Bags (Weft)</td><td colspan="2">${fmt(inv.yarnBagsWeft)}</td></tr>
-                  <tr class="highlight-row"><td>Total Yarn Bags</td><td colspan="2" class="highlight-val">${fmt(inv.totalYarnBags)}</td></tr>
+                  <tr><td>Yarn Bags (Warp)</td><td colspan="2">${fmtInt(inv.yarnBagsWarp)}</td></tr>
+                  <tr><td>Yarn Bags (Weft)</td><td colspan="2">${fmtInt(inv.yarnBagsWeft)}</td></tr>
+                  <tr class="highlight-row"><td>Total Yarn Bags</td><td colspan="2" class="highlight-val">${fmtInt(inv.totalYarnBags)}</td></tr>
                   <tr class="highlight-row"><td>Qty in 1 FCL</td><td colspan="2" class="highlight-val">${fmtInt(inv.qtyInFCL)}</td></tr>
                 </tbody>
               </table>
@@ -650,9 +650,9 @@ Conv Rate: ${inv.conversionRate} | Qty: ${fmtInt(inv.quantity)} m
 
 ⚖️ *WEIGHT*
             Yard        Meter
-Warp:      ${fmt(inv.warpWeightYard, 2)}      ${fmt(inv.warpWeightMeter, 2)}
-Weft:      ${fmt(inv.weftWeightYard, 2)}      ${fmt(inv.weftWeightMeter, 2)}
-*Total:*    ${fmt(inv.totalWeightYard, 2)}      ${fmt(inv.totalWeightMeter, 2)}
+Warp:      ${fmt(inv.warpWeightYard, 4)}      ${fmt(inv.warpWeightMeter, 4)}
+Weft:      ${fmt(inv.weftWeightYard, 4)}      ${fmt(inv.weftWeightMeter, 4)}
+*Total:*    ${fmt(inv.totalWeightYard, 4)}      ${fmt(inv.totalWeightMeter, 4)}
 
 GSM: ${fmt(inv.gsm, 4)} | OZ/SQ YD: ${fmt(inv.ozPerSqYd, 4)}
 
@@ -665,7 +665,7 @@ Manf:      ${fmt(inv.manfCostYard)}       ${fmt(inv.manfCostMeter)}
 *TOTAL:*    ${fmt(inv.totalCostYard)}      ${fmt(inv.totalCostMeter)}
 ━━━━━━━━━━━━━━━━━━━
 
-📦 Yarn Bags: ${fmt(inv.totalYarnBags)} | FCL Qty: ${fmtInt(inv.qtyInFCL)}`;
+📦 Yarn Bags: ${fmtInt(inv.totalYarnBags)} | FCL Qty: ${fmtInt(inv.qtyInFCL)}`;
 }
 
 // ═══════════════════════════════════════════════════════════
