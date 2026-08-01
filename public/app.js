@@ -609,63 +609,167 @@ async function openDetail(id) {
 //  SHARE
 // ═══════════════════════════════════════════════════════════
 
+// ── Share / Export PDF ──────────────────────────────────────
 $('btnShare').addEventListener('click', async () => {
   if (!currentInvoiceId) return;
 
   try {
     const inv = await apiGet(`${API}/${currentInvoiceId}`);
-    const text = generateShareText(inv);
-
-    if (navigator.share) {
-      // Native share (mobile — WhatsApp, Telegram, etc.)
-      await navigator.share({
-        title: `Costing - ${inv.partyName}`,
-        text: text,
-      });
-    } else {
-      // Desktop fallback — copy to clipboard
-      await navigator.clipboard.writeText(text);
-      toast('Copied to clipboard! Paste in WhatsApp, email, etc.', 'info');
-    }
+    toast('Generating PDF document...', 'info');
+    await shareInvoiceAsPDF(inv);
   } catch (err) {
     if (err.name !== 'AbortError') {
-      toast('Share failed', 'error');
+      toast('Failed to generate PDF: ' + err.message, 'error');
     }
   }
 });
 
-function generateShareText(inv) {
-  return `🧵 *COSTING SHEET*
-━━━━━━━━━━━━━━━━━━━
-*Party:* ${inv.partyName}
-*Date:* ${formatDate(inv.date)}
-${inv.fabricType ? `*Fabric:* ${inv.fabricType}` : ''}
-${inv.loomType ? `*Loom:* ${inv.loomType}` : ''}
+async function shareInvoiceAsPDF(inv) {
+  const container = document.createElement('div');
+  container.style.position = 'fixed';
+  container.style.left = '-9999px';
+  container.style.top = '-9999px';
+  
+  container.innerHTML = `
+    <div style="padding: 24px; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #0f172a; background: #ffffff; width: 720px; box-sizing: border-box;">
+      
+      <!-- Header Bar -->
+      <div style="background: #0f172a; color: #ffffff; padding: 16px 20px; border-radius: 6px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h1 style="margin: 0; font-size: 20px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; color: #ffffff;">TEXTILE FABRIC COSTING SHEET</h1>
+          <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.95;">Party: <strong style="color: #60a5fa;">${escapeHtml(inv.partyName)}</strong></p>
+        </div>
+        <div style="text-align: right; font-size: 12px; opacity: 0.95; line-height: 1.5;">
+          <div>📅 Date: <strong>${formatDate(inv.date)}</strong></div>
+          ${inv.fabricType ? `<div>🧵 Fabric: <strong>${escapeHtml(inv.fabricType)}</strong></div>` : ''}
+          ${inv.loomType ? `<div>🏭 Loom: <strong>${escapeHtml(inv.loomType)}</strong></div>` : ''}
+        </div>
+      </div>
 
-📐 *SPECIFICATIONS*
-Warp Count: ${inv.warpCount} | Weft Count: ${inv.weftCount}
-Reed: ${inv.reed} | Pick: ${inv.pick}
-Width: ${inv.width}" | Rate W: ${inv.warpRate} / F: ${inv.weftRate}
-Conv Rate: ${inv.conversionRate} | Qty: ${fmtInt(inv.quantity)} m
+      <!-- Content Grid: 2 Columns -->
+      <div style="display: flex; gap: 16px; align-items: flex-start;">
+        
+        <!-- Left Column: Specifications -->
+        <div style="flex: 1; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden;">
+          <div style="background: #0f172a; color: #ffffff; padding: 8px 12px; font-size: 13px; font-weight: 700;">📋 Specifications</div>
+          <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+            <tbody>
+              <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 6px 10px; font-weight: 600;">Warp Count</td><td style="padding: 6px 10px; text-align: right;">${inv.warpCount}${inv.warpCountAlt ? ' / ' + inv.warpCountAlt : ''}</td></tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 6px 10px; font-weight: 600;">Weft Count</td><td style="padding: 6px 10px; text-align: right;">${inv.weftCount}${inv.weftCountAlt ? ' / ' + inv.weftCountAlt : ''}</td></tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 6px 10px; font-weight: 600;">Reed</td><td style="padding: 6px 10px; text-align: right;">${inv.reed}</td></tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 6px 10px; font-weight: 600;">Pick</td><td style="padding: 6px 10px; text-align: right;">${inv.pick}</td></tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 6px 10px; font-weight: 600;">Width</td><td style="padding: 6px 10px; text-align: right;">${inv.width}"${inv.widthCm ? ' / ' + inv.widthCm + ' cm' : ''}</td></tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 6px 10px; font-weight: 600;">Warp Rate</td><td style="padding: 6px 10px; text-align: right;">${inv.warpRate}</td></tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 6px 10px; font-weight: 600;">Weft Rate</td><td style="padding: 6px 10px; text-align: right;">${inv.weftRate}</td></tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 6px 10px; font-weight: 600;">Conversion Rate / Pick</td><td style="padding: 6px 10px; text-align: right;">${inv.conversionRate}</td></tr>
+              <tr style="background: #dbeafe;"><td style="padding: 8px 10px; font-weight: 700; color: #1e40af;">Quantity</td><td style="padding: 8px 10px; text-align: right; font-weight: 700; color: #1e40af;">${fmtInt(inv.quantity)} m</td></tr>
+            </tbody>
+          </table>
+        </div>
 
-⚖️ *WEIGHT*
-            Yard        Meter
-Warp:      ${fmt(inv.warpWeightYard, 4)}      ${fmt(inv.warpWeightMeter, 4)}
-Weft:      ${fmt(inv.weftWeightYard, 4)}      ${fmt(inv.weftWeightMeter, 4)}
-*Total:*    ${fmt(inv.totalWeightYard, 4)}      ${fmt(inv.totalWeightMeter, 4)}
+        <!-- Right Column: Calculated Parameters -->
+        <div style="flex: 1.35; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden;">
+          <div style="background: #0f172a; color: #ffffff; padding: 8px 12px; font-size: 13px; font-weight: 700;">⚡ Calculated Parameters</div>
+          <table style="width: 100%; border-collapse: collapse; font-size: 11.5px;">
+            <thead>
+              <tr style="background: #0f172a; color: #ffffff; text-align: left;">
+                <th style="padding: 6px 8px;">Parameter</th>
+                <th style="padding: 6px 8px; text-align: right;">Yard</th>
+                <th style="padding: 6px 8px; text-align: right;">Meter</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="background: #0f172a; color: #ffffff; font-weight: 700;"><td colspan="3" style="padding: 5px 8px;">⚖️ Weight</td></tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 4px 8px;">Warp Weight</td><td style="padding: 4px 8px; text-align: right;">${fmt(inv.warpWeightYard, 4)}</td><td style="padding: 4px 8px; text-align: right; background: #dbeafe; color: #1e40af; font-weight: 600;">${fmt(inv.warpWeightMeter, 4)}</td></tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 4px 8px;">Weft Weight</td><td style="padding: 4px 8px; text-align: right;">${fmt(inv.weftWeightYard, 4)}</td><td style="padding: 4px 8px; text-align: right; background: #dbeafe; color: #1e40af; font-weight: 600;">${fmt(inv.weftWeightMeter, 4)}</td></tr>
+              <tr style="border-bottom: 1px solid #e2e8f0; background: #f8fafc;"><td style="padding: 4px 8px; font-weight: 700;">Total Weight</td><td style="padding: 4px 8px; text-align: right; font-weight: 700;">${fmt(inv.totalWeightYard, 4)}</td><td style="padding: 4px 8px; text-align: right; background: #dbeafe; color: #1e40af; font-weight: 700;">${fmt(inv.totalWeightMeter, 4)}</td></tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 4px 8px;">Wt / Mtr (Pound)</td><td style="padding: 4px 8px; text-align: right;">${fmt(inv.weightPerMtrPYard, 4)}</td><td style="padding: 4px 8px; text-align: right;">${fmt(inv.weightPerMtrPMeter, 4)}</td></tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 4px 8px;">Wt / Mtr (Gram)</td><td style="padding: 4px 8px; text-align: right;">${fmt(inv.weightPerMtrGYard, 4)}</td><td style="padding: 4px 8px; text-align: right;">${fmt(inv.weightPerMtrGMeter, 4)}</td></tr>
 
-GSM: ${fmt(inv.gsm, 4)} | OZ/SQ YD: ${fmt(inv.ozPerSqYd, 4)}
+              <tr style="background: #0f172a; color: #ffffff; font-weight: 700;"><td colspan="3" style="padding: 5px 8px;">📐 Fabric Specs</td></tr>
+              <tr style="border-bottom: 1px solid #e2e8f0; background: #dbeafe;"><td style="padding: 4px 8px; font-weight: 700; color: #1e40af;">GSM</td><td colspan="2" style="padding: 4px 8px; text-align: right; font-weight: 700; color: #1e40af;">${fmt(inv.gsm, 4)}</td></tr>
+              <tr style="border-bottom: 1px solid #e2e8f0; background: #dbeafe;"><td style="padding: 4px 8px; font-weight: 700; color: #1e40af;">OZ / SQ YD</td><td colspan="2" style="padding: 4px 8px; text-align: right; font-weight: 700; color: #1e40af;">${fmt(inv.ozPerSqYd, 4)}</td></tr>
 
-💰 *COSTING*
-            Yard        Meter
-Warp:      ${fmt(inv.warpCostYard)}       ${fmt(inv.warpCostMeter)}
-Weft:      ${fmt(inv.weftCostYard)}       ${fmt(inv.weftCostMeter)}
-Manf:      ${fmt(inv.manfCostYard)}       ${fmt(inv.manfCostMeter)}
-━━━━━━━━━━━━━━━━━━━
-*TOTAL:*    ${fmt(inv.totalCostYard)}      ${fmt(inv.totalCostMeter)}
-━━━━━━━━━━━━━━━━━━━
+              <tr style="background: #0f172a; color: #ffffff; font-weight: 700;"><td colspan="3" style="padding: 5px 8px;">💰 Costing</td></tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 4px 8px;">Conversion Cost</td><td colspan="2" style="padding: 4px 8px; text-align: right;">${fmt(inv.conversionCost)}</td></tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 4px 8px;">Warp Cost</td><td style="padding: 4px 8px; text-align: right;">${fmt(inv.warpCostYard)}</td><td style="padding: 4px 8px; text-align: right;">${fmt(inv.warpCostMeter)}</td></tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 4px 8px;">Weft Cost</td><td style="padding: 4px 8px; text-align: right;">${fmt(inv.weftCostYard)}</td><td style="padding: 4px 8px; text-align: right;">${fmt(inv.weftCostMeter)}</td></tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 4px 8px;">Manufacturing Cost</td><td style="padding: 4px 8px; text-align: right;">${fmt(inv.manfCostYard)}</td><td style="padding: 4px 8px; text-align: right;">${fmt(inv.manfCostMeter)}</td></tr>
+              <tr style="background: #dbeafe; border-top: 1.5px solid #1e40af; border-bottom: 1.5px solid #1e40af;"><td style="padding: 6px 8px; font-weight: 800; color: #0f172a;">Total Fabric Cost</td><td style="padding: 6px 8px; text-align: right; font-weight: 800; color: #0369a1;">${fmt(inv.totalCostYard)}</td><td style="padding: 6px 8px; text-align: right; font-weight: 800; color: #1e40af;">${fmt(inv.totalCostMeter)}</td></tr>
 
-📦 Yarn Bags: ${fmtInt(inv.totalYarnBags)} | FCL Qty: ${fmtInt(inv.qtyInFCL)}`;
+              <tr style="background: #0f172a; color: #ffffff; font-weight: 700;"><td colspan="3" style="padding: 5px 8px;">📦 Yarn &amp; Container</td></tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 4px 8px;">Yarn Bags (Warp)</td><td colspan="2" style="padding: 4px 8px; text-align: right;">${fmtInt(inv.yarnBagsWarp)}</td></tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 4px 8px;">Yarn Bags (Weft)</td><td colspan="2" style="padding: 4px 8px; text-align: right;">${fmtInt(inv.yarnBagsWeft)}</td></tr>
+              <tr style="border-bottom: 1px solid #e2e8f0; background: #dbeafe;"><td style="padding: 4px 8px; font-weight: 700; color: #1e40af;">Total Yarn Bags</td><td colspan="2" style="padding: 4px 8px; text-align: right; font-weight: 700; color: #1e40af;">${fmtInt(inv.totalYarnBags)}</td></tr>
+              <tr style="background: #dbeafe;"><td style="padding: 4px 8px; font-weight: 700; color: #1e40af;">Qty in 1 FCL</td><td colspan="2" style="padding: 4px 8px; text-align: right; font-weight: 700; color: #1e40af;">${fmtInt(inv.qtyInFCL)}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="margin-top: 16px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 8px; font-size: 11px; color: #94a3b8;">
+        Generated via Textile Costing Web Application
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(container);
+
+  const cleanParty = (inv.partyName || 'Invoice').replace(/[^a-zA-Z0-9]/g, '_');
+  const cleanDate = formatDate(inv.date).replace(/\s+/g, '_');
+  const fileName = `Costing_${cleanParty}_${cleanDate}.pdf`;
+
+  const opt = {
+    margin:       10,
+    filename:     fileName,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true, logging: false },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  try {
+    if (typeof html2pdf !== 'undefined') {
+      const pdfWorker = html2pdf().set(opt).from(container.firstElementChild);
+      const pdfBlob = await pdfWorker.output('blob');
+      
+      if (container.parentNode) document.body.removeChild(container);
+
+      const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+      // Web Share API for Mobile PDF sharing (WhatsApp, Telegram, Email, etc.)
+      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+        try {
+          await navigator.share({
+            files: [pdfFile],
+            title: `Costing Sheet - ${inv.partyName}`,
+            text: `Fabric Costing Sheet for ${inv.partyName}`,
+          });
+          toast('Shared PDF successfully!', 'success');
+          return;
+        } catch (shareErr) {
+          if (shareErr.name === 'AbortError') return;
+        }
+      }
+
+      // Desktop / Browser fallback: download PDF file directly
+      const downloadUrl = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+      toast('Downloaded PDF successfully!', 'success');
+    } else {
+      if (container.parentNode) document.body.removeChild(container);
+      window.print();
+    }
+  } catch (err) {
+    if (container.parentNode) document.body.removeChild(container);
+    toast('PDF generation failed: ' + err.message, 'error');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
