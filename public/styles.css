@@ -544,26 +544,31 @@ body::before {
   margin-bottom: 1.25rem;
 }
 
+.btn-back,
 .form-header .btn-back {
   background: #ffffff;
-  border: 1px solid var(--border);
-  color: var(--text-secondary);
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border-hover);
+  color: var(--accent-navy);
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all var(--transition);
-  font-size: 1.125rem;
+  font-size: 1.5rem;
+  font-weight: 800;
   box-shadow: var(--shadow-sm);
 }
 
+.btn-back:hover,
 .form-header .btn-back:hover {
-  color: var(--accent-navy);
-  border-color: var(--border-hover);
-  background: var(--bg-tertiary);
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
+  background: #f1f5f9;
+  transform: translateX(-3px);
+  box-shadow: var(--shadow-md);
 }
 
 .form-title {

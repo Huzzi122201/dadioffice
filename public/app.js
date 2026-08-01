@@ -60,6 +60,10 @@ function showView(view) {
 }
 
 // ── Calculator (client-side replica) ───────────────────────
+function r4(v) { return v != null && !isNaN(v) && isFinite(v) ? Number(Number(v).toFixed(4)) : 0; }
+function r2(v) { return v != null && !isNaN(v) && isFinite(v) ? Number(Number(v).toFixed(2)) : 0; }
+function r0(v) { return v != null && !isNaN(v) && isFinite(v) ? Math.round(Number(v)) : 0; }
+
 function calculate(inputs) {
   const warpCount = inputs.warpCount || 0;
   const weftCount = inputs.weftCount || 0;
@@ -98,12 +102,31 @@ function calculate(inputs) {
   const qtyInFCL = weightPerMtrGMeter > 0 ? (24000 / weightPerMtrGMeter) : 0;
 
   return {
-    warpWeightYard, warpWeightMeter, weftWeightYard, weftWeightMeter,
-    totalWeightYard, totalWeightMeter, weightPerMtrPYard, weightPerMtrPMeter,
-    weightPerMtrGYard, weightPerMtrGMeter, gsm, ozPerSqYd,
-    conversionCost, warpCostYard, warpCostMeter, weftCostYard, weftCostMeter,
-    manfCostYard, manfCostMeter, totalCostYard, totalCostMeter,
-    yarnBagsWarp, yarnBagsWeft, totalYarnBags, qtyInFCL,
+    warpWeightYard: r4(warpWeightYard),
+    warpWeightMeter: r4(warpWeightMeter),
+    weftWeightYard: r4(weftWeightYard),
+    weftWeightMeter: r4(weftWeightMeter),
+    totalWeightYard: r4(totalWeightYard),
+    totalWeightMeter: r4(totalWeightMeter),
+    weightPerMtrPYard: r4(weightPerMtrPYard),
+    weightPerMtrPMeter: r4(weightPerMtrPMeter),
+    weightPerMtrGYard: r4(weightPerMtrGYard),
+    weightPerMtrGMeter: r4(weightPerMtrGMeter),
+    gsm: r4(gsm),
+    ozPerSqYd: r4(ozPerSqYd),
+    conversionCost: r2(conversionCost),
+    warpCostYard: r2(warpCostYard),
+    warpCostMeter: r2(warpCostMeter),
+    weftCostYard: r2(weftCostYard),
+    weftCostMeter: r2(weftCostMeter),
+    manfCostYard: r2(manfCostYard),
+    manfCostMeter: r2(manfCostMeter),
+    totalCostYard: r2(totalCostYard),
+    totalCostMeter: r2(totalCostMeter),
+    yarnBagsWarp: r2(yarnBagsWarp),
+    yarnBagsWeft: r2(yarnBagsWeft),
+    totalYarnBags: r2(totalYarnBags),
+    qtyInFCL: r0(qtyInFCL),
   };
 }
 
