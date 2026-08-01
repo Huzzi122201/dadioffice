@@ -240,23 +240,42 @@ function toInputDate(dateStr) {
 //  DASHBOARD
 // ═══════════════════════════════════════════════════════════
 
-async function loadInvoices(search = '') {
+async function loadInvoices() {
   try {
+    const search = searchInput ? searchInput.value.trim() : '';
+    const filterType = $('filterType') ? $('filterType').value : 'all';
+    const sortBy = $('sortBy') ? $('sortBy').value : 'newest';
+
     const url = search ? `${API}?search=${encodeURIComponent(search)}` : API;
     const invoices = await apiGet(url);
 
     let displayList = invoices;
-    if (search && search.trim()) {
-      const term = search.trim().toLowerCase();
+    if (search) {
+      const term = search.toLowerCase();
       displayList = invoices.filter((inv) => {
-        const nameMatch = inv.partyName && inv.partyName.toLowerCase().includes(term);
-        const dateMatch = inv.date && formatDate(inv.date).toLowerCase().includes(term);
-        const qtyMatch = inv.quantity != null && (String(inv.quantity).includes(term) || fmtInt(inv.quantity).toLowerCase().includes(term));
-        const fabricMatch = inv.fabricType && inv.fabricType.toLowerCase().includes(term);
-        const loomMatch = inv.loomType && inv.loomType.toLowerCase().includes(term);
-        return nameMatch || dateMatch || qtyMatch || fabricMatch || loomMatch;
+        const partyStr = (inv.partyName || '').toLowerCase();
+        const dateStr = formatDate(inv.date).toLowerCase();
+        const qtyStr = inv.quantity != null ? String(inv.quantity) + ' ' + fmtInt(inv.quantity).toLowerCase() : '';
+        const fabricStr = ((inv.fabricType || '') + ' ' + (inv.loomType || '')).toLowerCase();
+
+        if (filterType === 'party') return partyStr.includes(term);
+        if (filterType === 'date') return dateStr.includes(term);
+        if (filterType === 'qty') return qtyStr.includes(term);
+        if (filterType === 'fabric') return fabricStr.includes(term);
+
+        return partyStr.includes(term) || dateStr.includes(term) || qtyStr.includes(term) || fabricStr.includes(term);
       });
     }
+
+    // Apply sorting
+    displayList.sort((a, b) => {
+      if (sortBy === 'oldest') return new Date(a.date || 0) - new Date(b.date || 0);
+      if (sortBy === 'qtyHigh') return (b.quantity || 0) - (a.quantity || 0);
+      if (sortBy === 'costHigh') return (b.totalCostMeter || 0) - (a.totalCostMeter || 0);
+      if (sortBy === 'partyAZ') return (a.partyName || '').localeCompare(b.partyName || '');
+      // newest
+      return new Date(b.date || b.createdAt || 0) - new Date(a.date || a.createdAt || 0);
+    });
 
     invoiceCount.textContent = `(${displayList.length})`;
 
@@ -264,7 +283,7 @@ async function loadInvoices(search = '') {
       invoiceList.innerHTML = `
         <div class="empty-state">
           <div class="empty-icon">📋</div>
-          <p>${search ? 'No invoices match your search.' : 'No invoices yet. Create your first one!'}</p>
+          <p>${search ? 'No invoices match your filter criteria.' : 'No invoices yet. Create your first one!'}</p>
           ${!search ? '<button class="btn btn-primary" onclick="openNewForm()">＋ Create Invoice</button>' : ''}
         </div>
       `;
@@ -301,13 +320,21 @@ function escapeHtml(str) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-// Search with debounce
+// Search & Filter listeners
 searchInput.addEventListener('input', () => {
   clearTimeout(searchTimeout);
   searchTimeout = setTimeout(() => {
-    loadInvoices(searchInput.value.trim());
+    loadInvoices();
   }, 300);
 });
+
+if ($('filterType')) {
+  $('filterType').addEventListener('change', () => loadInvoices());
+}
+
+if ($('sortBy')) {
+  $('sortBy').addEventListener('change', () => loadInvoices());
+}
 
 // ═══════════════════════════════════════════════════════════
 //  FORM (Create / Edit)

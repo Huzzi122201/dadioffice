@@ -40,15 +40,41 @@
         </button>
       </div>
 
-      <div class="search-wrapper">
-        <span class="search-icon">🔍</span>
-        <input
-          type="text"
-          class="search-input"
-          id="searchInput"
-          placeholder="Search by party name..."
-          autocomplete="off"
-        />
+      <div class="search-section">
+        <div class="search-wrapper">
+          <span class="search-icon">🔍</span>
+          <input
+            type="text"
+            class="search-input"
+            id="searchInput"
+            placeholder="Search party name, date, quantity, fabric..."
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="filter-controls">
+          <div class="filter-group">
+            <label class="filter-label" for="filterType">Filter By:</label>
+            <select class="filter-select" id="filterType">
+              <option value="all">All Fields</option>
+              <option value="party">Party Name</option>
+              <option value="date">Date</option>
+              <option value="qty">Quantity</option>
+              <option value="fabric">Fabric / Loom</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label class="filter-label" for="sortBy">Sort By:</label>
+            <select class="filter-select" id="sortBy">
+              <option value="newest">Date (Newest First)</option>
+              <option value="oldest">Date (Oldest First)</option>
+              <option value="qtyHigh">Quantity (High → Low)</option>
+              <option value="costHigh">Cost / Meter (High → Low)</option>
+              <option value="partyAZ">Party Name (A → Z)</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <div class="invoice-list" id="invoiceList">
