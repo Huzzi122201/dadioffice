@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="Textile Fabric Costing Sheet — Conversion Invoice Manager" />
+  <meta name="theme-color" content="#6366f1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Textile Costing Sheet</title>
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+
+  <!-- ═══ Header ═══ -->
+  <header class="app-header">
+    <div class="header-brand" id="headerBrand">
+      <div class="brand-icon">🧵</div>
+      <h1>Textile Costing</h1>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-ghost btn-icon" id="btnExport" title="Export All">📥</button>
+      <button class="btn btn-ghost btn-icon" id="btnImportTrigger" title="Import Backup">📤</button>
+      <input type="file" id="importFile" accept=".json" style="display:none" />
+    </div>
+  </header>
+
+  <!-- ═══ Main Content ═══ -->
+  <main class="app-main">
+
+    <!-- ─── Dashboard View ─── -->
+    <section class="view active" id="viewDashboard">
+      <div class="dashboard-header">
+        <div>
+          <h2 class="dashboard-title">Invoices <span class="dashboard-count" id="invoiceCount"></span></h2>
+        </div>
+        <button class="btn btn-primary" id="btnNewInvoice">
+          ＋ New Invoice
+        </button>
+      </div>
+
+      <div class="search-wrapper">
+        <span class="search-icon">🔍</span>
+        <input
+          type="text"
+          class="search-input"
+          id="searchInput"
+          placeholder="Search by party name..."
+          autocomplete="off"
+        />
+      </div>
+
+      <div class="invoice-list" id="invoiceList">
+        <!-- populated by JS -->
+      </div>
+    </section>
+
+    <!-- ─── Form View (Create / Edit) ─── -->
+    <section class="view" id="viewForm">
+      <div class="form-header">
+        <button class="btn-back" id="btnFormBack">←</button>
+        <h2 class="form-title" id="formTitle">New Invoice</h2>
+      </div>
+
+      <form id="invoiceForm" autocomplete="off">
+        <input type="hidden" id="editId" value="" />
+
+        <div class="card">
+          <div class="split-card-grid">
+            
+            <!-- Left Side: Inputs -->
+            <div class="split-col">
+              <div class="split-title">📋 Enter Specifications</div>
+
+              <!-- Party Info -->
+              <div class="form-section">
+                <div class="form-section-title">Party Information</div>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label" for="partyName">Party Name *</label>
+                    <input class="form-input" type="text" id="partyName" required />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="date">Date</label>
+                    <input class="form-input" type="text" id="date" placeholder="1 Aug 2026" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="fabricType">Fabric Type</label>
+                    <input class="form-input" type="text" id="fabricType" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="loomType">Loom Type</label>
+                    <input class="form-input" type="text" id="loomType" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Yarn Specs -->
+              <div class="form-section">
+                <div class="form-section-title">Yarn Specifications</div>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label" for="warpCount">Warp Count *</label>
+                    <input class="form-input calc-input" type="number" id="warpCount" required step="any" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="warpCountAlt">Warp Count (Alt)</label>
+                    <input class="form-input" type="number" id="warpCountAlt" step="any" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="weftCount">Weft Count *</label>
+                    <input class="form-input calc-input" type="number" id="weftCount" required step="any" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="weftCountAlt">Weft Count (Alt)</label>
+                    <input class="form-input" type="number" id="weftCountAlt" step="any" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Fabric Specs -->
+              <div class="form-section">
+                <div class="form-section-title">Fabric Specifications</div>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label" for="reed">Reed *</label>
+                    <input class="form-input calc-input" type="number" id="reed" required step="any" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="pick">Pick *</label>
+                    <input class="form-input calc-input" type="number" id="pick" required step="any" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="width">Width (inches) *</label>
+                    <input class="form-input calc-input" type="number" id="width" required step="any" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="widthCm">Width (cm)</label>
+                    <input class="form-input" type="number" id="widthCm" step="any" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rates & Quantity -->
+              <div class="form-section">
+                <div class="form-section-title">Rates &amp; Quantity</div>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label" for="warpRate">Warp Rate (per bag) *</label>
+                    <input class="form-input calc-input" type="number" id="warpRate" required step="any" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="weftRate">Weft Rate (per bag) *</label>
+                    <input class="form-input calc-input" type="number" id="weftRate" required step="any" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="conversionRate">Conversion Rate / Pick *</label>
+                    <input class="form-input calc-input" type="number" id="conversionRate" required step="any" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="quantity">Quantity (meters) *</label>
+                    <input class="form-input calc-input" type="number" id="quantity" required step="any" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Side: Live Calculated Results -->
+            <div class="split-col">
+              <div class="split-title">⚡ Calculated Parameters</div>
+              <table class="results-table" id="resultsTable">
+                <thead>
+                  <tr>
+                    <th class="col-param">Parameter</th>
+                    <th class="col-yard">Yard</th>
+                    <th class="col-meter">Meter</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="section-row"><td colspan="3">⚖️ Weight</td></tr>
+                  <tr><td>Warp Weight</td><td id="preWarpWtY">—</td><td id="preWarpWtM" class="highlight-val">—</td></tr>
+                  <tr><td>Weft Weight</td><td id="preWeftWtY">—</td><td id="preWeftWtM" class="highlight-val">—</td></tr>
+                  <tr class="highlight-row"><td>Total Weight</td><td id="preTotalWtY">—</td><td id="preTotalWtM" class="highlight-val">—</td></tr>
+                  <tr><td>Wt / Mtr (Pound)</td><td id="preWtMtrPY">—</td><td id="preWtMtrPM">—</td></tr>
+                  <tr><td>Wt / Mtr (Gram)</td><td id="preWtMtrGY">—</td><td id="preWtMtrGM">—</td></tr>
+
+                  <tr class="section-row"><td colspan="3">📐 Fabric Specs</td></tr>
+                  <tr class="highlight-row"><td>GSM</td><td id="preGSM" colspan="2" class="highlight-val">—</td></tr>
+                  <tr class="highlight-row"><td>OZ / SQ YD</td><td id="preOZ" colspan="2" class="highlight-val">—</td></tr>
+
+                  <tr class="section-row"><td colspan="3">💰 Costing</td></tr>
+                  <tr><td>Conversion Cost</td><td id="preConvCost" colspan="2">—</td></tr>
+                  <tr><td>Warp Cost</td><td id="preWarpCostY">—</td><td id="preWarpCostM">—</td></tr>
+                  <tr><td>Weft Cost</td><td id="preWeftCostY">—</td><td id="preWeftCostM">—</td></tr>
+                  <tr><td>Manufacturing Cost</td><td id="preManfCostY">—</td><td id="preManfCostM">—</td></tr>
+                  <tr class="total-row"><td>Total Fabric Cost</td><td id="preTotalCostY">—</td><td id="preTotalCostM">—</td></tr>
+
+                  <tr class="section-row"><td colspan="3">📦 Yarn &amp; Container</td></tr>
+                  <tr><td>Yarn Bags (Warp)</td><td id="preBagsWarp" colspan="2">—</td></tr>
+                  <tr><td>Yarn Bags (Weft)</td><td id="preBagsWeft" colspan="2">—</td></tr>
+                  <tr class="highlight-row"><td>Total Yarn Bags</td><td id="preTotalBags" colspan="2" class="highlight-val">—</td></tr>
+                  <tr class="highlight-row"><td>Qty in 1 FCL</td><td id="preFCL" colspan="2" class="highlight-val">—</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary btn-lg" id="btnSave">
+            💾 Save Invoice
+          </button>
+          <button type="button" class="btn btn-secondary btn-lg" id="btnFormCancel">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ─── Detail View ─── -->
+    <section class="view" id="viewDetail">
+      <div class="detail-header">
+        <div class="detail-header-left">
+          <button class="btn-back" id="btnDetailBack">←</button>
+          <h2 class="form-title">Invoice Details</h2>
+        </div>
+        <div class="detail-header-actions">
+          <button class="btn btn-success" id="btnShare">📤 Share</button>
+          <button class="btn btn-secondary" id="btnEdit">✏️ Edit</button>
+          <button class="btn btn-danger" id="btnDelete">🗑️ Delete</button>
+        </div>
+      </div>
+
+      <div id="detailContent">
+        <!-- populated by JS -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ═══ Confirm Modal ═══ -->
+  <div class="modal-overlay hidden" id="confirmModal">
+    <div class="modal">
+      <h3 class="modal-title" id="confirmTitle">Confirm</h3>
+      <p class="modal-text" id="confirmText">Are you sure?</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="confirmCancel">Cancel</button>
+        <button class="btn btn-danger" id="confirmOk">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Toast Container ═══ -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ═══ FAB (mobile new invoice) ═══ -->
+  <button class="fab" id="fabNew" title="New Invoice">＋</button>
+
+  <script src="/app.js"></script>
+</body>
+</html>
