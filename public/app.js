@@ -243,7 +243,7 @@ function toInputDate(dateStr) {
 async function loadInvoices() {
   try {
     const search = searchInput ? searchInput.value.trim() : '';
-    const filterType = $('filterType') ? $('filterType').value : 'all';
+    const filterType = $('filterType') ? $('filterType').value : 'party';
     const sortBy = $('sortBy') ? $('sortBy').value : 'newest';
 
     const url = search ? `${API}?search=${encodeURIComponent(search)}` : API;
@@ -258,12 +258,12 @@ async function loadInvoices() {
         const qtyStr = inv.quantity != null ? String(inv.quantity) + ' ' + fmtInt(inv.quantity).toLowerCase() : '';
         const fabricStr = ((inv.fabricType || '') + ' ' + (inv.loomType || '')).toLowerCase();
 
-        if (filterType === 'party') return partyStr.includes(term);
         if (filterType === 'date') return dateStr.includes(term);
         if (filterType === 'qty') return qtyStr.includes(term);
         if (filterType === 'fabric') return fabricStr.includes(term);
 
-        return partyStr.includes(term) || dateStr.includes(term) || qtyStr.includes(term) || fabricStr.includes(term);
+        // Default & party filter strictly searches Party Name
+        return partyStr.includes(term);
       });
     }
 
@@ -283,7 +283,7 @@ async function loadInvoices() {
       invoiceList.innerHTML = `
         <div class="empty-state">
           <div class="empty-icon">📋</div>
-          <p>${search ? 'No invoices match your filter criteria.' : 'No invoices yet. Create your first one!'}</p>
+          <p>${search ? 'No invoices match your search.' : 'No invoices yet. Create your first one!'}</p>
           ${!search ? '<button class="btn btn-primary" onclick="openNewForm()">＋ Create Invoice</button>' : ''}
         </div>
       `;
@@ -329,7 +329,19 @@ searchInput.addEventListener('input', () => {
 });
 
 if ($('filterType')) {
-  $('filterType').addEventListener('change', () => loadInvoices());
+  $('filterType').addEventListener('change', (e) => {
+    const val = e.target.value;
+    if (val === 'date') {
+      searchInput.placeholder = 'Search by date (e.g. 1 Aug 2026)...';
+    } else if (val === 'qty') {
+      searchInput.placeholder = 'Search by quantity (e.g. 40000)...';
+    } else if (val === 'fabric') {
+      searchInput.placeholder = 'Search by fabric or loom type...';
+    } else {
+      searchInput.placeholder = 'Search by party name...';
+    }
+    loadInvoices();
+  });
 }
 
 if ($('sortBy')) {
