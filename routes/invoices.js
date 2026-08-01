@@ -10,9 +10,21 @@ router.get('/', async (req, res) => {
     let query = {};
 
     if (search && search.trim()) {
-      query = {
-        partyName: { $regex: search.trim(), $options: 'i' },
-      };
+      const term = search.trim();
+      const regex = new RegExp(term, 'i');
+      const numVal = parseFloat(term.replace(/,/g, ''));
+
+      const orConditions = [
+        { partyName: regex },
+        { fabricType: regex },
+        { loomType: regex },
+      ];
+
+      if (!isNaN(numVal)) {
+        orConditions.push({ quantity: numVal });
+      }
+
+      query = { $or: orConditions };
     }
 
     const invoices = await Invoice.find(query)

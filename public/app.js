@@ -245,9 +245,22 @@ async function loadInvoices(search = '') {
     const url = search ? `${API}?search=${encodeURIComponent(search)}` : API;
     const invoices = await apiGet(url);
 
-    invoiceCount.textContent = `(${invoices.length})`;
+    let displayList = invoices;
+    if (search && search.trim()) {
+      const term = search.trim().toLowerCase();
+      displayList = invoices.filter((inv) => {
+        const nameMatch = inv.partyName && inv.partyName.toLowerCase().includes(term);
+        const dateMatch = inv.date && formatDate(inv.date).toLowerCase().includes(term);
+        const qtyMatch = inv.quantity != null && (String(inv.quantity).includes(term) || fmtInt(inv.quantity).toLowerCase().includes(term));
+        const fabricMatch = inv.fabricType && inv.fabricType.toLowerCase().includes(term);
+        const loomMatch = inv.loomType && inv.loomType.toLowerCase().includes(term);
+        return nameMatch || dateMatch || qtyMatch || fabricMatch || loomMatch;
+      });
+    }
 
-    if (invoices.length === 0) {
+    invoiceCount.textContent = `(${displayList.length})`;
+
+    if (displayList.length === 0) {
       invoiceList.innerHTML = `
         <div class="empty-state">
           <div class="empty-icon">📋</div>
@@ -258,12 +271,13 @@ async function loadInvoices(search = '') {
       return;
     }
 
-    invoiceList.innerHTML = invoices.map((inv) => `
+    invoiceList.innerHTML = displayList.map((inv) => `
       <div class="invoice-item" data-id="${inv._id}" onclick="openDetail('${inv._id}')">
         <div class="invoice-item-info">
           <div class="invoice-item-name">${escapeHtml(inv.partyName)}</div>
           <div class="invoice-item-meta">
             <span>📅 ${formatDate(inv.date)}</span>
+            ${inv.quantity ? `<span>📊 ${fmtInt(inv.quantity)} m</span>` : ''}
             ${inv.fabricType ? `<span>🧵 ${escapeHtml(inv.fabricType)}</span>` : ''}
           </div>
         </div>
