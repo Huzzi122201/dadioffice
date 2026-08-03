@@ -62,10 +62,6 @@ function showView(view) {
   view.classList.add('active');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
-  // Show/hide FAB
-  const fab = $('fabNew');
-  fab.style.display = view === viewDashboard ? 'flex' : 'none';
-
   // Update bottom nav active state
   const tabBtns = document.querySelectorAll('.bottom-nav-tab');
   if (view === viewYarnDashboard || view === viewYarnForm || view === viewYarnHistory) {
@@ -887,7 +883,6 @@ $('headerBrand').addEventListener('click', () => {
 });
 
 $('btnNewInvoice').addEventListener('click', openNewForm);
-$('fabNew').addEventListener('click', openNewForm);
 
 $('btnFormBack').addEventListener('click', () => {
   showView(viewDashboard);
