@@ -1212,6 +1212,31 @@ body {
   margin: 0 auto;
 }
 
+.yarn-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.yarn-history-header .header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 200px;
+}
+
+.yarn-history-header .form-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--accent-navy);
+  margin: 0;
+  word-break: break-word;
+}
+
 .yarn-datagrid-table {
   width: 100%;
   border-collapse: collapse;

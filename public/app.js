@@ -929,17 +929,45 @@ $('tabYarn').addEventListener('click', () => {
 });
 
 // ═══════════════════════════════════════════════════════════
-//  YARN STOCK — DASHBOARD (Party Names Only)
+//  YARN STOCK — DASHBOARD (All Parties from Invoices & Yarn)
 // ═══════════════════════════════════════════════════════════
 
 async function loadYarnStock(search = '') {
   try {
-    const stock = await apiGet(`${YARN_API}/stock`);
+    const [stock, invoices] = await Promise.all([
+      apiGet(`${YARN_API}/stock`).catch(() => []),
+      apiGet(API).catch(() => []),
+    ]);
 
-    let displayList = stock;
+    const partyMap = new Map();
+
+    if (Array.isArray(invoices)) {
+      invoices.forEach(i => {
+        if (i.partyName && i.partyName.trim()) {
+          const norm = i.partyName.trim().toLowerCase();
+          if (!partyMap.has(norm)) {
+            partyMap.set(norm, {
+              partyName: i.partyName.trim(),
+              partyNameNorm: norm,
+            });
+          }
+        }
+      });
+    }
+
+    if (Array.isArray(stock)) {
+      stock.forEach(s => {
+        if (s.partyNameNorm) {
+          partyMap.set(s.partyNameNorm, s);
+        }
+      });
+    }
+
+    let displayList = Array.from(partyMap.values()).sort((a, b) => a.partyName.localeCompare(b.partyName));
+
     if (search) {
       const term = search.toLowerCase();
-      displayList = stock.filter(s => s.partyName.toLowerCase().includes(term));
+      displayList = displayList.filter(s => s.partyName.toLowerCase().includes(term));
     }
 
     $('yarnPartyCount').textContent = `(${displayList.length})`;
@@ -948,7 +976,7 @@ async function loadYarnStock(search = '') {
       $('yarnStockGrid').innerHTML = `
         <div class="empty-state">
           <div class="empty-icon">🏢</div>
-          <p>${search ? 'No parties match your search.' : 'No party yarn issued yet. Start by issuing yarn to a party!'}</p>
+          <p>${search ? 'No parties match your search.' : 'No party entered yet. Start by issuing yarn or creating an invoice!'}</p>
           ${!search ? '<button class="btn btn-primary" onclick="openYarnForm()">＋ Issue Yarn</button>' : ''}
         </div>
       `;
@@ -993,21 +1021,22 @@ async function populatePartyNamesDatalist() {
   try {
     const datalist = $('partyNamesDatalist');
     if (!datalist) return;
-    
-    // Fetch parties from yarn stock as well as invoices for comprehensive autocomplete
+
     const [stock, invoices] = await Promise.all([
       apiGet(`${YARN_API}/stock`).catch(() => []),
       apiGet(API).catch(() => []),
     ]);
 
     const nameSet = new Set();
-    if (Array.isArray(stock)) stock.forEach(s => s.partyName && nameSet.add(s.partyName));
-    if (Array.isArray(invoices)) invoices.forEach(i => i.partyName && nameSet.add(i.partyName));
+    if (Array.isArray(stock)) stock.forEach(s => s.partyName && nameSet.add(s.partyName.trim()));
+    if (Array.isArray(invoices)) invoices.forEach(i => i.partyName && nameSet.add(i.partyName.trim()));
 
-    datalist.innerHTML = Array.from(nameSet)
+    const optionsHtml = Array.from(nameSet)
       .sort()
-      .map(name => `<option value="${escapeHtml(name)}"></option>`)
+      .map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`)
       .join('');
+
+    datalist.innerHTML = optionsHtml;
   } catch (err) {
     // silent fallback
   }
