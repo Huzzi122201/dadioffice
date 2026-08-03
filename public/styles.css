@@ -977,7 +977,7 @@ body::before {
 /* ── Floating Action Button (FAB mobile) ────────────────── */
 .fab {
   position: fixed;
-  bottom: 76px;
+  bottom: 84px;
   right: 1.25rem;
   width: 56px;
   height: 56px;
@@ -992,7 +992,7 @@ body::before {
   align-items: center;
   justify-content: center;
   transition: all var(--transition);
-  z-index: 1001;
+  z-index: 14000;
 }
 
 .fab:hover {
@@ -1099,7 +1099,7 @@ body {
   background: #ffffff;
   border-top: 1px solid var(--border);
   box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
-  z-index: 1000;
+  z-index: 15000;
   height: 60px;
 }
 
@@ -1177,6 +1177,8 @@ body {
   cursor: pointer;
   box-shadow: var(--shadow-sm);
   transition: all var(--transition);
+  position: relative;
+  z-index: 1;
 }
 
 .party-card:hover {
