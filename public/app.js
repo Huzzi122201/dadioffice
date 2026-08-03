@@ -53,6 +53,8 @@ let confirmCallback = null;
 let searchTimeout = null;
 let yarnSearchTimeout = null;
 let currentTab = 'costing'; // 'costing' or 'yarn'
+let currentHistoryPartyName = '';
+let currentHistoryPartyNorm = '';
 
 // ── View Routing ───────────────────────────────────────────
 function showView(view) {
@@ -984,26 +986,62 @@ if ($('yarnSearchInput')) {
 }
 
 // ═══════════════════════════════════════════════════════════
-//  YARN STOCK — ISSUE FORM
+//  YARN STOCK — ISSUE FORM & PARTY AUTO-COMPLETE
 // ═══════════════════════════════════════════════════════════
 
-function openYarnForm() {
-  $('yarnFormTitle').textContent = 'Issue Yarn';
+async function populatePartyNamesDatalist() {
+  try {
+    const datalist = $('partyNamesDatalist');
+    if (!datalist) return;
+    
+    // Fetch parties from yarn stock as well as invoices for comprehensive autocomplete
+    const [stock, invoices] = await Promise.all([
+      apiGet(`${YARN_API}/stock`).catch(() => []),
+      apiGet(API).catch(() => []),
+    ]);
+
+    const nameSet = new Set();
+    if (Array.isArray(stock)) stock.forEach(s => s.partyName && nameSet.add(s.partyName));
+    if (Array.isArray(invoices)) invoices.forEach(i => i.partyName && nameSet.add(i.partyName));
+
+    datalist.innerHTML = Array.from(nameSet)
+      .sort()
+      .map(name => `<option value="${escapeHtml(name)}"></option>`)
+      .join('');
+  } catch (err) {
+    // silent fallback
+  }
+}
+
+function openYarnForm(partyNamePreFill = '') {
+  $('yarnFormTitle').textContent = partyNamePreFill ? `Issue Yarn — ${partyNamePreFill}` : 'Issue Yarn';
   $('yarnForm').reset();
   $('yarnDate').value = formatDate(new Date());
+  if (partyNamePreFill) {
+    $('yarnPartyName').value = partyNamePreFill;
+  }
+  populatePartyNamesDatalist();
   showView(viewYarnForm);
 }
 
-$('btnNewYarnIssue').addEventListener('click', openYarnForm);
+$('btnNewYarnIssue').addEventListener('click', () => openYarnForm(''));
 
 $('btnYarnFormBack').addEventListener('click', () => {
-  showView(viewYarnDashboard);
-  loadYarnStock();
+  if (currentHistoryPartyName && currentHistoryPartyNorm) {
+    openYarnHistory(encodeURIComponent(currentHistoryPartyNorm), currentHistoryPartyName);
+  } else {
+    showView(viewYarnDashboard);
+    loadYarnStock();
+  }
 });
 
 $('btnYarnFormCancel').addEventListener('click', () => {
-  showView(viewYarnDashboard);
-  loadYarnStock();
+  if (currentHistoryPartyName && currentHistoryPartyNorm) {
+    openYarnHistory(encodeURIComponent(currentHistoryPartyNorm), currentHistoryPartyName);
+  } else {
+    showView(viewYarnDashboard);
+    loadYarnStock();
+  }
 });
 
 $('yarnForm').addEventListener('submit', async (e) => {
@@ -1036,8 +1074,15 @@ $('yarnForm').addEventListener('submit', async (e) => {
   try {
     await apiPost(YARN_API, data);
     toast('Yarn issued successfully!');
-    showView(viewYarnDashboard);
-    loadYarnStock();
+
+    // If issuing for the active history party, refresh and return to DataGrid
+    const norm = partyName.toLowerCase();
+    if (currentHistoryPartyNorm === norm) {
+      openYarnHistory(encodeURIComponent(currentHistoryPartyNorm), currentHistoryPartyName);
+    } else {
+      showView(viewYarnDashboard);
+      loadYarnStock();
+    }
   } catch (err) {
     toast(err.message, 'error');
   }
@@ -1049,6 +1094,9 @@ $('yarnForm').addEventListener('submit', async (e) => {
 
 async function openYarnHistory(partyNormEncoded, partyDisplayName) {
   const partyNorm = decodeURIComponent(partyNormEncoded);
+  currentHistoryPartyName = partyDisplayName;
+  currentHistoryPartyNorm = partyNorm;
+
   $('yarnHistoryTitle').textContent = `${partyDisplayName} — Yarn DataGrid`;
 
   try {
@@ -1120,9 +1168,17 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
 }
 
 $('btnYarnHistoryBack').addEventListener('click', () => {
+  currentHistoryPartyName = '';
+  currentHistoryPartyNorm = '';
   showView(viewYarnDashboard);
   loadYarnStock();
 });
+
+if ($('btnIssueYarnFromHistory')) {
+  $('btnIssueYarnFromHistory').addEventListener('click', () => {
+    openYarnForm(currentHistoryPartyName);
+  });
+}
 
 // Make yarn functions globally available
 window.openYarnForm = openYarnForm;
@@ -1132,4 +1188,5 @@ window.openYarnHistory = openYarnHistory;
 //  INIT
 // ═══════════════════════════════════════════════════════════
 
+populatePartyNamesDatalist();
 loadInvoices();
