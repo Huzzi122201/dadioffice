@@ -927,7 +927,7 @@ $('tabYarn').addEventListener('click', () => {
 });
 
 // ═══════════════════════════════════════════════════════════
-//  YARN STOCK — DASHBOARD
+//  YARN STOCK — DASHBOARD (Party Names Only)
 // ═══════════════════════════════════════════════════════════
 
 async function loadYarnStock(search = '') {
@@ -945,47 +945,28 @@ async function loadYarnStock(search = '') {
     if (displayList.length === 0) {
       $('yarnStockGrid').innerHTML = `
         <div class="empty-state">
-          <div class="empty-icon">🧶</div>
-          <p>${search ? 'No parties match your search.' : 'No yarn issued yet. Start by issuing yarn to a party!'}</p>
+          <div class="empty-icon">🏢</div>
+          <p>${search ? 'No parties match your search.' : 'No party yarn issued yet. Start by issuing yarn to a party!'}</p>
           ${!search ? '<button class="btn btn-primary" onclick="openYarnForm()">＋ Issue Yarn</button>' : ''}
         </div>
       `;
       return;
     }
 
-    function stockClass(val) {
-      if (val > 0) return 'stock-positive';
-      if (val < 0) return 'stock-negative';
-      return 'stock-zero';
-    }
-
     $('yarnStockGrid').innerHTML = `
-      <table class="yarn-stock-table">
-        <thead>
-          <tr>
-            <th>Party Name</th>
-            <th>Warp Issued</th>
-            <th>Weft Issued</th>
-            <th>Warp Deducted</th>
-            <th>Weft Deducted</th>
-            <th>Warp Stock</th>
-            <th>Weft Stock</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${displayList.map(s => `
-            <tr onclick="openYarnHistory('${encodeURIComponent(s.partyNameNorm)}', '${escapeHtml(s.partyName)}')">
-              <td class="party-name-cell">${escapeHtml(s.partyName)}</td>
-              <td>${fmtInt(s.totalIssuedWarp)}</td>
-              <td>${fmtInt(s.totalIssuedWeft)}</td>
-              <td>${fmtInt(s.totalDeductedWarp)}</td>
-              <td>${fmtInt(s.totalDeductedWeft)}</td>
-              <td class="${stockClass(s.currentWarpStock)}">${fmtInt(s.currentWarpStock)}</td>
-              <td class="${stockClass(s.currentWeftStock)}">${fmtInt(s.currentWeftStock)}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
+      <div class="party-list-container">
+        ${displayList.map(s => `
+          <div class="party-card" onclick="openYarnHistory('${encodeURIComponent(s.partyNameNorm)}', '${escapeHtml(s.partyName)}')">
+            <div class="party-card-info">
+              <span class="party-icon">🏢</span>
+              <span class="party-name-text">${escapeHtml(s.partyName)}</span>
+            </div>
+            <div class="party-card-action">
+              <span class="view-link">View DataGrid ➔</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
     `;
   } catch (err) {
     toast(err.message, 'error');
@@ -1063,17 +1044,16 @@ $('yarnForm').addEventListener('submit', async (e) => {
 });
 
 // ═══════════════════════════════════════════════════════════
-//  YARN STOCK — PARTY HISTORY
+//  YARN STOCK — PARTY DATAGRID VIEW
 // ═══════════════════════════════════════════════════════════
 
 async function openYarnHistory(partyNormEncoded, partyDisplayName) {
   const partyNorm = decodeURIComponent(partyNormEncoded);
-  $('yarnHistoryTitle').textContent = `${partyDisplayName} — Yarn History`;
+  $('yarnHistoryTitle').textContent = `${partyDisplayName} — Yarn DataGrid`;
 
   try {
     const records = await apiGet(`${YARN_API}/history/${encodeURIComponent(partyNorm)}`);
 
-    // Calculate totals
     let totalIssuedW = 0, totalIssuedF = 0, totalDeductedW = 0, totalDeductedF = 0;
     records.forEach(r => {
       if (r.type === 'issue') {
@@ -1087,62 +1067,49 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
 
     const currentW = totalIssuedW - totalDeductedW;
     const currentF = totalIssuedF - totalDeductedF;
+    const currentTotal = currentW + currentF;
 
     $('yarnHistoryContent').innerHTML = `
-      <div class="yarn-summary-card">
-        <div class="yarn-summary-stat">
-          <div class="stat-value">${fmtInt(totalIssuedW)}</div>
-          <div class="stat-label">Warp Issued</div>
-        </div>
-        <div class="yarn-summary-stat">
-          <div class="stat-value">${fmtInt(totalIssuedF)}</div>
-          <div class="stat-label">Weft Issued</div>
-        </div>
-        <div class="yarn-summary-stat">
-          <div class="stat-value">${fmtInt(totalDeductedW)}</div>
-          <div class="stat-label">Warp Deducted</div>
-        </div>
-        <div class="yarn-summary-stat">
-          <div class="stat-value">${fmtInt(totalDeductedF)}</div>
-          <div class="stat-label">Weft Deducted</div>
-        </div>
-        <div class="yarn-summary-stat">
-          <div class="stat-value ${currentW >= 0 ? 'positive' : 'negative'}">${fmtInt(currentW)}</div>
-          <div class="stat-label">Warp In Stock</div>
-        </div>
-        <div class="yarn-summary-stat">
-          <div class="stat-value ${currentF >= 0 ? 'positive' : 'negative'}">${fmtInt(currentF)}</div>
-          <div class="stat-label">Weft In Stock</div>
-        </div>
-      </div>
-
-      <table class="yarn-history-table">
+      <table class="yarn-datagrid-table">
         <thead>
           <tr>
             <th>Date</th>
-            <th>Type</th>
-            <th>Warp</th>
-            <th>Weft</th>
-            <th>Warp Quality</th>
-            <th>Weft Quality</th>
-            <th>Note</th>
+            <th>Quality</th>
+            <th>Warp Bags</th>
+            <th>Weft Bags</th>
+            <th>Total Bags</th>
           </tr>
         </thead>
         <tbody>
-          ${records.map(r => `
-            <tr>
-              <td>${formatDate(r.date)}</td>
-              <td class="${r.type === 'issue' ? 'type-issue' : 'type-deduction'}">
-                ${r.type === 'issue' ? '📥 Issue' : '📤 Deduction'}
-              </td>
-              <td>${r.type === 'issue' ? '+' : '−'}${fmtInt(r.warpBags)}</td>
-              <td>${r.type === 'issue' ? '+' : '−'}${fmtInt(r.weftBags)}</td>
-              <td>${escapeHtml(r.warpQuality || '—')}</td>
-              <td>${escapeHtml(r.weftQuality || '—')}</td>
-              <td>${escapeHtml(r.note || '—')}</td>
-            </tr>
-          `).join('')}
+          ${records.map(r => {
+            const warp = r.warpBags || 0;
+            const weft = r.weftBags || 0;
+            const totalBags = warp + weft;
+            const qParts = [];
+            if (r.warpQuality) qParts.push(`Warp: ${r.warpQuality}`);
+            if (r.weftQuality) qParts.push(`Weft: ${r.weftQuality}`);
+            const qualityStr = qParts.join(' | ') || '—';
+            const isIssue = r.type === 'issue';
+            const sign = isIssue ? '+' : '−';
+            return `
+              <tr class="${isIssue ? 'row-issue' : 'row-deduction'}">
+                <td>${formatDate(r.date)}</td>
+                <td>${escapeHtml(qualityStr)}</td>
+                <td>${sign}${fmtInt(warp)}</td>
+                <td>${sign}${fmtInt(weft)}</td>
+                <td><strong>${sign}${fmtInt(totalBags)}</strong></td>
+              </tr>
+            `;
+          }).join('')}
         </tbody>
+        <tfoot>
+          <tr class="datagrid-summary-row">
+            <td colspan="2"><strong>Net Available Stock</strong></td>
+            <td class="${currentW >= 0 ? 'stock-pos' : 'stock-neg'}"><strong>${fmtInt(currentW)}</strong></td>
+            <td class="${currentF >= 0 ? 'stock-pos' : 'stock-neg'}"><strong>${fmtInt(currentF)}</strong></td>
+            <td class="${currentTotal >= 0 ? 'stock-pos' : 'stock-neg'}"><strong>${fmtInt(currentTotal)}</strong></td>
+          </tr>
+        </tfoot>
       </table>
     `;
 

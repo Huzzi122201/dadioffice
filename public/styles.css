@@ -1149,126 +1149,70 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   YARN STOCK DATAGRID
+   YARN STOCK — PARTY CARDS & DATAGRID
    ═══════════════════════════════════════════════════════════ */
 
 #viewYarnDashboard {
-  max-width: 850px;
+  max-width: 700px;
   margin: 0 auto;
 }
 
-.yarn-stock-table {
-  width: 100%;
-  border-collapse: collapse;
+.party-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.party-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   background: #ffffff;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-  font-size: 0.8125rem;
-}
-
-.yarn-stock-table thead th {
-  background: var(--accent-navy);
-  color: #ffffff;
-  padding: 10px 12px;
-  text-align: left;
-  font-weight: 700;
-  font-size: 0.75rem;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.yarn-stock-table tbody tr {
-  border-bottom: 1px solid var(--border);
+  padding: 16px 20px;
   cursor: pointer;
-  transition: background var(--transition);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition);
 }
 
-.yarn-stock-table tbody tr:hover {
-  background: var(--bg-tertiary);
+.party-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-primary);
+  box-shadow: var(--shadow-md);
+  background: #fafafa;
 }
 
-.yarn-stock-table tbody td {
-  padding: 10px 12px;
-  color: var(--text-primary);
-  vertical-align: middle;
+.party-card-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.yarn-stock-table .party-name-cell {
+.party-icon {
+  font-size: 1.5rem;
+}
+
+.party-name-text {
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--accent-navy);
 }
 
-.yarn-stock-table .stock-positive {
-  color: var(--success);
-  font-weight: 700;
+.party-card-action .view-link {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--accent-primary);
 }
 
-.yarn-stock-table .stock-negative {
-  color: var(--danger);
-  font-weight: 700;
-}
-
-.yarn-stock-table .stock-zero {
-  color: var(--text-muted);
-}
-
-.yarn-stock-table .col-actions {
-  text-align: right;
-  white-space: nowrap;
-}
-
-/* ═══════════════════════════════════════════════════════════
-   YARN HISTORY
-   ═══════════════════════════════════════════════════════════ */
+/* ── DATAGRID TABLE ── */
 
 #viewYarnHistory {
-  max-width: 850px;
+  max-width: 800px;
   margin: 0 auto;
 }
 
-.yarn-summary-card {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px;
-  margin-bottom: 1.5rem;
-}
-
-.yarn-summary-stat {
-  background: #ffffff;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 14px 16px;
-  text-align: center;
-}
-
-.yarn-summary-stat .stat-value {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--accent-navy);
-  line-height: 1.2;
-}
-
-.yarn-summary-stat .stat-value.positive {
-  color: var(--success);
-}
-
-.yarn-summary-stat .stat-value.negative {
-  color: var(--danger);
-}
-
-.yarn-summary-stat .stat-label {
-  font-size: 0.6875rem;
-  color: var(--text-muted);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-top: 4px;
-}
-
-.yarn-history-table {
+.yarn-datagrid-table {
   width: 100%;
   border-collapse: collapse;
   background: #ffffff;
@@ -1276,56 +1220,70 @@ body {
   border-radius: var(--radius-md);
   overflow: hidden;
   box-shadow: var(--shadow-sm);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
 }
 
-.yarn-history-table thead th {
+.yarn-datagrid-table thead th {
   background: var(--accent-navy);
   color: #ffffff;
-  padding: 9px 10px;
+  padding: 12px 14px;
   text-align: left;
   font-weight: 700;
-  font-size: 0.6875rem;
+  font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
 
-.yarn-history-table tbody tr {
+.yarn-datagrid-table tbody tr {
   border-bottom: 1px solid var(--border);
 }
 
-.yarn-history-table tbody td {
-  padding: 8px 10px;
+.yarn-datagrid-table tbody tr.row-issue {
+  background: #ffffff;
+}
+
+.yarn-datagrid-table tbody tr.row-deduction {
+  background: #fff5f5;
+}
+
+.yarn-datagrid-table tbody td {
+  padding: 12px 14px;
   color: var(--text-primary);
 }
 
-.yarn-history-table .type-issue {
+.yarn-datagrid-table tfoot .datagrid-summary-row {
+  background: var(--bg-tertiary);
+  border-top: 2px solid var(--accent-navy);
+}
+
+.yarn-datagrid-table tfoot td {
+  padding: 14px;
+  font-size: 0.95rem;
+}
+
+.stock-pos {
   color: var(--success);
-  font-weight: 700;
 }
 
-.yarn-history-table .type-deduction {
+.stock-neg {
   color: var(--danger);
-  font-weight: 700;
 }
 
-/* ── Yarn Form ─────────────────────────────────────────── */
+/* ── Yarn Form ── */
 #viewYarnForm {
   max-width: 600px;
   margin: 0 auto;
 }
 
 @media (max-width: 600px) {
-  .yarn-stock-table {
-    font-size: 0.75rem;
+  .yarn-datagrid-table {
+    font-size: 0.78125rem;
   }
 
-  .yarn-stock-table thead th,
-  .yarn-stock-table tbody td {
-    padding: 8px 6px;
-  }
-
-  .yarn-summary-card {
-    grid-template-columns: repeat(2, 1fr);
+  .yarn-datagrid-table thead th,
+  .yarn-datagrid-table tbody td,
+  .yarn-datagrid-table tfoot td {
+    padding: 9px 8px;
   }
 }
+
