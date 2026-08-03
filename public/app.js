@@ -1157,9 +1157,11 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
             const weft = r.weftBags || 0;
             const totalBags = warp + weft;
             const qParts = [];
-            if (r.warpQuality) qParts.push(`Warp: ${r.warpQuality}`);
-            if (r.weftQuality) qParts.push(`Weft: ${r.weftQuality}`);
-            const qualityStr = qParts.join(' | ') || '—';
+            if (r.warpQuality && r.warpQuality.trim()) qParts.push(r.warpQuality.trim());
+            if (r.weftQuality && r.weftQuality.trim() && r.weftQuality.trim() !== (r.warpQuality || '').trim()) {
+              qParts.push(r.weftQuality.trim());
+            }
+            const qualityStr = qParts.join(' / ') || '—';
             const isIssue = r.type === 'issue';
             const sign = isIssue ? '+' : '−';
             return `
