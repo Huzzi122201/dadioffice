@@ -1164,7 +1164,10 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
   $('yarnHistoryTitle').textContent = `${partyDisplayName} — Yarn History`;
 
   try {
-    const records = await apiGet(`${YARN_API}/history/${encodeURIComponent(partyNorm)}`);
+    const [records, contracts] = await Promise.all([
+      apiGet(`${YARN_API}/history/${encodeURIComponent(partyNorm)}`),
+      apiGet(`${YARN_API}/contracts/${encodeURIComponent(partyNorm)}`),
+    ]);
 
     let totalIssuedW = 0, totalIssuedF = 0, totalDeductedW = 0, totalDeductedF = 0;
     records.forEach(r => {
@@ -1179,21 +1182,49 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
 
     const currentW = totalIssuedW - totalDeductedW;
     const currentF = totalIssuedF - totalDeductedF;
-    const currentTotal = currentW + currentF;
+
+    // Render Contracts fulfillment cards if contracts exist
+    let contractsHtml = '';
+    if (Array.isArray(contracts) && contracts.length > 0) {
+      contractsHtml = `
+        <div class="contracts-summary-section" style="margin-bottom: 1.25rem;">
+          <h4 style="font-size: 0.8125rem; font-weight: 700; color: var(--accent-navy); text-transform: uppercase; margin-bottom: 0.625rem; letter-spacing: 0.04em;">
+            📋 Contract Fulfillment Status (${contracts.length})
+          </h4>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;">
+            ${contracts.map(c => `
+              <div class="contract-card" style="background: #ffffff; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px; box-shadow: var(--shadow-sm); border-left: 4px solid ${c.isFulfilled ? 'var(--success)' : 'var(--accent-primary)'};">
+                <div style="font-weight: 700; font-size: 0.9rem; color: var(--accent-navy); margin-bottom: 4px;">
+                  ${escapeHtml(c.title)}
+                </div>
+                <div style="font-size: 0.78125rem; color: var(--text-muted); margin-bottom: 6px;">
+                  Required: <strong>${c.requiredWarp}W / ${c.requiredWeft}F Bags</strong> | Issued: <strong>${c.issuedWarp}W / ${c.issuedWeft}F</strong>
+                </div>
+                <div style="font-size: 0.8125rem; font-weight: 700; color: ${c.isFulfilled ? 'var(--success)' : 'var(--warning)'};">
+                  ${c.isFulfilled ? '✅ Contract Fulfilled (0 Bags Needed)' : `⏳ Still Needed: ${c.remWarpNeeded} Warp / ${c.remWeftNeeded} Weft`}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
 
     $('yarnHistoryContent').innerHTML = `
+      ${contractsHtml}
+
       <div class="yarn-table-wrapper">
         <table class="yarn-datagrid-table">
           <thead>
             <tr>
               <th>Date</th>
               <th>Quality</th>
-              <th>Contract / Ref</th>
+              <th>Target Contract / Ref</th>
               <th>Warp Bags</th>
               <th>Weft Bags</th>
+              <th>Contract Rem. Needed</th>
               <th>Rem. Warp</th>
               <th>Rem. Weft</th>
-              <th>Rem. Total</th>
             </tr>
           </thead>
           <tbody>
@@ -1210,8 +1241,12 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
               const sign = isIssue ? '+' : '−';
               const remW = r.remainingWarp ?? 0;
               const remF = r.remainingWeft ?? 0;
-              const remT = r.remainingTotal ?? (remW + remF);
-              const refLabel = r.contractInfo || r.note || (isIssue ? 'General Stock' : 'Contract Deduction');
+              const refLabel = r.contractInfo || r.note || (isIssue ? 'General Stock' : 'Contract Requirement');
+
+              let contractRemText = '—';
+              if (r.contractRemWarp !== null && r.contractRemWarp !== undefined) {
+                contractRemText = `${r.contractRemWarp}W / ${r.contractRemWeft}F Needed`;
+              }
 
               return `
                 <tr class="${isIssue ? 'row-issue' : 'row-deduction'}">
@@ -1220,19 +1255,18 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
                   <td>${escapeHtml(refLabel)}</td>
                   <td class="${isIssue ? 'stock-pos' : 'stock-neg'}">${sign}${fmtInt(warp)}</td>
                   <td class="${isIssue ? 'stock-pos' : 'stock-neg'}">${sign}${fmtInt(weft)}</td>
+                  <td style="font-weight: 600; color: ${r.contractRemWarp === 0 && r.contractRemWeft === 0 ? 'var(--success)' : 'var(--text-secondary)'};">${contractRemText}</td>
                   <td class="${remW >= 0 ? '' : 'stock-neg'}"><strong>${fmtInt(remW)}</strong></td>
                   <td class="${remF >= 0 ? '' : 'stock-neg'}"><strong>${fmtInt(remF)}</strong></td>
-                  <td class="${remT >= 0 ? 'stock-pos' : 'stock-neg'}"><strong>${fmtInt(remT)}</strong></td>
                 </tr>
               `;
             }).join('')}
           </tbody>
           <tfoot>
             <tr class="datagrid-summary-row">
-              <td colspan="5"><strong>Current Available Balance</strong></td>
+              <td colspan="6"><strong>Current Available Balance</strong></td>
               <td class="${currentW >= 0 ? 'stock-pos' : 'stock-neg'}"><strong>${fmtInt(currentW)}</strong></td>
               <td class="${currentF >= 0 ? 'stock-pos' : 'stock-neg'}"><strong>${fmtInt(currentF)}</strong></td>
-              <td class="${currentTotal >= 0 ? 'stock-pos' : 'stock-neg'}"><strong>${fmtInt(currentTotal)}</strong></td>
             </tr>
           </tfoot>
         </table>
