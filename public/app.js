@@ -992,7 +992,7 @@ async function loadYarnStock(search = '') {
               <span class="party-name-text">${escapeHtml(s.partyName)}</span>
             </div>
             <div class="party-card-action">
-              <span class="view-link">View DataGrid ➔</span>
+              <span class="view-link">View Details ➔</span>
             </div>
           </div>
         `).join('')}
@@ -1104,7 +1104,6 @@ $('yarnForm').addEventListener('submit', async (e) => {
     await apiPost(YARN_API, data);
     toast('Yarn issued successfully!');
 
-    // If issuing for the active history party, refresh and return to DataGrid
     const norm = partyName.toLowerCase();
     if (currentHistoryPartyNorm === norm) {
       openYarnHistory(encodeURIComponent(currentHistoryPartyNorm), currentHistoryPartyName);
@@ -1118,7 +1117,7 @@ $('yarnForm').addEventListener('submit', async (e) => {
 });
 
 // ═══════════════════════════════════════════════════════════
-//  YARN STOCK — PARTY DATAGRID VIEW
+//  YARN STOCK — PARTY HISTORY VIEW
 // ═══════════════════════════════════════════════════════════
 
 async function openYarnHistory(partyNormEncoded, partyDisplayName) {
@@ -1126,7 +1125,7 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
   currentHistoryPartyName = partyDisplayName;
   currentHistoryPartyNorm = partyNorm;
 
-  $('yarnHistoryTitle').textContent = `${partyDisplayName} — Yarn DataGrid`;
+  $('yarnHistoryTitle').textContent = `${partyDisplayName} — Yarn History`;
 
   try {
     const records = await apiGet(`${YARN_API}/history/${encodeURIComponent(partyNorm)}`);
