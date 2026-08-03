@@ -264,7 +264,99 @@
       </div>
     </section>
 
+    <!-- ─── Yarn Stock Dashboard ─── -->
+    <section class="view" id="viewYarnDashboard">
+      <div class="dashboard-header">
+        <h2 class="dashboard-title">🧶 Yarn Stock <span class="dashboard-count" id="yarnPartyCount">(0)</span></h2>
+        <button class="btn btn-primary" id="btnNewYarnIssue">＋ Issue Yarn</button>
+      </div>
+
+      <div class="search-section">
+        <div class="search-wrapper">
+          <span class="search-icon">🔍</span>
+          <input type="text" class="search-input" id="yarnSearchInput" placeholder="Search by party name..." autocomplete="off" />
+        </div>
+      </div>
+
+      <div id="yarnStockGrid">
+        <!-- populated by JS -->
+      </div>
+    </section>
+
+    <!-- ─── Yarn Issue Form ─── -->
+    <section class="view" id="viewYarnForm">
+      <div class="form-header">
+        <button class="btn-back" id="btnYarnFormBack">←</button>
+        <h2 class="form-title" id="yarnFormTitle">Issue Yarn</h2>
+      </div>
+
+      <form id="yarnForm" class="card" autocomplete="off">
+        <div class="form-section">
+          <h3 class="section-title">📋 Yarn Issuance Details</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="yarnPartyName">Party Name *</label>
+              <input class="form-input" type="text" id="yarnPartyName" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="yarnDate">Date</label>
+              <input class="form-input" type="text" id="yarnDate" placeholder="1 Aug 2026" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="yarnWarpBags">Warp Bags</label>
+              <input class="form-input" type="number" id="yarnWarpBags" min="0" step="1" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="yarnWarpQuality">Warp Quality</label>
+              <input class="form-input" type="text" id="yarnWarpQuality" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="yarnWeftBags">Weft Bags</label>
+              <input class="form-input" type="number" id="yarnWeftBags" min="0" step="1" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="yarnWeftQuality">Weft Quality</label>
+              <input class="form-input" type="text" id="yarnWeftQuality" />
+            </div>
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label class="form-label" for="yarnNote">Note (optional)</label>
+              <input class="form-input" type="text" id="yarnNote" />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary btn-lg">💾 Save Issuance</button>
+          <button type="button" class="btn btn-secondary btn-lg" id="btnYarnFormCancel">Cancel</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ─── Yarn Party History ─── -->
+    <section class="view" id="viewYarnHistory">
+      <div class="form-header">
+        <button class="btn-back" id="btnYarnHistoryBack">←</button>
+        <h2 class="form-title" id="yarnHistoryTitle">Party Yarn History</h2>
+      </div>
+
+      <div id="yarnHistoryContent">
+        <!-- populated by JS -->
+      </div>
+    </section>
+
   </main>
+
+  <!-- ═══ Bottom Tab Navigation ═══ -->
+  <nav class="bottom-nav" id="bottomNav">
+    <button class="bottom-nav-tab active" id="tabCosting" data-tab="costing">
+      <span class="tab-icon">📊</span>
+      <span class="tab-label">Costing</span>
+    </button>
+    <button class="bottom-nav-tab" id="tabYarn" data-tab="yarn">
+      <span class="tab-icon">🧶</span>
+      <span class="tab-label">Yarn Stock</span>
+    </button>
+  </nav>
 
   <!-- ═══ Confirm Modal ═══ -->
   <div class="modal-overlay hidden" id="confirmModal">
@@ -287,3 +379,4 @@
   <script src="/app.js"></script>
 </body>
 </html>
+

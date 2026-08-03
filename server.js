@@ -5,6 +5,7 @@ const cors = require('cors');
 const path = require('path');
 
 const invoiceRoutes = require('./routes/invoices');
+const yarnRoutes = require('./routes/yarn');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -36,6 +37,7 @@ app.use(async (req, res, next) => {
 
 // ── API Routes ─────────────────────────────────────────────
 app.use('/api/invoices', invoiceRoutes);
+app.use('/api/yarn', yarnRoutes);
 
 // ── SPA Fallback ───────────────────────────────────────────
 app.get('*', (req, res) => {

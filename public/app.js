@@ -9,6 +9,7 @@ if ('serviceWorker' in navigator) {
 
 // ── Constants ──────────────────────────────────────────────
 const API = '/api/invoices';
+const YARN_API = '/api/yarn';
 
 // ── DOM References ─────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
@@ -16,7 +17,10 @@ const $ = (id) => document.getElementById(id);
 const viewDashboard = $('viewDashboard');
 const viewForm = $('viewForm');
 const viewDetail = $('viewDetail');
-const views = [viewDashboard, viewForm, viewDetail];
+const viewYarnDashboard = $('viewYarnDashboard');
+const viewYarnForm = $('viewYarnForm');
+const viewYarnHistory = $('viewYarnHistory');
+const views = [viewDashboard, viewForm, viewDetail, viewYarnDashboard, viewYarnForm, viewYarnHistory];
 
 const invoiceList = $('invoiceList');
 const invoiceCount = $('invoiceCount');
@@ -47,6 +51,8 @@ const allFields = [
 let currentInvoiceId = null;
 let confirmCallback = null;
 let searchTimeout = null;
+let yarnSearchTimeout = null;
+let currentTab = 'costing'; // 'costing' or 'yarn'
 
 // ── View Routing ───────────────────────────────────────────
 function showView(view) {
@@ -57,6 +63,17 @@ function showView(view) {
   // Show/hide FAB
   const fab = $('fabNew');
   fab.style.display = view === viewDashboard ? 'flex' : 'none';
+
+  // Update bottom nav active state
+  const tabBtns = document.querySelectorAll('.bottom-nav-tab');
+  if (view === viewYarnDashboard || view === viewYarnForm || view === viewYarnHistory) {
+    currentTab = 'yarn';
+  } else {
+    currentTab = 'costing';
+  }
+  tabBtns.forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === currentTab);
+  });
 }
 
 // ── Calculator (client-side replica) ───────────────────────
@@ -139,6 +156,16 @@ function fmt(n, decimals = 2) {
 function fmtInt(n) {
   if (n == null || isNaN(n)) return '—';
   return Math.round(n).toLocaleString();
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 // ── Toast Notifications ────────────────────────────────────
@@ -884,6 +911,255 @@ window.openNewForm = openNewForm;
 window.openEditForm = openEditForm;
 window.openDetail = openDetail;
 window.deleteInvoice = deleteInvoice;
+
+// ═══════════════════════════════════════════════════════════
+//  BOTTOM TAB NAVIGATION
+// ═══════════════════════════════════════════════════════════
+
+$('tabCosting').addEventListener('click', () => {
+  showView(viewDashboard);
+  loadInvoices();
+});
+
+$('tabYarn').addEventListener('click', () => {
+  showView(viewYarnDashboard);
+  loadYarnStock();
+});
+
+// ═══════════════════════════════════════════════════════════
+//  YARN STOCK — DASHBOARD
+// ═══════════════════════════════════════════════════════════
+
+async function loadYarnStock(search = '') {
+  try {
+    const stock = await apiGet(`${YARN_API}/stock`);
+
+    let displayList = stock;
+    if (search) {
+      const term = search.toLowerCase();
+      displayList = stock.filter(s => s.partyName.toLowerCase().includes(term));
+    }
+
+    $('yarnPartyCount').textContent = `(${displayList.length})`;
+
+    if (displayList.length === 0) {
+      $('yarnStockGrid').innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🧶</div>
+          <p>${search ? 'No parties match your search.' : 'No yarn issued yet. Start by issuing yarn to a party!'}</p>
+          ${!search ? '<button class="btn btn-primary" onclick="openYarnForm()">＋ Issue Yarn</button>' : ''}
+        </div>
+      `;
+      return;
+    }
+
+    function stockClass(val) {
+      if (val > 0) return 'stock-positive';
+      if (val < 0) return 'stock-negative';
+      return 'stock-zero';
+    }
+
+    $('yarnStockGrid').innerHTML = `
+      <table class="yarn-stock-table">
+        <thead>
+          <tr>
+            <th>Party Name</th>
+            <th>Warp Issued</th>
+            <th>Weft Issued</th>
+            <th>Warp Deducted</th>
+            <th>Weft Deducted</th>
+            <th>Warp Stock</th>
+            <th>Weft Stock</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${displayList.map(s => `
+            <tr onclick="openYarnHistory('${encodeURIComponent(s.partyNameNorm)}', '${escapeHtml(s.partyName)}')">
+              <td class="party-name-cell">${escapeHtml(s.partyName)}</td>
+              <td>${fmtInt(s.totalIssuedWarp)}</td>
+              <td>${fmtInt(s.totalIssuedWeft)}</td>
+              <td>${fmtInt(s.totalDeductedWarp)}</td>
+              <td>${fmtInt(s.totalDeductedWeft)}</td>
+              <td class="${stockClass(s.currentWarpStock)}">${fmtInt(s.currentWarpStock)}</td>
+              <td class="${stockClass(s.currentWeftStock)}">${fmtInt(s.currentWeftStock)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+// Yarn search listener
+if ($('yarnSearchInput')) {
+  $('yarnSearchInput').addEventListener('input', () => {
+    clearTimeout(yarnSearchTimeout);
+    yarnSearchTimeout = setTimeout(() => {
+      loadYarnStock($('yarnSearchInput').value.trim());
+    }, 300);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  YARN STOCK — ISSUE FORM
+// ═══════════════════════════════════════════════════════════
+
+function openYarnForm() {
+  $('yarnFormTitle').textContent = 'Issue Yarn';
+  $('yarnForm').reset();
+  $('yarnDate').value = formatDate(new Date());
+  showView(viewYarnForm);
+}
+
+$('btnNewYarnIssue').addEventListener('click', openYarnForm);
+
+$('btnYarnFormBack').addEventListener('click', () => {
+  showView(viewYarnDashboard);
+  loadYarnStock();
+});
+
+$('btnYarnFormCancel').addEventListener('click', () => {
+  showView(viewYarnDashboard);
+  loadYarnStock();
+});
+
+$('yarnForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const partyName = $('yarnPartyName').value.trim();
+  if (!partyName) {
+    toast('Party name is required', 'error');
+    return;
+  }
+
+  const warpBags = parseInt($('yarnWarpBags').value) || 0;
+  const weftBags = parseInt($('yarnWeftBags').value) || 0;
+
+  if (warpBags <= 0 && weftBags <= 0) {
+    toast('Enter at least warp or weft bags', 'error');
+    return;
+  }
+
+  const data = {
+    partyName,
+    date: $('yarnDate').value || formatDate(new Date()),
+    warpBags,
+    weftBags,
+    warpQuality: $('yarnWarpQuality').value.trim(),
+    weftQuality: $('yarnWeftQuality').value.trim(),
+    note: $('yarnNote').value.trim(),
+  };
+
+  try {
+    await apiPost(YARN_API, data);
+    toast('Yarn issued successfully!');
+    showView(viewYarnDashboard);
+    loadYarnStock();
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+//  YARN STOCK — PARTY HISTORY
+// ═══════════════════════════════════════════════════════════
+
+async function openYarnHistory(partyNormEncoded, partyDisplayName) {
+  const partyNorm = decodeURIComponent(partyNormEncoded);
+  $('yarnHistoryTitle').textContent = `${partyDisplayName} — Yarn History`;
+
+  try {
+    const records = await apiGet(`${YARN_API}/history/${encodeURIComponent(partyNorm)}`);
+
+    // Calculate totals
+    let totalIssuedW = 0, totalIssuedF = 0, totalDeductedW = 0, totalDeductedF = 0;
+    records.forEach(r => {
+      if (r.type === 'issue') {
+        totalIssuedW += r.warpBags || 0;
+        totalIssuedF += r.weftBags || 0;
+      } else {
+        totalDeductedW += r.warpBags || 0;
+        totalDeductedF += r.weftBags || 0;
+      }
+    });
+
+    const currentW = totalIssuedW - totalDeductedW;
+    const currentF = totalIssuedF - totalDeductedF;
+
+    $('yarnHistoryContent').innerHTML = `
+      <div class="yarn-summary-card">
+        <div class="yarn-summary-stat">
+          <div class="stat-value">${fmtInt(totalIssuedW)}</div>
+          <div class="stat-label">Warp Issued</div>
+        </div>
+        <div class="yarn-summary-stat">
+          <div class="stat-value">${fmtInt(totalIssuedF)}</div>
+          <div class="stat-label">Weft Issued</div>
+        </div>
+        <div class="yarn-summary-stat">
+          <div class="stat-value">${fmtInt(totalDeductedW)}</div>
+          <div class="stat-label">Warp Deducted</div>
+        </div>
+        <div class="yarn-summary-stat">
+          <div class="stat-value">${fmtInt(totalDeductedF)}</div>
+          <div class="stat-label">Weft Deducted</div>
+        </div>
+        <div class="yarn-summary-stat">
+          <div class="stat-value ${currentW >= 0 ? 'positive' : 'negative'}">${fmtInt(currentW)}</div>
+          <div class="stat-label">Warp In Stock</div>
+        </div>
+        <div class="yarn-summary-stat">
+          <div class="stat-value ${currentF >= 0 ? 'positive' : 'negative'}">${fmtInt(currentF)}</div>
+          <div class="stat-label">Weft In Stock</div>
+        </div>
+      </div>
+
+      <table class="yarn-history-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Warp</th>
+            <th>Weft</th>
+            <th>Warp Quality</th>
+            <th>Weft Quality</th>
+            <th>Note</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${records.map(r => `
+            <tr>
+              <td>${formatDate(r.date)}</td>
+              <td class="${r.type === 'issue' ? 'type-issue' : 'type-deduction'}">
+                ${r.type === 'issue' ? '📥 Issue' : '📤 Deduction'}
+              </td>
+              <td>${r.type === 'issue' ? '+' : '−'}${fmtInt(r.warpBags)}</td>
+              <td>${r.type === 'issue' ? '+' : '−'}${fmtInt(r.weftBags)}</td>
+              <td>${escapeHtml(r.warpQuality || '—')}</td>
+              <td>${escapeHtml(r.weftQuality || '—')}</td>
+              <td>${escapeHtml(r.note || '—')}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+
+    showView(viewYarnHistory);
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+$('btnYarnHistoryBack').addEventListener('click', () => {
+  showView(viewYarnDashboard);
+  loadYarnStock();
+});
+
+// Make yarn functions globally available
+window.openYarnForm = openYarnForm;
+window.openYarnHistory = openYarnHistory;
 
 // ═══════════════════════════════════════════════════════════
 //  INIT

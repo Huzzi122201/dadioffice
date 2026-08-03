@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Invoice = require('../models/Invoice');
+const YarnIssuance = require('../models/YarnIssuance');
 const { calculate } = require('../utils/calculator');
 
 // ── GET /api/invoices ── List all (with optional search) ──
@@ -73,6 +74,21 @@ router.post('/', async (req, res) => {
     });
 
     await invoice.save();
+
+    // Auto-deduct yarn bags from party stock
+    if (calculated.yarnBagsWarp > 0 || calculated.yarnBagsWeft > 0) {
+      const deduction = new YarnIssuance({
+        partyName: partyName.trim(),
+        date: date || new Date(),
+        warpBags: calculated.yarnBagsWarp || 0,
+        weftBags: calculated.yarnBagsWeft || 0,
+        type: 'deduction',
+        refInvoiceId: invoice._id,
+        note: `Auto-deducted from contract ${invoice._id}`,
+      });
+      await deduction.save();
+    }
+
     res.status(201).json(invoice);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -119,6 +135,10 @@ router.delete('/:id', async (req, res) => {
   try {
     const invoice = await Invoice.findByIdAndDelete(req.params.id);
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+
+    // Restore yarn stock by removing the deduction record linked to this invoice
+    await YarnIssuance.deleteMany({ refInvoiceId: invoice._id, type: 'deduction' });
+
     res.json({ message: 'Invoice deleted' });
   } catch (err) {
     res.status(500).json({ error: err.message });
