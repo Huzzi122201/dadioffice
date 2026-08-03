@@ -1180,58 +1180,39 @@ body {
   color: var(--accent-primary);
 }
 
-/* ── DATAGRID TABLE ── */
+/* ── HISTORY TABLE ── */
 
 #viewYarnHistory {
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
 }
 
-.yarn-history-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 1.25rem;
-  flex-wrap: wrap;
-}
-
-.yarn-history-header .header-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1;
-  min-width: 200px;
-}
-
-.yarn-history-header .form-title {
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: var(--accent-navy);
-  margin: 0;
-  word-break: break-word;
+.yarn-table-wrapper {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: #ffffff;
+  box-shadow: var(--shadow-sm);
 }
 
 .yarn-datagrid-table {
   width: 100%;
   border-collapse: collapse;
   background: #ffffff;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
+  min-width: 600px;
 }
 
 .yarn-datagrid-table thead th {
   background: var(--accent-navy);
   color: #ffffff;
-  padding: 12px 14px;
+  padding: 10px 12px;
   text-align: left;
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+  white-space: nowrap;
 }
 
 .yarn-datagrid-table tbody tr {
@@ -1247,8 +1228,9 @@ body {
 }
 
 .yarn-datagrid-table tbody td {
-  padding: 12px 14px;
+  padding: 10px 12px;
   color: var(--text-primary);
+  white-space: nowrap;
 }
 
 .yarn-datagrid-table tfoot .datagrid-summary-row {
@@ -1257,8 +1239,9 @@ body {
 }
 
 .yarn-datagrid-table tfoot td {
-  padding: 14px;
-  font-size: 0.95rem;
+  padding: 12px;
+  font-size: 0.875rem;
+  white-space: nowrap;
 }
 
 .stock-pos {
@@ -1277,13 +1260,13 @@ body {
 
 @media (max-width: 600px) {
   .yarn-datagrid-table {
-    font-size: 0.78125rem;
+    font-size: 0.75rem;
   }
 
   .yarn-datagrid-table thead th,
   .yarn-datagrid-table tbody td,
   .yarn-datagrid-table tfoot td {
-    padding: 9px 8px;
+    padding: 8px 6px;
   }
 }
 

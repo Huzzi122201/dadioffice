@@ -77,10 +77,36 @@ router.get('/stock', async (req, res) => {
 router.get('/history/:partyNorm', async (req, res) => {
   try {
     const partyNorm = req.params.partyNorm.toLowerCase();
-    const records = await YarnIssuance.find({ partyNameNorm: partyNorm })
-      .sort({ date: -1 })
+    // Fetch in chronological order (oldest first) to calculate line-by-line running stock balance
+    const rawRecords = await YarnIssuance.find({ partyNameNorm: partyNorm })
+      .sort({ date: 1, createdAt: 1 })
       .lean();
-    res.json(records);
+
+    let remWarp = 0;
+    let remWeft = 0;
+
+    const recordsWithBalance = rawRecords.map(r => {
+      const wBags = r.warpBags || 0;
+      const fBags = r.weftBags || 0;
+
+      if (r.type === 'issue') {
+        remWarp += wBags;
+        remWeft += fBags;
+      } else {
+        remWarp -= wBags;
+        remWeft -= fBags;
+      }
+
+      return {
+        ...r,
+        remainingWarp: remWarp,
+        remainingWeft: remWeft,
+        remainingTotal: remWarp + remWeft,
+      };
+    });
+
+    // Return in reverse order (newest first) for presentation
+    res.json(recordsWithBalance.reverse());
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

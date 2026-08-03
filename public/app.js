@@ -1141,49 +1141,58 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
     const currentTotal = currentW + currentF;
 
     $('yarnHistoryContent').innerHTML = `
-      <table class="yarn-datagrid-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Quality</th>
-            <th>Warp Bags</th>
-            <th>Weft Bags</th>
-            <th>Total Bags</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${records.map(r => {
-            const warp = r.warpBags || 0;
-            const weft = r.weftBags || 0;
-            const totalBags = warp + weft;
-            const qParts = [];
-            if (r.warpQuality && r.warpQuality.trim()) qParts.push(r.warpQuality.trim());
-            if (r.weftQuality && r.weftQuality.trim() && r.weftQuality.trim() !== (r.warpQuality || '').trim()) {
-              qParts.push(r.weftQuality.trim());
-            }
-            const qualityStr = qParts.join(' / ') || '—';
-            const isIssue = r.type === 'issue';
-            const sign = isIssue ? '+' : '−';
-            return `
-              <tr class="${isIssue ? 'row-issue' : 'row-deduction'}">
-                <td>${formatDate(r.date)}</td>
-                <td>${escapeHtml(qualityStr)}</td>
-                <td>${sign}${fmtInt(warp)}</td>
-                <td>${sign}${fmtInt(weft)}</td>
-                <td><strong>${sign}${fmtInt(totalBags)}</strong></td>
-              </tr>
-            `;
-          }).join('')}
-        </tbody>
-        <tfoot>
-          <tr class="datagrid-summary-row">
-            <td colspan="2"><strong>Net Available Stock</strong></td>
-            <td class="${currentW >= 0 ? 'stock-pos' : 'stock-neg'}"><strong>${fmtInt(currentW)}</strong></td>
-            <td class="${currentF >= 0 ? 'stock-pos' : 'stock-neg'}"><strong>${fmtInt(currentF)}</strong></td>
-            <td class="${currentTotal >= 0 ? 'stock-pos' : 'stock-neg'}"><strong>${fmtInt(currentTotal)}</strong></td>
-          </tr>
-        </tfoot>
-      </table>
+      <div class="yarn-table-wrapper">
+        <table class="yarn-datagrid-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Quality</th>
+              <th>Warp Bags</th>
+              <th>Weft Bags</th>
+              <th>Rem. Warp</th>
+              <th>Rem. Weft</th>
+              <th>Rem. Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${records.map(r => {
+              const warp = r.warpBags || 0;
+              const weft = r.weftBags || 0;
+              const qParts = [];
+              if (r.warpQuality && r.warpQuality.trim()) qParts.push(r.warpQuality.trim());
+              if (r.weftQuality && r.weftQuality.trim() && r.weftQuality.trim() !== (r.warpQuality || '').trim()) {
+                qParts.push(r.weftQuality.trim());
+              }
+              const qualityStr = qParts.join(' / ') || '—';
+              const isIssue = r.type === 'issue';
+              const sign = isIssue ? '+' : '−';
+              const remW = r.remainingWarp ?? 0;
+              const remF = r.remainingWeft ?? 0;
+              const remT = r.remainingTotal ?? (remW + remF);
+
+              return `
+                <tr class="${isIssue ? 'row-issue' : 'row-deduction'}">
+                  <td>${formatDate(r.date)}</td>
+                  <td>${escapeHtml(qualityStr)}</td>
+                  <td class="${isIssue ? 'stock-pos' : 'stock-neg'}">${sign}${fmtInt(warp)}</td>
+                  <td class="${isIssue ? 'stock-pos' : 'stock-neg'}">${sign}${fmtInt(weft)}</td>
+                  <td class="${remW >= 0 ? '' : 'stock-neg'}"><strong>${fmtInt(remW)}</strong></td>
+                  <td class="${remF >= 0 ? '' : 'stock-neg'}"><strong>${fmtInt(remF)}</strong></td>
+                  <td class="${remT >= 0 ? 'stock-pos' : 'stock-neg'}"><strong>${fmtInt(remT)}</strong></td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+          <tfoot>
+            <tr class="datagrid-summary-row">
+              <td colspan="4"><strong>Current Available Balance</strong></td>
+              <td class="${currentW >= 0 ? 'stock-pos' : 'stock-neg'}"><strong>${fmtInt(currentW)}</strong></td>
+              <td class="${currentF >= 0 ? 'stock-pos' : 'stock-neg'}"><strong>${fmtInt(currentF)}</strong></td>
+              <td class="${currentTotal >= 0 ? 'stock-pos' : 'stock-neg'}"><strong>${fmtInt(currentTotal)}</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
     `;
 
     showView(viewYarnHistory);
