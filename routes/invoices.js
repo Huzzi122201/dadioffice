@@ -77,6 +77,7 @@ router.post('/', async (req, res) => {
 
     // Auto-deduct yarn bags from party stock
     if (calculated.yarnBagsWarp > 0 || calculated.yarnBagsWeft > 0) {
+      const contractLabel = `${fabricType || 'Contract'} — Qty: ${quantity || 0}`;
       const deduction = new YarnIssuance({
         partyName: partyName.trim(),
         date: date || new Date(),
@@ -84,7 +85,9 @@ router.post('/', async (req, res) => {
         weftBags: calculated.yarnBagsWeft || 0,
         type: 'deduction',
         refInvoiceId: invoice._id,
-        note: `Auto-deducted from contract ${invoice._id}`,
+        contractId: invoice._id,
+        contractInfo: contractLabel,
+        note: `Contract Deduction (${contractLabel})`,
       });
       await deduction.save();
     }

@@ -1037,12 +1037,46 @@ async function populatePartyNamesDatalist() {
   }
 }
 
+async function loadPartyContracts(partyName) {
+  const select = $('yarnContractSelect');
+  if (!select) return;
+  select.innerHTML = '<option value="">General Stock (No specific contract)</option>';
+  if (!partyName || !partyName.trim()) return;
+
+  try {
+    const partyNorm = partyName.trim().toLowerCase();
+    const contracts = await apiGet(`${YARN_API}/contracts/${encodeURIComponent(partyNorm)}`);
+    if (Array.isArray(contracts) && contracts.length > 0) {
+      contracts.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c._id;
+        opt.textContent = c.label;
+        select.appendChild(opt);
+      });
+    }
+  } catch (e) {
+    // silent fallback
+  }
+}
+
+if ($('yarnPartyName')) {
+  $('yarnPartyName').addEventListener('input', () => {
+    loadPartyContracts($('yarnPartyName').value.trim());
+  });
+  $('yarnPartyName').addEventListener('change', () => {
+    loadPartyContracts($('yarnPartyName').value.trim());
+  });
+}
+
 function openYarnForm(partyNamePreFill = '') {
   $('yarnFormTitle').textContent = partyNamePreFill ? `Issue Yarn — ${partyNamePreFill}` : 'Issue Yarn';
   $('yarnForm').reset();
   $('yarnDate').value = formatDate(new Date());
   if (partyNamePreFill) {
     $('yarnPartyName').value = partyNamePreFill;
+    loadPartyContracts(partyNamePreFill);
+  } else {
+    loadPartyContracts('');
   }
   populatePartyNamesDatalist();
   showView(viewYarnForm);
@@ -1085,6 +1119,11 @@ $('yarnForm').addEventListener('submit', async (e) => {
     return;
   }
 
+  const contractSelect = $('yarnContractSelect');
+  const selectedOpt = contractSelect ? contractSelect.options[contractSelect.selectedIndex] : null;
+  const contractId = contractSelect ? contractSelect.value : null;
+  const contractInfo = (selectedOpt && selectedOpt.value) ? selectedOpt.textContent : '';
+
   const data = {
     partyName,
     date: $('yarnDate').value || formatDate(new Date()),
@@ -1092,6 +1131,8 @@ $('yarnForm').addEventListener('submit', async (e) => {
     weftBags,
     warpQuality: $('yarnWarpQuality').value.trim(),
     weftQuality: $('yarnWeftQuality').value.trim(),
+    contractId: contractId || null,
+    contractInfo: contractInfo || '',
     note: $('yarnNote').value.trim(),
   };
 
@@ -1147,6 +1188,7 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
             <tr>
               <th>Date</th>
               <th>Quality</th>
+              <th>Contract / Ref</th>
               <th>Warp Bags</th>
               <th>Weft Bags</th>
               <th>Rem. Warp</th>
@@ -1169,11 +1211,13 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
               const remW = r.remainingWarp ?? 0;
               const remF = r.remainingWeft ?? 0;
               const remT = r.remainingTotal ?? (remW + remF);
+              const refLabel = r.contractInfo || r.note || (isIssue ? 'General Stock' : 'Contract Deduction');
 
               return `
                 <tr class="${isIssue ? 'row-issue' : 'row-deduction'}">
                   <td>${formatDate(r.date)}</td>
                   <td>${escapeHtml(qualityStr)}</td>
+                  <td>${escapeHtml(refLabel)}</td>
                   <td class="${isIssue ? 'stock-pos' : 'stock-neg'}">${sign}${fmtInt(warp)}</td>
                   <td class="${isIssue ? 'stock-pos' : 'stock-neg'}">${sign}${fmtInt(weft)}</td>
                   <td class="${remW >= 0 ? '' : 'stock-neg'}"><strong>${fmtInt(remW)}</strong></td>
@@ -1185,7 +1229,7 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
           </tbody>
           <tfoot>
             <tr class="datagrid-summary-row">
-              <td colspan="4"><strong>Current Available Balance</strong></td>
+              <td colspan="5"><strong>Current Available Balance</strong></td>
               <td class="${currentW >= 0 ? 'stock-pos' : 'stock-neg'}"><strong>${fmtInt(currentW)}</strong></td>
               <td class="${currentF >= 0 ? 'stock-pos' : 'stock-neg'}"><strong>${fmtInt(currentF)}</strong></td>
               <td class="${currentTotal >= 0 ? 'stock-pos' : 'stock-neg'}"><strong>${fmtInt(currentTotal)}</strong></td>

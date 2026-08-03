@@ -49,12 +49,22 @@ const yarnIssuanceSchema = new mongoose.Schema(
       default: 'issue',
     },
 
-    // ── Reference ──────────────────────────────────────
-    // Links deduction records back to the invoice that triggered them
+    // ── Reference & Contract Link ──────────────────────
+    // Links deduction or manual issuance to a specific contract/invoice
     refInvoiceId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Invoice',
       default: null,
+    },
+    contractId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Invoice',
+      default: null,
+    },
+    contractInfo: {
+      type: String,
+      trim: true,
+      default: '',
     },
 
     // ── Optional Note ──────────────────────────────────

@@ -112,10 +112,38 @@ router.get('/history/:partyNorm', async (req, res) => {
   }
 });
 
+// ── GET /api/yarn/contracts/:partyNorm ── List contracts for a party ──
+router.get('/contracts/:partyNorm', async (req, res) => {
+  try {
+    const partyNorm = req.params.partyNorm.toLowerCase();
+    const Invoice = require('../models/Invoice');
+    
+    const invoices = await Invoice.find().sort({ createdAt: -1 }).lean();
+    const partyInvoices = invoices.filter(inv => 
+      inv.partyName && inv.partyName.trim().toLowerCase() === partyNorm
+    );
+
+    const formatted = partyInvoices.map(inv => ({
+      _id: inv._id,
+      date: inv.date,
+      fabricType: inv.fabricType || 'Contract',
+      loomType: inv.loomType || '',
+      quantity: inv.quantity || 0,
+      yarnBagsWarp: inv.yarnBagsWarp || 0,
+      yarnBagsWeft: inv.yarnBagsWeft || 0,
+      label: `${inv.fabricType ? inv.fabricType + ' ' : ''}Contract — Qty: ${inv.quantity || 0} (${inv.yarnBagsWarp || 0}W / ${inv.yarnBagsWeft || 0}F Bags)`
+    }));
+
+    res.json(formatted);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── POST /api/yarn ── Create new issuance record ──────────
 router.post('/', async (req, res) => {
   try {
-    const { partyName, date, warpBags, weftBags, warpQuality, weftQuality, note } = req.body;
+    const { partyName, date, warpBags, weftBags, warpQuality, weftQuality, contractId, contractInfo, note } = req.body;
 
     if (!partyName || !partyName.trim()) {
       return res.status(400).json({ error: 'Party name is required' });
@@ -128,6 +156,8 @@ router.post('/', async (req, res) => {
       weftBags: weftBags || 0,
       warpQuality: warpQuality || '',
       weftQuality: weftQuality || '',
+      contractId: contractId || null,
+      contractInfo: contractInfo || '',
       note: note || '',
       type: 'issue',
     });
