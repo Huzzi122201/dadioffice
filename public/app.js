@@ -1042,18 +1042,20 @@ let editingYarnId = null;
 async function loadPartyContracts(partyName, selectedContractId = null) {
   const select = $('yarnContractSelect');
   if (!select) return;
-  select.innerHTML = '<option value="">General Stock (No specific contract)</option>';
+  select.innerHTML = '<option value="">-- Select Contract --</option>';
   if (!partyName || !partyName.trim()) return;
 
   try {
     const partyNorm = partyName.trim().toLowerCase();
     const contracts = await apiGet(`${YARN_API}/contracts/${encodeURIComponent(partyNorm)}`);
     if (Array.isArray(contracts) && contracts.length > 0) {
-      contracts.forEach(c => {
+      contracts.forEach((c, idx) => {
         const opt = document.createElement('option');
         opt.value = c._id;
         opt.textContent = c.label;
-        if (selectedContractId && c._id.toString() === selectedContractId.toString()) {
+        if (selectedContractId) {
+          if (c._id.toString() === selectedContractId.toString()) opt.selected = true;
+        } else if (idx === 0) {
           opt.selected = true;
         }
         select.appendChild(opt);
@@ -1146,6 +1148,11 @@ $('yarnForm').addEventListener('submit', async (e) => {
   const selectedOpt = contractSelect ? contractSelect.options[contractSelect.selectedIndex] : null;
   const contractId = contractSelect ? contractSelect.value : null;
   const contractInfo = (selectedOpt && selectedOpt.value) ? selectedOpt.textContent : '';
+
+  if (!contractId) {
+    toast('Please select a target contract for yarn issuance', 'error');
+    return;
+  }
 
   const data = {
     partyName,
