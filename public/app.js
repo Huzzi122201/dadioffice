@@ -1161,9 +1161,12 @@ function openYarnForm(partyNamePreFill = '', editRecord = null) {
   $('yarnForm').reset();
   populatePartyNamesDatalist();
 
+  const partyDropdown = $('yarnPartySelectDropdown');
+
   if (editRecord) {
     editingYarnId = editRecord._id;
     $('yarnFormTitle').textContent = 'Edit Yarn Issuance';
+    if (partyDropdown) partyDropdown.style.display = 'none';
     $('yarnPartyName').value = editRecord.partyName || partyNamePreFill;
     $('yarnDate').value = toInputDate(editRecord.date || new Date());
     $('yarnWarpBags').value = editRecord.warpBags || '';
@@ -1177,9 +1180,11 @@ function openYarnForm(partyNamePreFill = '', editRecord = null) {
     $('yarnFormTitle').textContent = partyNamePreFill ? `Issue Yarn — ${partyNamePreFill}` : 'Issue Yarn';
     $('yarnDate').value = toInputDate(new Date());
     if (partyNamePreFill) {
+      if (partyDropdown) partyDropdown.style.display = 'none';
       $('yarnPartyName').value = partyNamePreFill;
       loadPartyContracts(partyNamePreFill);
     } else {
+      if (partyDropdown) partyDropdown.style.display = 'block';
       loadPartyContracts('');
     }
   }
