@@ -1293,11 +1293,11 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
 
       return `
         <div class="contract-history-block" style="margin-bottom: 1.75rem;">
-          <div class="contract-block-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; padding: 0 4px;">
-            <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--accent-navy); margin: 0;">
+          <div class="contract-block-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; padding: 0 4px; gap: 8px; flex-wrap: nowrap;">
+            <h3 style="font-size: 0.8125rem; font-weight: 800; color: var(--accent-navy); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 65%;">
               📜 ${escapeHtml(group.label)}
             </h3>
-            <span style="font-size: 0.8125rem; font-weight: 700; color: ${latestT === 0 ? 'var(--success)' : 'var(--accent-primary)'};">
+            <span style="font-size: 0.75rem; font-weight: 700; color: ${latestT === 0 ? 'var(--success)' : 'var(--accent-primary)'}; white-space: nowrap; flex-shrink: 0;">
               Rem: ${fmtInt(latestW)}W / ${fmtInt(latestF)}F (${fmtInt(latestT)} Total)
             </span>
           </div>
@@ -1369,7 +1369,7 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
     const overallTotalRemT = overallTotalRemW + overallTotalRemF;
 
     const grandTotalCardHtml = `
-      <div class="grand-total-card" style="background: linear-gradient(135deg, var(--accent-navy) 0%, #1e293b 100%); color: #ffffff; border-radius: var(--radius-md); padding: 14px 18px; margin-bottom: 1.25rem; box-shadow: var(--shadow-md); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+      <div class="grand-total-card" style="margin-top: 0.875rem; margin-bottom: 1.5rem; background: linear-gradient(135deg, var(--accent-navy) 0%, #1e293b 100%); color: #ffffff; border-radius: var(--radius-md); padding: 14px 18px; box-shadow: var(--shadow-md); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
         <div>
           <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; font-weight: 700; margin-bottom: 2px;">
             📊 Grand Total Balance Remaining (${contractGroups.size} ${contractGroups.size === 1 ? 'Contract' : 'Contracts'})
