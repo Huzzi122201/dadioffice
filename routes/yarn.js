@@ -213,6 +213,24 @@ function toTitleCase(str) {
   return str.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
 }
 
+function toUtcDate(dateStr) {
+  if (!dateStr) return new Date();
+  if (dateStr instanceof Date) {
+    return new Date(Date.UTC(dateStr.getUTCFullYear(), dateStr.getUTCMonth(), dateStr.getUTCDate(), 0, 0, 0));
+  }
+  const str = String(dateStr).trim();
+  const dashMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (dashMatch) {
+    const y = parseInt(dashMatch[1], 10);
+    const m = parseInt(dashMatch[2], 10) - 1;
+    const d = parseInt(dashMatch[3], 10);
+    return new Date(Date.UTC(y, m, d, 0, 0, 0));
+  }
+  const dObj = new Date(str);
+  if (isNaN(dObj.getTime())) return new Date();
+  return new Date(Date.UTC(dObj.getFullYear(), dObj.getMonth(), dObj.getDate(), 0, 0, 0));
+}
+
 // ── POST /api/yarn ── Create new issuance record ──────────
 router.post('/', async (req, res) => {
   try {
@@ -223,10 +241,11 @@ router.post('/', async (req, res) => {
     }
 
     const cleanParty = toTitleCase(partyName);
+    const cleanDate = toUtcDate(date);
 
     const record = new YarnIssuance({
       partyName: cleanParty,
-      date: date || new Date(),
+      date: cleanDate,
       warpBags: warpBags || 0,
       weftBags: weftBags || 0,
       warpQuality: warpQuality || '',
@@ -268,7 +287,7 @@ router.put('/:id', async (req, res) => {
       record.partyName = cleanParty;
       record.partyNameNorm = cleanParty.toLowerCase();
     }
-    if (date) record.date = date;
+    if (date) record.date = toUtcDate(date);
     if (warpBags !== undefined) record.warpBags = warpBags || 0;
     if (weftBags !== undefined) record.weftBags = weftBags || 0;
     if (warpQuality !== undefined) record.warpQuality = warpQuality || '';

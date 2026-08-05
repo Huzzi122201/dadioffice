@@ -54,6 +54,24 @@ function toTitleCase(str) {
   return str.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
 }
 
+function toUtcDate(dateStr) {
+  if (!dateStr) return new Date();
+  if (dateStr instanceof Date) {
+    return new Date(Date.UTC(dateStr.getUTCFullYear(), dateStr.getUTCMonth(), dateStr.getUTCDate(), 0, 0, 0));
+  }
+  const str = String(dateStr).trim();
+  const dashMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (dashMatch) {
+    const y = parseInt(dashMatch[1], 10);
+    const m = parseInt(dashMatch[2], 10) - 1;
+    const d = parseInt(dashMatch[3], 10);
+    return new Date(Date.UTC(y, m, d, 0, 0, 0));
+  }
+  const dObj = new Date(str);
+  if (isNaN(dObj.getTime())) return new Date();
+  return new Date(Date.UTC(dObj.getFullYear(), dObj.getMonth(), dObj.getDate(), 0, 0, 0));
+}
+
 // ── POST /api/invoices ── Create new invoice ──────────────
 router.post('/', async (req, res) => {
   try {
@@ -65,6 +83,7 @@ router.post('/', async (req, res) => {
     } = req.body;
 
     const cleanPartyName = toTitleCase(partyName);
+    const cleanDate = toUtcDate(date);
 
     // Calculate all outputs
     const calculated = calculate({
@@ -73,7 +92,7 @@ router.post('/', async (req, res) => {
     });
 
     const invoice = new Invoice({
-      partyName: cleanPartyName, date, fabricType, loomType,
+      partyName: cleanPartyName, date: cleanDate, fabricType, loomType,
       warpCount, warpCountAlt, weftCount, weftCountAlt,
       reed, pick, width, widthCm,
       warpRate, weftRate, conversionRate, quantity,
@@ -87,7 +106,7 @@ router.post('/', async (req, res) => {
       const contractLabel = `${fabricType || 'Contract'} — Qty: ${quantity || 0}`;
       const deduction = new YarnIssuance({
         partyName: cleanPartyName,
-        date: date || new Date(),
+        date: cleanDate,
         warpBags: calculated.yarnBagsWarp || 0,
         weftBags: calculated.yarnBagsWeft || 0,
         type: 'deduction',
@@ -116,6 +135,7 @@ router.put('/:id', async (req, res) => {
     } = req.body;
 
     const cleanPartyName = toTitleCase(partyName);
+    const cleanDate = toUtcDate(date);
 
     // Recalculate
     const calculated = calculate({
@@ -126,7 +146,7 @@ router.put('/:id', async (req, res) => {
     const invoice = await Invoice.findByIdAndUpdate(
       req.params.id,
       {
-        partyName: cleanPartyName, date, fabricType, loomType,
+        partyName: cleanPartyName, date: cleanDate, fabricType, loomType,
         warpCount, warpCountAlt, weftCount, weftCountAlt,
         reed, pick, width, widthCm,
         warpRate, weftRate, conversionRate, quantity,
@@ -146,7 +166,7 @@ router.put('/:id', async (req, res) => {
     if (autoDeduction) {
       autoDeduction.partyName = cleanPartyName;
       autoDeduction.partyNameNorm = cleanPartyName.toLowerCase();
-      if (date) autoDeduction.date = date;
+      autoDeduction.date = cleanDate;
       autoDeduction.warpBags = calculated.yarnBagsWarp || 0;
       autoDeduction.weftBags = calculated.yarnBagsWeft || 0;
       autoDeduction.contractInfo = contractLabel;
