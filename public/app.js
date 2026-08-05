@@ -1246,14 +1246,25 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
   try {
     const records = await apiGet(`${YARN_API}/history/${encodeURIComponent(partyNorm)}`);
 
-    let latestRemW = 0;
-    let latestRemF = 0;
-    let latestRemT = 0;
-    if (records.length > 0) {
-      latestRemW = records[0].remainingWarp ?? 0;
-      latestRemF = records[0].remainingWeft ?? 0;
-      latestRemT = records[0].remainingTotal ?? (latestRemW + latestRemF);
-    }
+    // Calculate total net remaining yarn balance across ALL contracts for this party
+    const contractLatestMap = new Map();
+    records.forEach(r => {
+      const cId = (r.contractId || r.refInvoiceId)?.toString();
+      if (cId && !contractLatestMap.has(cId)) {
+        contractLatestMap.set(cId, {
+          w: r.remainingWarp ?? 0,
+          f: r.remainingWeft ?? 0,
+        });
+      }
+    });
+
+    let partyTotalRemW = 0;
+    let partyTotalRemF = 0;
+    contractLatestMap.forEach(bal => {
+      partyTotalRemW += bal.w;
+      partyTotalRemF += bal.f;
+    });
+    const partyTotalRemT = partyTotalRemW + partyTotalRemF;
 
     $('yarnHistoryContent').innerHTML = `
       <div class="yarn-table-wrapper">
@@ -1313,10 +1324,10 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
           </tbody>
           <tfoot>
             <tr class="datagrid-summary-row">
-              <td colspan="5"><strong>Contract Balance Remaining</strong></td>
-              <td class="${latestRemW === 0 ? 'stock-pos' : ''}"><strong>${fmtInt(latestRemW)}</strong></td>
-              <td class="${latestRemF === 0 ? 'stock-pos' : ''}"><strong>${fmtInt(latestRemF)}</strong></td>
-              <td class="${latestRemT === 0 ? 'stock-pos' : ''}"><strong>${fmtInt(latestRemT)}</strong></td>
+              <td colspan="5"><strong>Total Party Contract Balance Remaining</strong></td>
+              <td class="${partyTotalRemW === 0 ? 'stock-pos' : ''}"><strong>${fmtInt(partyTotalRemW)}</strong></td>
+              <td class="${partyTotalRemF === 0 ? 'stock-pos' : ''}"><strong>${fmtInt(partyTotalRemF)}</strong></td>
+              <td class="${partyTotalRemT === 0 ? 'stock-pos' : ''}"><strong>${fmtInt(partyTotalRemT)}</strong></td>
               <td></td>
             </tr>
           </tfoot>
