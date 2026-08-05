@@ -73,13 +73,13 @@ router.get('/stock', async (req, res) => {
   }
 });
 
-// ── GET /api/yarn/history/:partyNorm ── Transaction history & contract fulfillment ──
+// ── GET /api/yarn/history/:partyNorm ── Transaction history & contract balance ──
 router.get('/history/:partyNorm', async (req, res) => {
   try {
     const partyNorm = req.params.partyNorm.toLowerCase();
     const Invoice = require('../models/Invoice');
 
-    // Fetch invoices for contract requirements
+    // Fetch invoices for this party
     const invoices = await Invoice.find().lean();
     const invoiceMap = new Map();
     invoices.forEach(inv => {
@@ -88,71 +88,61 @@ router.get('/history/:partyNorm', async (req, res) => {
       }
     });
 
-    // Fetch records in chronological order (oldest first)
+    // Fetch all yarn records for this party in chronological order (oldest first)
     const rawRecords = await YarnIssuance.find({ partyNameNorm: partyNorm })
       .sort({ date: 1, createdAt: 1 })
       .lean();
 
-    let remWarp = 0;
-    let remWeft = 0;
-    const contractProgress = new Map();
+    // Track running remaining balance per contract
+    const contractBalanceMap = new Map();
 
     const recordsWithBalance = rawRecords.map(r => {
-      const wBags = r.warpBags || 0;
-      const fBags = r.weftBags || 0;
+      const cId = (r.contractId || r.refInvoiceId)?.toString();
 
-      if (r.type === 'issue') {
-        remWarp += wBags;
-        remWeft += fBags;
-      } else {
-        remWarp -= wBags;
-        remWeft -= fBags;
+      // Initialize contract balance if first time processing this contract
+      if (cId && invoiceMap.has(cId) && !contractBalanceMap.has(cId)) {
+        const inv = invoiceMap.get(cId);
+        contractBalanceMap.set(cId, {
+          remWarp: Math.round(inv.yarnBagsWarp || 0),
+          remWeft: Math.round(inv.yarnBagsWeft || 0),
+        });
       }
 
-      let contractReqW = null;
-      let contractReqF = null;
-      let contractRemW = null;
-      let contractRemF = null;
+      let curRemWarp = 0;
+      let curRemWeft = 0;
 
-      const cId = (r.contractId || r.refInvoiceId)?.toString();
-      if (cId && invoiceMap.has(cId)) {
-        const inv = invoiceMap.get(cId);
-        contractReqW = Math.round(inv.yarnBagsWarp || 0);
-        contractReqF = Math.round(inv.yarnBagsWeft || 0);
-
-        if (!contractProgress.has(cId)) {
-          contractProgress.set(cId, { issuedW: 0, issuedF: 0 });
-        }
-        const prog = contractProgress.get(cId);
+      if (cId && contractBalanceMap.has(cId)) {
+        const bal = contractBalanceMap.get(cId);
 
         if (r.type === 'issue') {
-          prog.issuedW += wBags;
-          prog.issuedF += fBags;
+          // Issuing yarn deducts from contract required bags!
+          bal.remWarp = Math.max(0, bal.remWarp - (r.warpBags || 0));
+          bal.remWeft = Math.max(0, bal.remWeft - (r.weftBags || 0));
         }
 
-        contractRemW = Math.max(0, contractReqW - prog.issuedW);
-        contractRemF = Math.max(0, contractReqF - prog.issuedF);
+        curRemWarp = bal.remWarp;
+        curRemWeft = bal.remWeft;
+      } else {
+        curRemWarp = Math.max(0, (r.warpBags || 0));
+        curRemWeft = Math.max(0, (r.weftBags || 0));
       }
 
       return {
         ...r,
-        remainingWarp: remWarp,
-        remainingWeft: remWeft,
-        remainingTotal: remWarp + remWeft,
-        contractReqWarp: contractReqW,
-        contractReqWeft: contractReqF,
-        contractRemWarp: contractRemW,
-        contractRemWeft: contractRemF,
+        remainingWarp: curRemWarp,
+        remainingWeft: curRemWeft,
+        remainingTotal: curRemWarp + curRemWeft,
       };
     });
 
+    // Return newest first for history presentation
     res.json(recordsWithBalance.reverse());
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ── GET /api/yarn/contracts/:partyNorm ── List contracts with remaining bags needed ──
+// ── GET /api/yarn/contracts/:partyNorm ── List contracts for a party ──
 router.get('/contracts/:partyNorm', async (req, res) => {
   try {
     const partyNorm = req.params.partyNorm.toLowerCase();
@@ -178,10 +168,9 @@ router.get('/contracts/:partyNorm', async (req, res) => {
 
       const remWarpNeeded = Math.max(0, requiredWarp - issuedWarp);
       const remWeftNeeded = Math.max(0, requiredWeft - issuedWeft);
-      const isFulfilled = remWarpNeeded === 0 && remWeftNeeded === 0;
 
       const title = `${inv.fabricType ? inv.fabricType + ' ' : ''}Contract (Qty: ${inv.quantity || 0})`;
-      const label = `${title} — Req: ${requiredWarp}W/${requiredWeft}F | Still Needed: ${remWarpNeeded}W/${remWeftNeeded}F`;
+      const label = `${title} — Req: ${requiredWarp}W/${requiredWeft}F | Rem: ${remWarpNeeded}W/${remWeftNeeded}F`;
 
       return {
         _id: inv._id,
@@ -195,7 +184,6 @@ router.get('/contracts/:partyNorm', async (req, res) => {
         issuedWeft,
         remWarpNeeded,
         remWeftNeeded,
-        isFulfilled,
         title,
         label,
       };
