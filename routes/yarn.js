@@ -106,7 +106,7 @@ router.get('/history/:partyNorm', async (req, res) => {
         r.contractInfo = shortTitle;
 
         if (r.type === 'deduction') {
-          r.date = inv.date || r.date;
+          r.date = inv.date;
           r.warpBags = Math.round(inv.yarnBagsWarp || 0);
           r.weftBags = Math.round(inv.yarnBagsWeft || 0);
         }
