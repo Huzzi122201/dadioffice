@@ -1214,6 +1214,31 @@ body {
   margin: 0 auto;
 }
 
+.yarn-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.yarn-history-header .header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.yarn-history-header .form-title {
+  margin: 0;
+  font-size: 1.15rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .yarn-table-wrapper {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -1288,6 +1313,26 @@ body {
 }
 
 @media (max-width: 600px) {
+  .yarn-history-header {
+    margin-bottom: 1.25rem;
+    gap: 8px;
+  }
+
+  .yarn-history-header .form-title {
+    font-size: 1rem;
+  }
+
+  .yarn-history-header #btnIssueYarnFromHistory {
+    font-size: 0.8rem;
+    padding: 6px 12px;
+  }
+
+  .grand-total-card {
+    margin-top: 1rem !important;
+    margin-bottom: 1.5rem !important;
+    clear: both;
+  }
+
   .yarn-table-wrapper {
     margin: 0 -6px;
     border-radius: var(--radius-sm);
