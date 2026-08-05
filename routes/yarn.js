@@ -100,12 +100,23 @@ router.get('/history/:partyNorm', async (req, res) => {
       const cId = (r.contractId || r.refInvoiceId)?.toString();
 
       // Initialize contract balance if first time processing this contract
-      if (cId && invoiceMap.has(cId) && !contractBalanceMap.has(cId)) {
+      if (cId && invoiceMap.has(cId)) {
         const inv = invoiceMap.get(cId);
-        contractBalanceMap.set(cId, {
-          remWarp: Math.round(inv.yarnBagsWarp || 0),
-          remWeft: Math.round(inv.yarnBagsWeft || 0),
-        });
+        const shortTitle = `${inv.fabricType || 'Contract'}${inv.quantity ? ' (' + Number(inv.quantity).toLocaleString() + 'm)' : ''}`;
+        r.contractInfo = shortTitle;
+
+        if (r.type === 'deduction') {
+          r.date = inv.date || r.date;
+          r.warpBags = Math.round(inv.yarnBagsWarp || 0);
+          r.weftBags = Math.round(inv.yarnBagsWeft || 0);
+        }
+
+        if (!contractBalanceMap.has(cId)) {
+          contractBalanceMap.set(cId, {
+            remWarp: Math.round(inv.yarnBagsWarp || 0),
+            remWeft: Math.round(inv.yarnBagsWeft || 0),
+          });
+        }
       }
 
       let curRemWarp = 0;

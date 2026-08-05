@@ -115,6 +115,8 @@ router.put('/:id', async (req, res) => {
       warpRate, weftRate, conversionRate, quantity,
     } = req.body;
 
+    const cleanPartyName = toTitleCase(partyName);
+
     // Recalculate
     const calculated = calculate({
       warpCount, weftCount, reed, pick, width,
@@ -124,7 +126,7 @@ router.put('/:id', async (req, res) => {
     const invoice = await Invoice.findByIdAndUpdate(
       req.params.id,
       {
-        partyName, date, fabricType, loomType,
+        partyName: cleanPartyName, date, fabricType, loomType,
         warpCount, warpCountAlt, weftCount, weftCountAlt,
         reed, pick, width, widthCm,
         warpRate, weftRate, conversionRate, quantity,
@@ -134,6 +136,49 @@ router.put('/:id', async (req, res) => {
     );
 
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+
+    // Sync changes to YarnIssuance records linked to this contract
+    const shortTitle = `${fabricType || 'Contract'}${quantity ? ' (' + Number(quantity).toLocaleString() + 'm)' : ''}`;
+    const contractLabel = shortTitle;
+
+    // 1. Update/Create auto-deduction record
+    let autoDeduction = await YarnIssuance.findOne({ refInvoiceId: invoice._id, type: 'deduction' });
+    if (autoDeduction) {
+      autoDeduction.partyName = cleanPartyName;
+      autoDeduction.partyNameNorm = cleanPartyName.toLowerCase();
+      if (date) autoDeduction.date = date;
+      autoDeduction.warpBags = calculated.yarnBagsWarp || 0;
+      autoDeduction.weftBags = calculated.yarnBagsWeft || 0;
+      autoDeduction.contractInfo = contractLabel;
+      autoDeduction.note = `Contract Deduction (${contractLabel})`;
+      await autoDeduction.save();
+    } else if (calculated.yarnBagsWarp > 0 || calculated.yarnBagsWeft > 0) {
+      autoDeduction = new YarnIssuance({
+        partyName: cleanPartyName,
+        date: date || new Date(),
+        warpBags: calculated.yarnBagsWarp || 0,
+        weftBags: calculated.yarnBagsWeft || 0,
+        type: 'deduction',
+        refInvoiceId: invoice._id,
+        contractId: invoice._id,
+        contractInfo: contractLabel,
+        note: `Contract Deduction (${contractLabel})`,
+      });
+      await autoDeduction.save();
+    }
+
+    // 2. Update all yarn issuances targeting this contract
+    await YarnIssuance.updateMany(
+      { contractId: invoice._id },
+      {
+        $set: {
+          partyName: cleanPartyName,
+          partyNameNorm: cleanPartyName.toLowerCase(),
+          contractInfo: contractLabel,
+        }
+      }
+    );
+
     res.json(invoice);
   } catch (err) {
     res.status(400).json({ error: err.message });
