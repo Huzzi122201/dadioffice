@@ -273,15 +273,53 @@ function formatDate(dateStr) {
 
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return dateStr;
-  const day = d.getDate();
-  const monthStr = months[d.getMonth()] || 'Aug';
-  const year = d.getFullYear();
+  const day = d.getUTCDate();
+  const monthStr = months[d.getUTCMonth()] || 'Aug';
+  const year = d.getUTCFullYear();
   return `${day} ${monthStr} ${year}`;
 }
 
 function toInputDate(dateStr) {
-  if (!dateStr) return formatDate(new Date());
-  return formatDate(dateStr);
+  if (!dateStr) {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  const monthsMap = {
+    jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+    jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12
+  };
+
+  if (typeof dateStr === 'string') {
+    const trimmed = dateStr.trim();
+    const dashMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (dashMatch) {
+      return `${dashMatch[1]}-${dashMatch[2]}-${dashMatch[3]}`;
+    }
+
+    const textMatch = trimmed.match(/^(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{4})/);
+    if (textMatch) {
+      const day = String(parseInt(textMatch[1], 10)).padStart(2, '0');
+      const mStr = textMatch[2].toLowerCase().slice(0, 3);
+      const mNum = String(monthsMap[mStr] || 8).padStart(2, '0');
+      const year = textMatch[3];
+      return `${year}-${mNum}-${day}`;
+    }
+  }
+
+  const dObj = new Date(dateStr);
+  if (isNaN(dObj.getTime())) {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  }
+
+  const y = dObj.getUTCFullYear();
+  const m = String(dObj.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(dObj.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -404,7 +442,7 @@ function openNewForm() {
   editIdField.value = '';
   formTitle.textContent = 'New Invoice';
   invoiceForm.reset();
-  $('date').value = formatDate(new Date());
+  $('date').value = toInputDate(new Date());
   updatePreview();
   showView(viewForm);
 }
@@ -1127,7 +1165,7 @@ function openYarnForm(partyNamePreFill = '', editRecord = null) {
     editingYarnId = editRecord._id;
     $('yarnFormTitle').textContent = 'Edit Yarn Issuance';
     $('yarnPartyName').value = editRecord.partyName || partyNamePreFill;
-    $('yarnDate').value = editRecord.date ? formatDate(editRecord.date) : formatDate(new Date());
+    $('yarnDate').value = toInputDate(editRecord.date || new Date());
     $('yarnWarpBags').value = editRecord.warpBags || '';
     $('yarnWarpQuality').value = editRecord.warpQuality || '';
     $('yarnWeftBags').value = editRecord.weftBags || '';
@@ -1137,7 +1175,7 @@ function openYarnForm(partyNamePreFill = '', editRecord = null) {
   } else {
     editingYarnId = null;
     $('yarnFormTitle').textContent = partyNamePreFill ? `Issue Yarn — ${partyNamePreFill}` : 'Issue Yarn';
-    $('yarnDate').value = formatDate(new Date());
+    $('yarnDate').value = toInputDate(new Date());
     if (partyNamePreFill) {
       $('yarnPartyName').value = partyNamePreFill;
       loadPartyContracts(partyNamePreFill);
@@ -1200,7 +1238,7 @@ $('yarnForm').addEventListener('submit', async (e) => {
 
   const data = {
     partyName,
-    date: $('yarnDate').value || formatDate(new Date()),
+    date: $('yarnDate').value || toInputDate(new Date()),
     warpBags,
     weftBags,
     warpQuality: $('yarnWarpQuality').value.trim(),
