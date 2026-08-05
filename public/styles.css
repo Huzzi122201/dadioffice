@@ -1180,6 +1180,33 @@ body {
   color: var(--accent-primary);
 }
 
+/* ── ACTION BUTTONS ── */
+.btn-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+  margin-right: 4px;
+}
+
+.btn-action.edit:hover, .btn-action.edit:active {
+  background: #eff6ff;
+  border-color: var(--accent-primary);
+}
+
+.btn-action.delete:hover, .btn-action.delete:active {
+  background: #fef2f2;
+  border-color: var(--danger);
+}
+
 /* ── HISTORY TABLE ── */
 
 #viewYarnHistory {
@@ -1189,10 +1216,12 @@ body {
 
 .yarn-table-wrapper {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: #ffffff;
   box-shadow: var(--shadow-sm);
+  position: relative;
 }
 
 .yarn-datagrid-table {
@@ -1200,7 +1229,7 @@ body {
   border-collapse: collapse;
   background: #ffffff;
   font-size: 0.8125rem;
-  min-width: 600px;
+  min-width: 700px;
 }
 
 .yarn-datagrid-table thead th {
@@ -1261,12 +1290,42 @@ body {
 @media (max-width: 600px) {
   .yarn-datagrid-table {
     font-size: 0.75rem;
+    min-width: 650px;
   }
 
   .yarn-datagrid-table thead th,
   .yarn-datagrid-table tbody td,
   .yarn-datagrid-table tfoot td {
     padding: 8px 6px;
+  }
+
+  /* Sticky Actions Column on Mobile */
+  .yarn-datagrid-table th:last-child,
+  .yarn-datagrid-table td:last-child {
+    position: sticky;
+    right: 0;
+    z-index: 5;
+    background: #ffffff;
+    box-shadow: -3px 0 6px rgba(0, 0, 0, 0.08);
+  }
+
+  .yarn-datagrid-table thead th:last-child {
+    background: var(--accent-navy);
+  }
+
+  .yarn-datagrid-table tbody tr.row-deduction td:last-child {
+    background: #fff5f5;
+  }
+
+  .yarn-datagrid-table tfoot td:last-child {
+    background: var(--bg-tertiary);
+  }
+
+  .btn-action {
+    width: 30px;
+    height: 30px;
+    font-size: 0.85rem;
+    margin-right: 2px;
   }
 }
 
