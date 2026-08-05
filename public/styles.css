@@ -1288,15 +1288,39 @@ body {
 }
 
 @media (max-width: 600px) {
-  .yarn-datagrid-table {
-    font-size: 0.75rem;
-    min-width: 650px;
+  .yarn-table-wrapper {
+    margin: 0 -6px;
+    border-radius: var(--radius-sm);
   }
 
-  .yarn-datagrid-table thead th,
+  .yarn-datagrid-table {
+    font-size: 0.72rem;
+    min-width: 100%;
+  }
+
+  .yarn-datagrid-table thead th {
+    padding: 6px 4px;
+    font-size: 0.68rem;
+    letter-spacing: 0;
+  }
+
   .yarn-datagrid-table tbody td,
   .yarn-datagrid-table tfoot td {
-    padding: 8px 6px;
+    padding: 6px 4px;
+  }
+
+  .yarn-datagrid-table td.col-contract {
+    max-width: 85px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .yarn-datagrid-table td.col-quality {
+    max-width: 70px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   /* Sticky Actions Column on Mobile */
@@ -1306,7 +1330,8 @@ body {
     right: 0;
     z-index: 5;
     background: #ffffff;
-    box-shadow: -3px 0 6px rgba(0, 0, 0, 0.08);
+    padding: 4px;
+    box-shadow: -2px 0 4px rgba(0, 0, 0, 0.08);
   }
 
   .yarn-datagrid-table thead th:last-child {
@@ -1322,10 +1347,10 @@ body {
   }
 
   .btn-action {
-    width: 30px;
-    height: 30px;
-    font-size: 0.85rem;
-    margin-right: 2px;
+    width: 26px;
+    height: 26px;
+    font-size: 0.75rem;
+    margin-right: 1px;
   }
 }
 

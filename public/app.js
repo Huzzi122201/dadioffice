@@ -1052,6 +1052,7 @@ async function loadPartyContracts(partyName, selectedContractId = null) {
       contracts.forEach((c, idx) => {
         const opt = document.createElement('option');
         opt.value = c._id;
+        opt.dataset.shortTitle = c.shortTitle || c.title || c.label;
         opt.textContent = c.label;
         if (selectedContractId) {
           if (c._id.toString() === selectedContractId.toString()) opt.selected = true;
@@ -1147,7 +1148,7 @@ $('yarnForm').addEventListener('submit', async (e) => {
   const contractSelect = $('yarnContractSelect');
   const selectedOpt = contractSelect ? contractSelect.options[contractSelect.selectedIndex] : null;
   const contractId = contractSelect ? contractSelect.value : null;
-  const contractInfo = (selectedOpt && selectedOpt.value) ? selectedOpt.textContent : '';
+  const contractInfo = (selectedOpt && selectedOpt.value) ? (selectedOpt.dataset.shortTitle || selectedOpt.textContent) : '';
 
   if (!contractId) {
     toast('Please select a target contract for yarn issuance', 'error');
@@ -1218,12 +1219,12 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
             <tr>
               <th>Date</th>
               <th>Quality</th>
-              <th>Contract / Ref</th>
-              <th>Warp Bags</th>
-              <th>Weft Bags</th>
-              <th>Rem. Warp</th>
-              <th>Rem. Weft</th>
-              <th>Rem. Total</th>
+              <th>Contract</th>
+              <th>Warp</th>
+              <th>Weft</th>
+              <th>Rem. W</th>
+              <th>Rem. F</th>
+              <th>Rem. Tot</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -1242,13 +1243,16 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
               const remW = r.remainingWarp ?? 0;
               const remF = r.remainingWeft ?? 0;
               const remT = r.remainingTotal ?? (remW + remF);
-              const refLabel = r.contractInfo || r.note || 'Contract';
+              let refLabel = r.contractInfo || r.note || 'Contract';
+              if (refLabel.includes(' — Req:')) {
+                refLabel = refLabel.split(' — Req:')[0].trim();
+              }
 
               return `
                 <tr class="${isIssue ? 'row-issue' : 'row-deduction'}">
                   <td>${formatDate(r.date)}</td>
-                  <td>${escapeHtml(qualityStr)}</td>
-                  <td>${escapeHtml(refLabel)}</td>
+                  <td class="col-quality" title="${escapeHtml(qualityStr)}">${escapeHtml(qualityStr)}</td>
+                  <td class="col-contract" title="${escapeHtml(refLabel)}">${escapeHtml(refLabel)}</td>
                   <td class="${isIssue ? 'stock-neg' : ''}">${sign}${fmtInt(warp)}</td>
                   <td class="${isIssue ? 'stock-neg' : ''}">${sign}${fmtInt(weft)}</td>
                   <td><strong>${fmtInt(remW)}</strong></td>

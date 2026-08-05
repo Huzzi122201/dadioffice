@@ -169,8 +169,9 @@ router.get('/contracts/:partyNorm', async (req, res) => {
       const remWarpNeeded = Math.max(0, requiredWarp - issuedWarp);
       const remWeftNeeded = Math.max(0, requiredWeft - issuedWeft);
 
+      const shortTitle = `${inv.fabricType || 'Contract'}${inv.quantity ? ' (' + Number(inv.quantity).toLocaleString() + 'm)' : ''}`;
       const title = `${inv.fabricType ? inv.fabricType + ' ' : ''}Contract (Qty: ${inv.quantity || 0})`;
-      const label = `${title} — Req: ${requiredWarp}W/${requiredWeft}F | Rem: ${remWarpNeeded}W/${remWeftNeeded}F`;
+      const label = `${shortTitle} — Req: ${requiredWarp}W/${requiredWeft}F | Rem: ${remWarpNeeded}W/${remWeftNeeded}F`;
 
       return {
         _id: inv._id,
@@ -184,6 +185,7 @@ router.get('/contracts/:partyNorm', async (req, res) => {
         issuedWeft,
         remWarpNeeded,
         remWeftNeeded,
+        shortTitle,
         title,
         label,
       };
