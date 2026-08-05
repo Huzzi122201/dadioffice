@@ -1293,11 +1293,11 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
 
       return `
         <div class="contract-history-block" style="margin-bottom: 1.75rem;">
-          <div class="contract-block-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; padding: 0 4px; gap: 8px; flex-wrap: nowrap;">
-            <h3 style="font-size: 0.8125rem; font-weight: 800; color: var(--accent-navy); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 65%;">
-              📜 ${escapeHtml(group.label)}
+          <div class="contract-block-header" style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 0.5rem; padding: 0 4px; gap: 8px; flex-wrap: wrap;">
+            <h3 style="font-size: 0.875rem; font-weight: 800; color: var(--accent-navy); margin: 0; word-break: break-word;">
+              ${escapeHtml(group.label)}
             </h3>
-            <span style="font-size: 0.75rem; font-weight: 700; color: ${latestT === 0 ? 'var(--success)' : 'var(--accent-primary)'}; white-space: nowrap; flex-shrink: 0;">
+            <span style="font-size: 0.78rem; font-weight: 700; color: ${latestT === 0 ? 'var(--success)' : 'var(--accent-primary)'}; white-space: nowrap;">
               Rem: ${fmtInt(latestW)}W / ${fmtInt(latestF)}F (${fmtInt(latestT)} Total)
             </span>
           </div>
