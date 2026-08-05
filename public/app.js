@@ -1020,7 +1020,6 @@ function toTitleCase(str) {
 async function populatePartyNamesDatalist() {
   try {
     const datalist = $('partyNamesDatalist');
-    const dashSelect = $('dashPartySelect');
     const yarnFormPartySelect = $('yarnPartySelectDropdown');
     const contractFormPartySelect = $('contractPartySelectDropdown');
 
@@ -1048,11 +1047,6 @@ async function populatePartyNamesDatalist() {
       datalist.innerHTML = sortedParties.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
     }
 
-    if (dashSelect) {
-      dashSelect.innerHTML = '<option value="">-- Choose Party --</option>' +
-        sortedParties.map(name => `<option value="${escapeHtml(name.toLowerCase())}" data-display="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
-    }
-
     if (yarnFormPartySelect) {
       yarnFormPartySelect.innerHTML = '<option value="">-- Choose Existing Party --</option>' +
         sortedParties.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
@@ -1065,19 +1059,6 @@ async function populatePartyNamesDatalist() {
   } catch (err) {
     // silent fallback
   }
-}
-
-if ($('dashPartySelect')) {
-  $('dashPartySelect').addEventListener('change', () => {
-    const sel = $('dashPartySelect');
-    const val = sel.value;
-    if (val) {
-      const selectedOpt = sel.options[sel.selectedIndex];
-      const displayName = selectedOpt ? selectedOpt.dataset.display || selectedOpt.textContent : val;
-      openYarnHistory(encodeURIComponent(val), displayName);
-      sel.value = '';
-    }
-  });
 }
 
 if ($('yarnPartySelectDropdown')) {
