@@ -79,67 +79,40 @@ router.get('/history/:partyNorm', async (req, res) => {
     const partyNorm = req.params.partyNorm.toLowerCase();
     const Invoice = require('../models/Invoice');
 
-    // Fetch invoices for this party
-    const invoices = await Invoice.find().lean();
-    const invoiceMap = new Map();
-    invoices.forEach(inv => {
-      if (inv.partyName && inv.partyName.trim().toLowerCase() === partyNorm) {
-        invoiceMap.set(inv._id.toString(), inv);
-      }
-    });
+    // Fetch the single contract for this party
+    const invoices = await Invoice.find().sort({ createdAt: -1 }).lean();
+    const inv = invoices.find(i => i.partyName && i.partyName.trim().toLowerCase() === partyNorm);
+
+    let remWarp = inv ? Math.round(inv.yarnBagsWarp || 0) : 0;
+    let remWeft = inv ? Math.round(inv.yarnBagsWeft || 0) : 0;
+    const contractInfo = inv ? `${inv.fabricType || 'Contract'}${inv.quantity ? ' (' + Number(inv.quantity).toLocaleString() + 'm)' : ''}` : 'Contract';
 
     // Fetch all yarn records for this party in chronological order (oldest first)
     const rawRecords = await YarnIssuance.find({ partyNameNorm: partyNorm })
       .sort({ date: 1, createdAt: 1 })
       .lean();
 
-    // Track running remaining balance per contract
-    const contractBalanceMap = new Map();
-
     const recordsWithBalance = rawRecords.map(r => {
-      const cId = (r.contractId || r.refInvoiceId)?.toString();
-
-      // Initialize contract balance if first time processing this contract
-      if (cId && invoiceMap.has(cId)) {
-        const inv = invoiceMap.get(cId);
-        const shortTitle = `${inv.fabricType || 'Contract'}${inv.quantity ? ' (' + Number(inv.quantity).toLocaleString() + 'm)' : ''}`;
-        r.contractInfo = shortTitle;
-
-        if (r.type === 'deduction') {
-          r.date = inv.date;
-          r.warpBags = Math.round(inv.yarnBagsWarp || 0);
-          r.weftBags = Math.round(inv.yarnBagsWeft || 0);
-        }
-
-        if (!contractBalanceMap.has(cId)) {
-          contractBalanceMap.set(cId, {
-            remWarp: Math.round(inv.yarnBagsWarp || 0),
-            remWeft: Math.round(inv.yarnBagsWeft || 0),
-          });
-        }
-      }
-
-      let curRemWarp = 0;
-      let curRemWeft = 0;
-
-      if (cId && contractBalanceMap.has(cId)) {
-        const bal = contractBalanceMap.get(cId);
-
-        if (r.type === 'issue') {
-          // Issuing yarn deducts from contract required bags!
-          bal.remWarp = Math.max(0, bal.remWarp - (r.warpBags || 0));
-          bal.remWeft = Math.max(0, bal.remWeft - (r.weftBags || 0));
-        }
-
-        curRemWarp = bal.remWarp;
-        curRemWeft = bal.remWeft;
+      if (r.type === 'deduction' && inv) {
+        r.date = inv.date || r.date;
+        r.warpBags = Math.round(inv.yarnBagsWarp || 0);
+        r.weftBags = Math.round(inv.yarnBagsWeft || 0);
+        r.contractInfo = contractInfo;
+        curRemWarp = remWarp;
+        curRemWeft = remWeft;
+      } else if (r.type === 'issue') {
+        remWarp = Math.max(0, remWarp - (r.warpBags || 0));
+        remWeft = Math.max(0, remWeft - (r.weftBags || 0));
+        curRemWarp = remWarp;
+        curRemWeft = remWeft;
       } else {
-        curRemWarp = Math.max(0, (r.warpBags || 0));
-        curRemWeft = Math.max(0, (r.weftBags || 0));
+        curRemWarp = remWarp;
+        curRemWeft = remWeft;
       }
 
       return {
         ...r,
+        contractInfo: r.contractInfo || contractInfo,
         remainingWarp: curRemWarp,
         remainingWeft: curRemWeft,
         remainingTotal: curRemWarp + curRemWeft,

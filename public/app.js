@@ -1174,7 +1174,6 @@ function openYarnForm(partyNamePreFill = '', editRecord = null) {
     $('yarnWeftBags').value = editRecord.weftBags || '';
     $('yarnWeftQuality').value = editRecord.weftQuality || '';
     $('yarnNote').value = editRecord.note || '';
-    loadPartyContracts(editRecord.partyName || partyNamePreFill, editRecord.contractId);
   } else {
     editingYarnId = null;
     $('yarnFormTitle').textContent = partyNamePreFill ? `Issue Yarn — ${partyNamePreFill}` : 'Issue Yarn';
@@ -1182,10 +1181,8 @@ function openYarnForm(partyNamePreFill = '', editRecord = null) {
     if (partyNamePreFill) {
       if (partyDropdown) partyDropdown.style.display = 'none';
       $('yarnPartyName').value = partyNamePreFill;
-      loadPartyContracts(partyNamePreFill);
     } else {
       if (partyDropdown) partyDropdown.style.display = 'block';
-      loadPartyContracts('');
     }
   }
 
@@ -1231,16 +1228,6 @@ $('yarnForm').addEventListener('submit', async (e) => {
     return;
   }
 
-  const contractSelect = $('yarnContractSelect');
-  const selectedOpt = contractSelect ? contractSelect.options[contractSelect.selectedIndex] : null;
-  const contractId = contractSelect ? contractSelect.value : null;
-  const contractInfo = (selectedOpt && selectedOpt.value) ? (selectedOpt.dataset.shortTitle || selectedOpt.textContent) : '';
-
-  if (!contractId) {
-    toast('Please select a target contract for yarn issuance', 'error');
-    return;
-  }
-
   const data = {
     partyName,
     date: $('yarnDate').value || toInputDate(new Date()),
@@ -1248,8 +1235,6 @@ $('yarnForm').addEventListener('submit', async (e) => {
     weftBags,
     warpQuality: $('yarnWarpQuality').value.trim(),
     weftQuality: $('yarnWeftQuality').value.trim(),
-    contractId: contractId || null,
-    contractInfo: contractInfo || '',
     note: $('yarnNote').value.trim(),
   };
 
@@ -1300,145 +1285,88 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
       return;
     }
 
-    // Group records by contractId (or refInvoiceId or 'general')
-    const contractGroups = new Map();
+    const latestRemW = records[0]?.remainingWarp ?? 0;
+    const latestRemF = records[0]?.remainingWeft ?? 0;
+    const latestRemT = records[0]?.remainingTotal ?? (latestRemW + latestRemF);
+    const contractInfo = records[0]?.contractInfo || 'Contract';
 
-    records.forEach(r => {
-      let key = (r.contractId || r.refInvoiceId)?.toString();
-      if (!key) key = 'general';
+    $('yarnHistoryContent').innerHTML = `
+      <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 0.75rem; padding: 0 4px; gap: 8px; flex-wrap: wrap;">
+        <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--accent-navy); margin: 0;">
+          📜 ${escapeHtml(contractInfo)}
+        </h3>
+        <span style="font-size: 0.8125rem; font-weight: 700; color: ${latestRemT === 0 ? 'var(--success)' : 'var(--accent-primary)'};">
+          Remaining: ${fmtInt(latestRemW)}W / ${fmtInt(latestRemF)}F (${fmtInt(latestRemT)} Total)
+        </span>
+      </div>
 
-      if (!contractGroups.has(key)) {
-        let label = r.contractInfo || r.note || 'Contract';
-        if (label.includes(' — Req:')) {
-          label = label.split(' — Req:')[0].trim();
-        }
-        contractGroups.set(key, {
-          contractId: key,
-          label: label,
-          records: [],
-        });
-      }
-      contractGroups.get(key).records.push(r);
-    });
+      <div class="yarn-table-wrapper">
+        <table class="yarn-datagrid-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Quality</th>
+              <th>Warp</th>
+              <th>Weft</th>
+              <th>Rem. W</th>
+              <th>Rem. F</th>
+              <th>Rem. Tot</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${records.map(r => {
+              const warp = r.warpBags || 0;
+              const weft = r.weftBags || 0;
+              const qParts = [];
+              if (r.warpQuality && r.warpQuality.trim()) qParts.push(r.warpQuality.trim());
+              if (r.weftQuality && r.weftQuality.trim() && r.weftQuality.trim() !== (r.warpQuality || '').trim()) {
+                qParts.push(r.weftQuality.trim());
+              }
+              const qualityStr = qParts.join(' / ') || '—';
+              const isIssue = r.type === 'issue';
+              const sign = isIssue ? '−' : '';
+              const remW = r.remainingWarp ?? 0;
+              const remF = r.remainingWeft ?? 0;
+              const remT = r.remainingTotal ?? (remW + remF);
 
-    let overallTotalRemW = 0;
-    let overallTotalRemF = 0;
-
-    // Build HTML for each contract table
-    const tablesHtml = Array.from(contractGroups.values()).map(group => {
-      const gRecords = group.records;
-      const latestW = gRecords[0]?.remainingWarp ?? 0;
-      const latestF = gRecords[0]?.remainingWeft ?? 0;
-      const latestT = gRecords[0]?.remainingTotal ?? (latestW + latestF);
-
-      overallTotalRemW += latestW;
-      overallTotalRemF += latestF;
-
-      return `
-        <div class="contract-history-block" style="margin-bottom: 1.75rem;">
-          <div class="contract-block-header" style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 0.5rem; padding: 0 4px; gap: 8px; flex-wrap: wrap;">
-            <h3 style="font-size: 0.875rem; font-weight: 800; color: var(--accent-navy); margin: 0; word-break: break-word;">
-              ${escapeHtml(group.label)}
-            </h3>
-            <span style="font-size: 0.78rem; font-weight: 700; color: ${latestT === 0 ? 'var(--success)' : 'var(--accent-primary)'}; white-space: nowrap;">
-              Rem: ${fmtInt(latestW)}W / ${fmtInt(latestF)}F (${fmtInt(latestT)} Total)
-            </span>
-          </div>
-
-          <div class="yarn-table-wrapper">
-            <table class="yarn-datagrid-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Quality</th>
-                  <th>Warp</th>
-                  <th>Weft</th>
-                  <th>Rem. W</th>
-                  <th>Rem. F</th>
-                  <th>Rem. Tot</th>
-                  <th>Actions</th>
+              return `
+                <tr class="${isIssue ? 'row-issue' : 'row-deduction'}">
+                  <td>${formatDate(r.date)}</td>
+                  <td class="col-quality" title="${escapeHtml(qualityStr)}">${escapeHtml(qualityStr)}</td>
+                  <td class="${isIssue ? 'stock-neg' : ''}">${sign}${fmtInt(warp)}</td>
+                  <td class="${isIssue ? 'stock-neg' : ''}">${sign}${fmtInt(weft)}</td>
+                  <td><strong>${fmtInt(remW)}</strong></td>
+                  <td><strong>${fmtInt(remF)}</strong></td>
+                  <td><strong>${fmtInt(remT)}</strong></td>
+                  <td>
+                    ${isIssue ? `
+                      <button class="btn-action edit" onclick="editYarnRecord('${r._id}')" title="Edit Issuance">✏️</button>
+                      <button class="btn-action delete" onclick="deleteYarnRecord('${r._id}')" title="Delete Issuance">🗑️</button>
+                    ` : '—'}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                ${gRecords.map(r => {
-                  const warp = r.warpBags || 0;
-                  const weft = r.weftBags || 0;
-                  const qParts = [];
-                  if (r.warpQuality && r.warpQuality.trim()) qParts.push(r.warpQuality.trim());
-                  if (r.weftQuality && r.weftQuality.trim() && r.weftQuality.trim() !== (r.warpQuality || '').trim()) {
-                    qParts.push(r.weftQuality.trim());
-                  }
-                  const qualityStr = qParts.join(' / ') || '—';
-                  const isIssue = r.type === 'issue';
-                  const sign = isIssue ? '−' : '';
-                  const remW = r.remainingWarp ?? 0;
-                  const remF = r.remainingWeft ?? 0;
-                  const remT = r.remainingTotal ?? (remW + remF);
-
-                  return `
-                    <tr class="${isIssue ? 'row-issue' : 'row-deduction'}">
-                      <td>${formatDate(r.date)}</td>
-                      <td class="col-quality" title="${escapeHtml(qualityStr)}">${escapeHtml(qualityStr)}</td>
-                      <td class="${isIssue ? 'stock-neg' : ''}">${sign}${fmtInt(warp)}</td>
-                      <td class="${isIssue ? 'stock-neg' : ''}">${sign}${fmtInt(weft)}</td>
-                      <td><strong>${fmtInt(remW)}</strong></td>
-                      <td><strong>${fmtInt(remF)}</strong></td>
-                      <td><strong>${fmtInt(remT)}</strong></td>
-                      <td>
-                        ${isIssue ? `
-                          <button class="btn-action edit" onclick="editYarnRecord('${r._id}')" title="Edit Issuance">✏️</button>
-                          <button class="btn-action delete" onclick="deleteYarnRecord('${r._id}')" title="Delete Issuance">🗑️</button>
-                        ` : '—'}
-                      </td>
-                    </tr>
-                  `;
-                }).join('')}
-              </tbody>
-              <tfoot>
-                <tr class="datagrid-summary-row">
-                  <td colspan="4"><strong>${escapeHtml(group.label)} Balance Remaining</strong></td>
-                  <td class="${latestW === 0 ? 'stock-pos' : ''}"><strong>${fmtInt(latestW)}</strong></td>
-                  <td class="${latestF === 0 ? 'stock-pos' : ''}"><strong>${fmtInt(latestF)}</strong></td>
-                  <td class="${latestT === 0 ? 'stock-pos' : ''}"><strong>${fmtInt(latestT)}</strong></td>
-                  <td></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    const overallTotalRemT = overallTotalRemW + overallTotalRemF;
-
-    const grandTotalCardHtml = `
-      <div class="grand-total-card" style="margin-top: 0.875rem; margin-bottom: 1.5rem; background: linear-gradient(135deg, var(--accent-navy) 0%, #1e293b 100%); color: #ffffff; border-radius: var(--radius-md); padding: 14px 18px; box-shadow: var(--shadow-md); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-        <div>
-          <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; font-weight: 700; margin-bottom: 2px;">
-            📊 Grand Total Balance Remaining (${contractGroups.size} ${contractGroups.size === 1 ? 'Contract' : 'Contracts'})
-          </div>
-          <div style="font-size: 1.1rem; font-weight: 800;">
-            ${escapeHtml(partyDisplayName)}
-          </div>
-        </div>
-        <div style="display: flex; gap: 16px; font-variant-numeric: tabular-nums;">
-          <div>
-            <span style="font-size: 0.72rem; opacity: 0.8; display: block;">REM. WARP</span>
-            <strong style="font-size: 1.05rem; color: #60a5fa;">${fmtInt(overallTotalRemW)}</strong>
-          </div>
-          <div>
-            <span style="font-size: 0.72rem; opacity: 0.8; display: block;">REM. WEFT</span>
-            <strong style="font-size: 1.05rem; color: #34d399;">${fmtInt(overallTotalRemF)}</strong>
-          </div>
-          <div>
-            <span style="font-size: 0.72rem; opacity: 0.8; display: block;">GRAND TOTAL</span>
-            <strong style="font-size: 1.05rem; color: #f59e0b;">${fmtInt(overallTotalRemT)}</strong>
-          </div>
-        </div>
+              `;
+            }).join('')}
+          </tbody>
+          <tfoot>
+            <tr class="datagrid-summary-row">
+              <td colspan="4"><strong>Contract Balance Remaining</strong></td>
+              <td class="${latestRemW === 0 ? 'stock-pos' : ''}"><strong>${fmtInt(latestRemW)}</strong></td>
+              <td class="${latestRemF === 0 ? 'stock-pos' : ''}"><strong>${fmtInt(latestRemF)}</strong></td>
+              <td class="${latestRemT === 0 ? 'stock-pos' : ''}"><strong>${fmtInt(latestRemT)}</strong></td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
     `;
 
-    $('yarnHistoryContent').innerHTML = grandTotalCardHtml + tablesHtml;
+    showView(viewYarnHistory);
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
     showView(viewYarnHistory);
   } catch (err) {
     toast(err.message, 'error');
