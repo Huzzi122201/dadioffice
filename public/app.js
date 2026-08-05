@@ -1012,29 +1012,91 @@ if ($('yarnSearchInput')) {
 //  YARN STOCK — ISSUE FORM & PARTY AUTO-COMPLETE
 // ═══════════════════════════════════════════════════════════
 
+function toTitleCase(str) {
+  if (!str) return '';
+  return str.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+}
+
 async function populatePartyNamesDatalist() {
   try {
     const datalist = $('partyNamesDatalist');
-    if (!datalist) return;
+    const dashSelect = $('dashPartySelect');
+    const yarnFormPartySelect = $('yarnPartySelectDropdown');
+    const contractFormPartySelect = $('contractPartySelectDropdown');
 
     const [stock, invoices] = await Promise.all([
       apiGet(`${YARN_API}/stock`).catch(() => []),
       apiGet(API).catch(() => []),
     ]);
 
-    const nameSet = new Set();
-    if (Array.isArray(stock)) stock.forEach(s => s.partyName && nameSet.add(s.partyName.trim()));
-    if (Array.isArray(invoices)) invoices.forEach(i => i.partyName && nameSet.add(i.partyName.trim()));
+    const partyMap = new Map();
+    const addParty = (rawName) => {
+      if (!rawName || !rawName.trim()) return;
+      const cleanName = toTitleCase(rawName);
+      const norm = cleanName.toLowerCase();
+      if (!partyMap.has(norm)) {
+        partyMap.set(norm, cleanName);
+      }
+    };
 
-    const optionsHtml = Array.from(nameSet)
-      .sort()
-      .map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`)
-      .join('');
+    if (Array.isArray(stock)) stock.forEach(s => addParty(s.partyName));
+    if (Array.isArray(invoices)) invoices.forEach(i => addParty(i.partyName));
 
-    datalist.innerHTML = optionsHtml;
+    const sortedParties = Array.from(partyMap.values()).sort();
+
+    if (datalist) {
+      datalist.innerHTML = sortedParties.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
+    }
+
+    if (dashSelect) {
+      dashSelect.innerHTML = '<option value="">-- Choose Party --</option>' +
+        sortedParties.map(name => `<option value="${escapeHtml(name.toLowerCase())}" data-display="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
+    }
+
+    if (yarnFormPartySelect) {
+      yarnFormPartySelect.innerHTML = '<option value="">-- Choose Existing Party --</option>' +
+        sortedParties.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
+    }
+
+    if (contractFormPartySelect) {
+      contractFormPartySelect.innerHTML = '<option value="">-- Choose Existing Party --</option>' +
+        sortedParties.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
+    }
   } catch (err) {
     // silent fallback
   }
+}
+
+if ($('dashPartySelect')) {
+  $('dashPartySelect').addEventListener('change', () => {
+    const sel = $('dashPartySelect');
+    const val = sel.value;
+    if (val) {
+      const selectedOpt = sel.options[sel.selectedIndex];
+      const displayName = selectedOpt ? selectedOpt.dataset.display || selectedOpt.textContent : val;
+      openYarnHistory(encodeURIComponent(val), displayName);
+      sel.value = '';
+    }
+  });
+}
+
+if ($('yarnPartySelectDropdown')) {
+  $('yarnPartySelectDropdown').addEventListener('change', () => {
+    const val = $('yarnPartySelectDropdown').value;
+    if (val) {
+      $('yarnPartyName').value = val;
+      loadPartyContracts(val);
+    }
+  });
+}
+
+if ($('contractPartySelectDropdown')) {
+  $('contractPartySelectDropdown').addEventListener('change', () => {
+    const val = $('contractPartySelectDropdown').value;
+    if (val) {
+      $('partyName').value = val;
+    }
+  });
 }
 
 let editingYarnId = null;

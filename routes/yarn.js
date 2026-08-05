@@ -197,6 +197,11 @@ router.get('/contracts/:partyNorm', async (req, res) => {
   }
 });
 
+function toTitleCase(str) {
+  if (!str) return '';
+  return str.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+}
+
 // ── POST /api/yarn ── Create new issuance record ──────────
 router.post('/', async (req, res) => {
   try {
@@ -206,8 +211,10 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Party name is required' });
     }
 
+    const cleanParty = toTitleCase(partyName);
+
     const record = new YarnIssuance({
-      partyName: partyName.trim(),
+      partyName: cleanParty,
       date: date || new Date(),
       warpBags: warpBags || 0,
       weftBags: weftBags || 0,
@@ -246,8 +253,9 @@ router.put('/:id', async (req, res) => {
     if (!record) return res.status(404).json({ error: 'Record not found' });
 
     if (partyName && partyName.trim()) {
-      record.partyName = partyName.trim();
-      record.partyNameNorm = partyName.trim().toLowerCase();
+      const cleanParty = toTitleCase(partyName);
+      record.partyName = cleanParty;
+      record.partyNameNorm = cleanParty.toLowerCase();
     }
     if (date) record.date = date;
     if (warpBags !== undefined) record.warpBags = warpBags || 0;

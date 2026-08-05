@@ -49,6 +49,11 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+function toTitleCase(str) {
+  if (!str) return '';
+  return str.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+}
+
 // ── POST /api/invoices ── Create new invoice ──────────────
 router.post('/', async (req, res) => {
   try {
@@ -59,6 +64,8 @@ router.post('/', async (req, res) => {
       warpRate, weftRate, conversionRate, quantity,
     } = req.body;
 
+    const cleanPartyName = toTitleCase(partyName);
+
     // Calculate all outputs
     const calculated = calculate({
       warpCount, weftCount, reed, pick, width,
@@ -66,7 +73,7 @@ router.post('/', async (req, res) => {
     });
 
     const invoice = new Invoice({
-      partyName, date, fabricType, loomType,
+      partyName: cleanPartyName, date, fabricType, loomType,
       warpCount, warpCountAlt, weftCount, weftCountAlt,
       reed, pick, width, widthCm,
       warpRate, weftRate, conversionRate, quantity,
@@ -79,7 +86,7 @@ router.post('/', async (req, res) => {
     if (calculated.yarnBagsWarp > 0 || calculated.yarnBagsWeft > 0) {
       const contractLabel = `${fabricType || 'Contract'} — Qty: ${quantity || 0}`;
       const deduction = new YarnIssuance({
-        partyName: partyName.trim(),
+        partyName: cleanPartyName,
         date: date || new Date(),
         warpBags: calculated.yarnBagsWarp || 0,
         weftBags: calculated.yarnBagsWeft || 0,
