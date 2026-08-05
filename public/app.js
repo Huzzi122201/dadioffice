@@ -1037,7 +1037,9 @@ async function populatePartyNamesDatalist() {
   }
 }
 
-async function loadPartyContracts(partyName) {
+let editingYarnId = null;
+
+async function loadPartyContracts(partyName, selectedContractId = null) {
   const select = $('yarnContractSelect');
   if (!select) return;
   select.innerHTML = '<option value="">General Stock (No specific contract)</option>';
@@ -1051,6 +1053,9 @@ async function loadPartyContracts(partyName) {
         const opt = document.createElement('option');
         opt.value = c._id;
         opt.textContent = c.label;
+        if (selectedContractId && c._id.toString() === selectedContractId.toString()) {
+          opt.selected = true;
+        }
         select.appendChild(opt);
       });
     }
@@ -1068,23 +1073,40 @@ if ($('yarnPartyName')) {
   });
 }
 
-function openYarnForm(partyNamePreFill = '') {
-  $('yarnFormTitle').textContent = partyNamePreFill ? `Issue Yarn — ${partyNamePreFill}` : 'Issue Yarn';
+function openYarnForm(partyNamePreFill = '', editRecord = null) {
   $('yarnForm').reset();
-  $('yarnDate').value = formatDate(new Date());
-  if (partyNamePreFill) {
-    $('yarnPartyName').value = partyNamePreFill;
-    loadPartyContracts(partyNamePreFill);
-  } else {
-    loadPartyContracts('');
-  }
   populatePartyNamesDatalist();
+
+  if (editRecord) {
+    editingYarnId = editRecord._id;
+    $('yarnFormTitle').textContent = 'Edit Yarn Issuance';
+    $('yarnPartyName').value = editRecord.partyName || partyNamePreFill;
+    $('yarnDate').value = editRecord.date ? formatDate(editRecord.date) : formatDate(new Date());
+    $('yarnWarpBags').value = editRecord.warpBags || '';
+    $('yarnWarpQuality').value = editRecord.warpQuality || '';
+    $('yarnWeftBags').value = editRecord.weftBags || '';
+    $('yarnWeftQuality').value = editRecord.weftQuality || '';
+    $('yarnNote').value = editRecord.note || '';
+    loadPartyContracts(editRecord.partyName || partyNamePreFill, editRecord.contractId);
+  } else {
+    editingYarnId = null;
+    $('yarnFormTitle').textContent = partyNamePreFill ? `Issue Yarn — ${partyNamePreFill}` : 'Issue Yarn';
+    $('yarnDate').value = formatDate(new Date());
+    if (partyNamePreFill) {
+      $('yarnPartyName').value = partyNamePreFill;
+      loadPartyContracts(partyNamePreFill);
+    } else {
+      loadPartyContracts('');
+    }
+  }
+
   showView(viewYarnForm);
 }
 
 $('btnNewYarnIssue').addEventListener('click', () => openYarnForm(''));
 
 $('btnYarnFormBack').addEventListener('click', () => {
+  editingYarnId = null;
   if (currentHistoryPartyName && currentHistoryPartyNorm) {
     openYarnHistory(encodeURIComponent(currentHistoryPartyNorm), currentHistoryPartyName);
   } else {
@@ -1094,6 +1116,7 @@ $('btnYarnFormBack').addEventListener('click', () => {
 });
 
 $('btnYarnFormCancel').addEventListener('click', () => {
+  editingYarnId = null;
   if (currentHistoryPartyName && currentHistoryPartyNorm) {
     openYarnHistory(encodeURIComponent(currentHistoryPartyNorm), currentHistoryPartyName);
   } else {
@@ -1137,9 +1160,15 @@ $('yarnForm').addEventListener('submit', async (e) => {
   };
 
   try {
-    await apiPost(YARN_API, data);
-    toast('Yarn issued successfully!');
+    if (editingYarnId) {
+      await apiPut(`${YARN_API}/${editingYarnId}`, data);
+      toast('Yarn issuance updated successfully!');
+    } else {
+      await apiPost(YARN_API, data);
+      toast('Yarn issued successfully!');
+    }
 
+    editingYarnId = null;
     const norm = partyName.toLowerCase();
     if (currentHistoryPartyNorm === norm) {
       openYarnHistory(encodeURIComponent(currentHistoryPartyNorm), currentHistoryPartyName);
@@ -1188,6 +1217,7 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
               <th>Rem. Warp</th>
               <th>Rem. Weft</th>
               <th>Rem. Total</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -1217,6 +1247,12 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
                   <td><strong>${fmtInt(remW)}</strong></td>
                   <td><strong>${fmtInt(remF)}</strong></td>
                   <td><strong>${fmtInt(remT)}</strong></td>
+                  <td>
+                    ${isIssue ? `
+                      <button class="btn-action edit" onclick="editYarnRecord('${r._id}')" title="Edit Issuance">✏️</button>
+                      <button class="btn-action delete" onclick="deleteYarnRecord('${r._id}')" title="Delete Issuance">🗑️</button>
+                    ` : '—'}
+                  </td>
                 </tr>
               `;
             }).join('')}
@@ -1227,6 +1263,7 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
               <td class="${latestRemW === 0 ? 'stock-pos' : ''}"><strong>${fmtInt(latestRemW)}</strong></td>
               <td class="${latestRemF === 0 ? 'stock-pos' : ''}"><strong>${fmtInt(latestRemF)}</strong></td>
               <td class="${latestRemT === 0 ? 'stock-pos' : ''}"><strong>${fmtInt(latestRemT)}</strong></td>
+              <td></td>
             </tr>
           </tfoot>
         </table>
@@ -1234,6 +1271,33 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
     `;
 
     showView(viewYarnHistory);
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+async function editYarnRecord(id) {
+  try {
+    const record = await apiGet(`${YARN_API}/${id}`);
+    if (record) {
+      openYarnForm(record.partyName, record);
+    }
+  } catch (err) {
+    toast('Failed to load issuance details', 'error');
+  }
+}
+
+async function deleteYarnRecord(id) {
+  if (!confirm('Are you sure you want to delete this yarn issuance record?')) return;
+  try {
+    await apiDelete(`${YARN_API}/${id}`);
+    toast('Yarn issuance deleted');
+    if (currentHistoryPartyName && currentHistoryPartyNorm) {
+      openYarnHistory(encodeURIComponent(currentHistoryPartyNorm), currentHistoryPartyName);
+    } else {
+      showView(viewYarnDashboard);
+      loadYarnStock();
+    }
   } catch (err) {
     toast(err.message, 'error');
   }
@@ -1255,6 +1319,8 @@ if ($('btnIssueYarnFromHistory')) {
 // Make yarn functions globally available
 window.openYarnForm = openYarnForm;
 window.openYarnHistory = openYarnHistory;
+window.editYarnRecord = editYarnRecord;
+window.deleteYarnRecord = deleteYarnRecord;
 
 // ═══════════════════════════════════════════════════════════
 //  INIT

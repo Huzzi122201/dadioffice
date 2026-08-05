@@ -224,6 +224,45 @@ router.post('/', async (req, res) => {
   }
 });
 
+// ── GET /api/yarn/:id ── Get single issuance record ──────
+router.get('/:id', async (req, res) => {
+  try {
+    const record = await YarnIssuance.findById(req.params.id);
+    if (!record) return res.status(404).json({ error: 'Record not found' });
+    res.json(record);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── PUT /api/yarn/:id ── Update issuance record ─────────
+router.put('/:id', async (req, res) => {
+  try {
+    const { partyName, date, warpBags, weftBags, warpQuality, weftQuality, contractId, contractInfo, note } = req.body;
+
+    const record = await YarnIssuance.findById(req.params.id);
+    if (!record) return res.status(404).json({ error: 'Record not found' });
+
+    if (partyName && partyName.trim()) {
+      record.partyName = partyName.trim();
+      record.partyNameNorm = partyName.trim().toLowerCase();
+    }
+    if (date) record.date = date;
+    if (warpBags !== undefined) record.warpBags = warpBags || 0;
+    if (weftBags !== undefined) record.weftBags = weftBags || 0;
+    if (warpQuality !== undefined) record.warpQuality = warpQuality || '';
+    if (weftQuality !== undefined) record.weftQuality = weftQuality || '';
+    if (contractId !== undefined) record.contractId = contractId || null;
+    if (contractInfo !== undefined) record.contractInfo = contractInfo || '';
+    if (note !== undefined) record.note = note || '';
+
+    await record.save();
+    res.json(record);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // ── DELETE /api/yarn/:id ── Delete a record ────────────────
 router.delete('/:id', async (req, res) => {
   try {
