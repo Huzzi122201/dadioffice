@@ -1367,11 +1367,6 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
     toast(err.message, 'error');
   }
 }
-    showView(viewYarnHistory);
-  } catch (err) {
-    toast(err.message, 'error');
-  }
-}
 
 async function editYarnRecord(id) {
   try {
