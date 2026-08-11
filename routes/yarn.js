@@ -73,6 +73,10 @@ router.get('/stock', async (req, res) => {
   }
 });
 
+function r2(v) {
+  return v != null && !isNaN(v) && isFinite(v) ? Number(Number(v).toFixed(2)) : 0;
+}
+
 // ── GET /api/yarn/history/:partyNorm ── Transaction history & contract balance ──
 router.get('/history/:partyNorm', async (req, res) => {
   try {
@@ -83,8 +87,8 @@ router.get('/history/:partyNorm', async (req, res) => {
     const invoices = await Invoice.find().sort({ createdAt: -1 }).lean();
     const inv = invoices.find(i => i.partyName && i.partyName.trim().toLowerCase() === partyNorm);
 
-    let remWarp = inv ? Math.round(inv.yarnBagsWarp || 0) : 0;
-    let remWeft = inv ? Math.round(inv.yarnBagsWeft || 0) : 0;
+    let remWarp = inv ? r2(inv.yarnBagsWarp || 0) : 0;
+    let remWeft = inv ? r2(inv.yarnBagsWeft || 0) : 0;
     const contractInfo = inv ? `${inv.fabricType || 'Contract'}${inv.quantity ? ' (' + Number(inv.quantity).toLocaleString() + 'm)' : ''}` : 'Contract';
 
     // Fetch all yarn records for this party in chronological order (oldest first)
@@ -93,16 +97,19 @@ router.get('/history/:partyNorm', async (req, res) => {
       .lean();
 
     const recordsWithBalance = rawRecords.map(r => {
+      let curRemWarp = remWarp;
+      let curRemWeft = remWeft;
+
       if (r.type === 'deduction' && inv) {
         r.date = inv.date || r.date;
-        r.warpBags = Math.round(inv.yarnBagsWarp || 0);
-        r.weftBags = Math.round(inv.yarnBagsWeft || 0);
+        r.warpBags = r2(inv.yarnBagsWarp || 0);
+        r.weftBags = r2(inv.yarnBagsWeft || 0);
         r.contractInfo = contractInfo;
         curRemWarp = remWarp;
         curRemWeft = remWeft;
       } else if (r.type === 'issue') {
-        remWarp = Math.max(0, remWarp - (r.warpBags || 0));
-        remWeft = Math.max(0, remWeft - (r.weftBags || 0));
+        remWarp = r2(Math.max(0, remWarp - (r.warpBags || 0)));
+        remWeft = r2(Math.max(0, remWeft - (r.weftBags || 0)));
         curRemWarp = remWarp;
         curRemWeft = remWeft;
       } else {
@@ -113,9 +120,9 @@ router.get('/history/:partyNorm', async (req, res) => {
       return {
         ...r,
         contractInfo: r.contractInfo || contractInfo,
-        remainingWarp: curRemWarp,
-        remainingWeft: curRemWeft,
-        remainingTotal: curRemWarp + curRemWeft,
+        remainingWarp: r2(curRemWarp),
+        remainingWeft: r2(curRemWeft),
+        remainingTotal: r2(curRemWarp + curRemWeft),
       };
     });
 
@@ -144,14 +151,14 @@ router.get('/contracts/:partyNorm', async (req, res) => {
         i.contractId && i.contractId.toString() === inv._id.toString()
       );
 
-      const issuedWarp = contractIssuances.reduce((sum, i) => sum + (i.warpBags || 0), 0);
-      const issuedWeft = contractIssuances.reduce((sum, i) => sum + (i.weftBags || 0), 0);
+      const issuedWarp = r2(contractIssuances.reduce((sum, i) => sum + (i.warpBags || 0), 0));
+      const issuedWeft = r2(contractIssuances.reduce((sum, i) => sum + (i.weftBags || 0), 0));
 
-      const requiredWarp = Math.round(inv.yarnBagsWarp || 0);
-      const requiredWeft = Math.round(inv.yarnBagsWeft || 0);
+      const requiredWarp = r2(inv.yarnBagsWarp || 0);
+      const requiredWeft = r2(inv.yarnBagsWeft || 0);
 
-      const remWarpNeeded = Math.max(0, requiredWarp - issuedWarp);
-      const remWeftNeeded = Math.max(0, requiredWeft - issuedWeft);
+      const remWarpNeeded = r2(Math.max(0, requiredWarp - issuedWarp));
+      const remWeftNeeded = r2(Math.max(0, requiredWeft - issuedWeft));
 
       const shortTitle = `${inv.fabricType || 'Contract'}${inv.quantity ? ' (' + Number(inv.quantity).toLocaleString() + 'm)' : ''}`;
       const title = `${inv.fabricType ? inv.fabricType + ' ' : ''}Contract (Qty: ${inv.quantity || 0})`;
@@ -219,8 +226,8 @@ router.post('/', async (req, res) => {
     const record = new YarnIssuance({
       partyName: cleanParty,
       date: cleanDate,
-      warpBags: warpBags || 0,
-      weftBags: weftBags || 0,
+      warpBags: r2(warpBags),
+      weftBags: r2(weftBags),
       warpQuality: warpQuality || '',
       weftQuality: weftQuality || '',
       contractId: contractId || null,
@@ -261,8 +268,8 @@ router.put('/:id', async (req, res) => {
       record.partyNameNorm = cleanParty.toLowerCase();
     }
     if (date) record.date = toUtcDate(date);
-    if (warpBags !== undefined) record.warpBags = warpBags || 0;
-    if (weftBags !== undefined) record.weftBags = weftBags || 0;
+    if (warpBags !== undefined) record.warpBags = r2(warpBags);
+    if (weftBags !== undefined) record.weftBags = r2(weftBags);
     if (warpQuality !== undefined) record.warpQuality = warpQuality || '';
     if (weftQuality !== undefined) record.weftQuality = weftQuality || '';
     if (contractId !== undefined) record.contractId = contractId || null;

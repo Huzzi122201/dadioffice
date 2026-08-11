@@ -60,7 +60,7 @@ function calculate(inputs) {
   const totalCostYard = warpCostYard + weftCostYard + manfCostYard;
   const totalCostMeter = warpCostMeter + weftCostMeter + manfCostMeter;
 
-  // ── Yarn Bags & Container (Whole Integers / 0 decimals) ──
+  // ── Yarn Bags (2 decimals) & Container (Whole Integers) ──
   const yarnBagsWarp = warpWeightMeter / 40 * quantity / 100;
   const yarnBagsWeft = weftWeightMeter / 40 * quantity / 100;
   const totalYarnBags = yarnBagsWarp + yarnBagsWeft;
@@ -89,9 +89,9 @@ function calculate(inputs) {
     manfCostMeter: r2(manfCostMeter),
     totalCostYard: r2(totalCostYard),
     totalCostMeter: r2(totalCostMeter),
-    yarnBagsWarp: r0(yarnBagsWarp),
-    yarnBagsWeft: r0(yarnBagsWeft),
-    totalYarnBags: r0(totalYarnBags),
+    yarnBagsWarp: r2(yarnBagsWarp),
+    yarnBagsWeft: r2(yarnBagsWeft),
+    totalYarnBags: r2(totalYarnBags),
     qtyInFCL: r0(qtyInFCL),
   };
 }

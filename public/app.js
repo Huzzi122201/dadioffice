@@ -511,9 +511,9 @@ function updatePreview() {
   $('preTotalCostY').textContent = fmt(r.totalCostYard);
   $('preTotalCostM').textContent = fmt(r.totalCostMeter);
 
-  $('preBagsWarp').textContent = fmtInt(r.yarnBagsWarp);
-  $('preBagsWeft').textContent = fmtInt(r.yarnBagsWeft);
-  $('preTotalBags').textContent = fmtInt(r.totalYarnBags);
+  $('preBagsWarp').textContent = fmt(r.yarnBagsWarp);
+  $('preBagsWeft').textContent = fmt(r.yarnBagsWeft);
+  $('preTotalBags').textContent = fmt(r.totalYarnBags);
   $('preFCL').textContent = fmtInt(r.qtyInFCL);
 }
 
@@ -649,9 +649,9 @@ async function openDetail(id) {
                   <tr class="total-row"><td>Total Fabric Cost</td><td>${fmt(inv.totalCostYard)}</td><td>${fmt(inv.totalCostMeter)}</td></tr>
 
                   <tr class="section-row"><td colspan="3">📦 Yarn &amp; Container</td></tr>
-                  <tr><td>Yarn Bags (Warp)</td><td colspan="2">${fmtInt(inv.yarnBagsWarp)}</td></tr>
-                  <tr><td>Yarn Bags (Weft)</td><td colspan="2">${fmtInt(inv.yarnBagsWeft)}</td></tr>
-                  <tr class="highlight-row"><td>Total Yarn Bags</td><td colspan="2" class="highlight-val">${fmtInt(inv.totalYarnBags)}</td></tr>
+                  <tr><td>Yarn Bags (Warp)</td><td colspan="2">${fmt(inv.yarnBagsWarp)}</td></tr>
+                  <tr><td>Yarn Bags (Weft)</td><td colspan="2">${fmt(inv.yarnBagsWeft)}</td></tr>
+                  <tr class="highlight-row"><td>Total Yarn Bags</td><td colspan="2" class="highlight-val">${fmt(inv.totalYarnBags)}</td></tr>
                   <tr class="highlight-row"><td>Qty in 1 FCL</td><td colspan="2" class="highlight-val">${fmtInt(inv.qtyInFCL)}</td></tr>
                 </tbody>
               </table>
@@ -761,9 +761,9 @@ async function shareInvoiceAsPDF(inv) {
               <tr style="background: #dbeafe; border-top: 1.5px solid #1e40af; border-bottom: 1.5px solid #1e40af;"><td style="padding: 6px 8px; font-weight: 800; color: #0f172a;">Total Fabric Cost</td><td style="padding: 6px 8px; text-align: right; font-weight: 800; color: #0369a1;">${fmt(inv.totalCostYard)}</td><td style="padding: 6px 8px; text-align: right; font-weight: 800; color: #1e40af;">${fmt(inv.totalCostMeter)}</td></tr>
 
               <tr style="background: #0f172a; color: #ffffff; font-weight: 700;"><td colspan="3" style="padding: 5px 8px;">📦 Yarn &amp; Container</td></tr>
-              <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 4px 8px;">Yarn Bags (Warp)</td><td colspan="2" style="padding: 4px 8px; text-align: right;">${fmtInt(inv.yarnBagsWarp)}</td></tr>
-              <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 4px 8px;">Yarn Bags (Weft)</td><td colspan="2" style="padding: 4px 8px; text-align: right;">${fmtInt(inv.yarnBagsWeft)}</td></tr>
-              <tr style="border-bottom: 1px solid #e2e8f0; background: #dbeafe;"><td style="padding: 4px 8px; font-weight: 700; color: #1e40af;">Total Yarn Bags</td><td colspan="2" style="padding: 4px 8px; text-align: right; font-weight: 700; color: #1e40af;">${fmtInt(inv.totalYarnBags)}</td></tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 4px 8px;">Yarn Bags (Warp)</td><td colspan="2" style="padding: 4px 8px; text-align: right;">${fmt(inv.yarnBagsWarp)}</td></tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 4px 8px;">Yarn Bags (Weft)</td><td colspan="2" style="padding: 4px 8px; text-align: right;">${fmt(inv.yarnBagsWeft)}</td></tr>
+              <tr style="border-bottom: 1px solid #e2e8f0; background: #dbeafe;"><td style="padding: 4px 8px; font-weight: 700; color: #1e40af;">Total Yarn Bags</td><td colspan="2" style="padding: 4px 8px; text-align: right; font-weight: 700; color: #1e40af;">${fmt(inv.totalYarnBags)}</td></tr>
               <tr style="background: #dbeafe;"><td style="padding: 4px 8px; font-weight: 700; color: #1e40af;">Qty in 1 FCL</td><td colspan="2" style="padding: 4px 8px; text-align: right; font-weight: 700; color: #1e40af;">${fmtInt(inv.qtyInFCL)}</td></tr>
             </tbody>
           </table>
@@ -1220,8 +1220,8 @@ $('yarnForm').addEventListener('submit', async (e) => {
     return;
   }
 
-  const warpBags = parseInt($('yarnWarpBags').value) || 0;
-  const weftBags = parseInt($('yarnWeftBags').value) || 0;
+  const warpBags = parseFloat($('yarnWarpBags').value) || 0;
+  const weftBags = parseFloat($('yarnWeftBags').value) || 0;
 
   if (warpBags <= 0 && weftBags <= 0) {
     toast('Enter at least warp or weft bags', 'error');
@@ -1296,7 +1296,7 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
           📜 ${escapeHtml(contractInfo)}
         </h3>
         <span style="font-size: 0.8125rem; font-weight: 700; color: ${latestRemT === 0 ? 'var(--success)' : 'var(--accent-primary)'};">
-          Remaining: ${fmtInt(latestRemW)}W / ${fmtInt(latestRemF)}F (${fmtInt(latestRemT)} Total)
+          Remaining: ${fmt(latestRemW)}W / ${fmt(latestRemF)}F (${fmt(latestRemT)} Total)
         </span>
       </div>
 
@@ -1334,11 +1334,11 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
                 <tr class="${isIssue ? 'row-issue' : 'row-deduction'}">
                   <td>${formatDate(r.date)}</td>
                   <td class="col-quality" title="${escapeHtml(qualityStr)}">${escapeHtml(qualityStr)}</td>
-                  <td class="${isIssue ? 'stock-neg' : ''}">${sign}${fmtInt(warp)}</td>
-                  <td class="${isIssue ? 'stock-neg' : ''}">${sign}${fmtInt(weft)}</td>
-                  <td><strong>${fmtInt(remW)}</strong></td>
-                  <td><strong>${fmtInt(remF)}</strong></td>
-                  <td><strong>${fmtInt(remT)}</strong></td>
+                  <td class="${isIssue ? 'stock-neg' : ''}">${sign}${fmt(warp)}</td>
+                  <td class="${isIssue ? 'stock-neg' : ''}">${sign}${fmt(weft)}</td>
+                  <td><strong>${fmt(remW)}</strong></td>
+                  <td><strong>${fmt(remF)}</strong></td>
+                  <td><strong>${fmt(remT)}</strong></td>
                   <td>
                     ${isIssue ? `
                       <button class="btn-action edit" onclick="editYarnRecord('${r._id}')" title="Edit Issuance">✏️</button>
@@ -1352,9 +1352,9 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
           <tfoot>
             <tr class="datagrid-summary-row">
               <td colspan="4"><strong>Contract Balance Remaining</strong></td>
-              <td class="${latestRemW === 0 ? 'stock-pos' : ''}"><strong>${fmtInt(latestRemW)}</strong></td>
-              <td class="${latestRemF === 0 ? 'stock-pos' : ''}"><strong>${fmtInt(latestRemF)}</strong></td>
-              <td class="${latestRemT === 0 ? 'stock-pos' : ''}"><strong>${fmtInt(latestRemT)}</strong></td>
+              <td class="${latestRemW === 0 ? 'stock-pos' : ''}"><strong>${fmt(latestRemW)}</strong></td>
+              <td class="${latestRemF === 0 ? 'stock-pos' : ''}"><strong>${fmt(latestRemF)}</strong></td>
+              <td class="${latestRemT === 0 ? 'stock-pos' : ''}"><strong>${fmt(latestRemT)}</strong></td>
               <td></td>
             </tr>
           </tfoot>
