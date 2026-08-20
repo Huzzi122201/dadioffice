@@ -2210,11 +2210,11 @@ function handleCashModeToggle() {
   const isCash = $('entryModeCash') ? $('entryModeCash').checked : false;
   const side = $('entrySide') ? $('entrySide').value : 'jama';
 
+  if ($('entryTypeSection')) $('entryTypeSection').style.display = 'none';
+
   if (isCash) {
-    if ($('entryTypeSection')) $('entryTypeSection').style.display = 'none';
     if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = 'none';
   } else {
-    if ($('entryTypeSection')) $('entryTypeSection').style.display = '';
     if (side === 'banam') {
       if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = '';
     } else {
@@ -2235,8 +2235,8 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
   $('editEntryId').value = '';
   $('entryDate').value = toInputDate(new Date());
 
-  // Reset trade type radio & sell section
-  if ($('entryTypeNormal')) $('entryTypeNormal').checked = true;
+  // Hide trade type radio section from form UI
+  if ($('entryTypeSection')) $('entryTypeSection').style.display = 'none';
   if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = 'none';
 
   // Determine active side
@@ -2256,10 +2256,7 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
     $('btnSaveEntry').style.borderColor = '#15803d';
     $('btnSaveEntry').textContent = '💾 Save Jama Entry (جمع)';
 
-    // Jama Entry: Purchase Entry only (hide Normal & Sell)
-    if ($('wrapperTypeNormal')) $('wrapperTypeNormal').style.display = 'none';
-    if ($('wrapperTypeSell')) $('wrapperTypeSell').style.display = 'none';
-    if ($('wrapperTypePurchase')) $('wrapperTypePurchase').style.display = '';
+    // Jama Entry: Auto set to Purchase
     if ($('entryTypePurchase')) $('entryTypePurchase').checked = true;
     if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = 'none';
 
@@ -2272,10 +2269,7 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
     $('btnSaveEntry').style.borderColor = '#b91c1c';
     $('btnSaveEntry').textContent = '💾 Save Banam Entry (بنام)';
 
-    // Banam Entry: Sell Entry only (hide Normal & Purchase)
-    if ($('wrapperTypeNormal')) $('wrapperTypeNormal').style.display = 'none';
-    if ($('wrapperTypePurchase')) $('wrapperTypePurchase').style.display = 'none';
-    if ($('wrapperTypeSell')) $('wrapperTypeSell').style.display = '';
+    // Banam Entry: Auto set to Sell
     if ($('entryTypeSell')) $('entryTypeSell').checked = true;
     if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = '';
     await populateOpenPurchasesSelect(editData ? editData.linkedPurchaseId : null);
