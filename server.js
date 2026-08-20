@@ -1,3 +1,8 @@
+const dns = require('dns');
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
+
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
@@ -6,6 +11,7 @@ const path = require('path');
 
 const invoiceRoutes = require('./routes/invoices');
 const yarnRoutes = require('./routes/yarn');
+const cashbookRoutes = require('./routes/cashbook');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,16 +21,25 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ── MongoDB Connection (Serverless & Local Friendly) ────────
+// ── MongoDB Connection ──────────────────────────────────────
 let isConnected = false;
 async function connectDB() {
   if (isConnected && mongoose.connection.readyState === 1) return;
+  const atlasUri = process.env.MONGODB_URI;
+  if (!atlasUri) {
+    console.error('❌ MONGODB_URI is not set in environment variables.');
+    return;
+  }
+
   try {
-    const db = await mongoose.connect(process.env.MONGODB_URI);
+    const db = await mongoose.connect(atlasUri, {
+      serverSelectionTimeoutMS: 10000,
+    });
     isConnected = db.connections[0].readyState === 1;
     console.log('✅ Connected to MongoDB Atlas');
   } catch (err) {
-    console.error('❌ MongoDB connection error:', err.message);
+    console.error('❌ Atlas connection failed:', err.message);
+    console.error('👉 Please check your IP whitelist on MongoDB Atlas (https://cloud.mongodb.com)');
   }
 }
 
@@ -38,6 +53,7 @@ app.use(async (req, res, next) => {
 // ── API Routes ─────────────────────────────────────────────
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/yarn', yarnRoutes);
+app.use('/api/cashbook', cashbookRoutes);
 
 // ── SPA Fallback ───────────────────────────────────────────
 app.get('*', (req, res) => {

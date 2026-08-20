@@ -6,10 +6,11 @@
   <meta name="description" content="Textile Fabric Costing Sheet — Conversion Invoice Manager" />
   <meta name="theme-color" content="#6366f1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Textile Costing Sheet</title>
   <link rel="manifest" href="/manifest.json" />
-  <link rel="stylesheet" href="/styles.css?v=1.2.0" />
+  <link rel="stylesheet" href="/styles.css?v=1.4.0" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
@@ -355,6 +356,212 @@
       </div>
     </section>
 
+    <!-- ═══ CASHBOOK VIEWS ═══ -->
+
+    <!-- ─── Cashbook Dashboard ─── -->
+    <section class="view" id="viewCashbookDashboard">
+      <div class="dashboard-header">
+        <h2 class="dashboard-title">📒 Cashbook <span class="dashboard-count" id="cbCount">(0)</span></h2>
+        <div class="cb-header-btns">
+          <button class="btn btn-success" id="btnNewJamaEntry" style="background: #15803d; color: #fff; border-color: #15803d;">🟢 ＋ Add Jama (جمع)</button>
+          <button class="btn btn-danger" id="btnNewBanamEntry" style="background: #b91c1c; color: #fff; border-color: #b91c1c;">🔴 ＋ Add Banam (بنام)</button>
+          <button class="btn btn-primary" id="btnNewParty" style="display: none;">＋ Add Party</button>
+        </div>
+      </div>
+
+      <!-- Subnav Tabs: Rokers vs Khata vs All Parties vs Purchase/Sell -->
+      <div class="cb-subnav">
+        <button class="cb-subnav-btn active" id="subnavRokers" data-subtab="rokers">📜 Rokers</button>
+        <button class="cb-subnav-btn" id="subnavKhata" data-subtab="khata">📒 Khata</button>
+        <button class="cb-subnav-btn" id="subnavParties" data-subtab="parties">👥 All Parties</button>
+        <button class="cb-subnav-btn" id="subnavPurchaseSell" data-subtab="purchaseSell">📦 Purchase / Sell</button>
+      </div>
+
+      <div class="search-section">
+        <div class="search-wrapper">
+          <span class="search-icon">🔍</span>
+          <input type="text" class="search-input" id="cbSearchInput" placeholder="Search..." autocomplete="off" />
+        </div>
+      </div>
+
+      <div id="cbMainList">
+        <!-- populated by JS: either rokers list or parties khata list -->
+      </div>
+    </section>
+
+    <!-- ─── Single Roker Detail View ─── -->
+    <section class="view" id="viewRokerDetail">
+      <div class="yarn-history-header">
+        <div class="header-left">
+          <button class="btn-back" id="btnRokerDetailBack">←</button>
+          <h2 class="form-title" id="rokerDetailTitle">Roker</h2>
+        </div>
+        <div class="cb-header-btns">
+          <button class="btn btn-success" id="btnRokerAddJama" style="background: #15803d; color: #fff; border-color: #15803d;">🟢 ＋ Add Jama (جمع)</button>
+          <button class="btn btn-danger" id="btnRokerAddBanam" style="background: #b91c1c; color: #fff; border-color: #b91c1c;">🔴 ＋ Add Banam (بنام)</button>
+        </div>
+      </div>
+
+      <div id="rokerInfoSummary">
+        <!-- populated by JS -->
+      </div>
+      <div id="rokerContent">
+        <!-- populated by JS -->
+      </div>
+    </section>
+
+    <!-- ─── Party Khata History ─── -->
+    <section class="view" id="viewKhata">
+      <div class="yarn-history-header">
+        <div class="header-left">
+          <button class="btn-back" id="btnKhataBack">←</button>
+          <h2 class="form-title" id="khataTitle">Party Khata</h2>
+        </div>
+      </div>
+
+      <div id="khataPartyInfo">
+        <!-- populated by JS -->
+      </div>
+      <div id="khataContent">
+        <!-- populated by JS -->
+      </div>
+    </section>
+
+    <!-- ─── Cashbook Entry Form (Purchase / Allocate / Buyback / Transfer / General) ─── -->
+    <section class="view" id="viewEntryForm">
+      <div class="form-header">
+        <button class="btn-back" id="btnEntryFormBack">←</button>
+        <h2 class="form-title" id="entryFormTitle">New Roker Entry</h2>
+      </div>
+
+      <form id="entryForm" class="card" autocomplete="off">
+        <input type="hidden" id="editEntryId" value="" />
+        <input type="hidden" id="entrySide" value="jama" />
+
+        <div class="form-section">
+          <h3 class="section-title" id="entryFormSectionTitle">📋 Roker Entry Details</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="entryRokerNo">Roker ID *</label>
+              <input class="form-input" type="number" id="entryRokerNo" min="1" placeholder="Auto-generated" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="entryDate">Date (DD/MM/YYYY) *</label>
+              <input class="form-input" type="text" id="entryDate" placeholder="DD/MM/YYYY" required />
+            </div>
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label class="form-label" for="entryPartyName">Party Name *</label>
+              <input class="form-input" type="text" id="entryPartyName" list="cbPartyDatalist" placeholder="Select existing or type new party name" required autocomplete="off" />
+              <datalist id="cbPartyDatalist"></datalist>
+            </div>
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label class="form-label" for="entryDescription">Description</label>
+              <input class="form-input" type="text" id="entryDescription" placeholder="Optional description of transaction" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Bags / Meters & Rate Section -->
+        <div class="form-section" id="entryBagSection">
+          <h3 class="section-title">📦 Bags / Meters & Rate (Optional)</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="entryBags">No. of Bags / Meters</label>
+              <input class="form-input" type="number" id="entryBags" min="0" step="any" placeholder="Optional (e.g. 100)" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="entryRate">Rate (₹)</label>
+              <input class="form-input" type="number" id="entryRate" min="0" step="any" placeholder="Optional (e.g. 2500)" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Entry Type: Normal vs Purchase vs Sell -->
+        <div class="form-section" id="entryTypeSection">
+          <h3 class="section-title">📦 Entry Type (خرید / فروخت)</h3>
+          <div class="cb-radio-group">
+            <label class="cb-radio-option" id="wrapperTypeNormal">
+              <input type="radio" name="entryTradeType" id="entryTypeNormal" value="normal" checked />
+              <div class="cb-radio-text">
+                <strong>📋 Normal Entry</strong>
+                <small>Regular roker entry</small>
+              </div>
+            </label>
+            <label class="cb-radio-option" id="wrapperTypePurchase">
+              <input type="radio" name="entryTradeType" id="entryTypePurchase" value="purchase" />
+              <div class="cb-radio-text">
+                <strong>🛒 Purchase Entry (خرید)</strong>
+                <small>Track bags for future selling</small>
+              </div>
+            </label>
+            <label class="cb-radio-option" id="wrapperTypeSell">
+              <input type="radio" name="entryTradeType" id="entryTypeSell" value="sell" />
+              <div class="cb-radio-text">
+                <strong>🏷️ Sell Entry (فروخت)</strong>
+                <small>Sell against a purchase</small>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Open Purchases Dropdown (shown only when Sell is selected) -->
+        <div class="form-section" id="sellPurchaseSection" style="display: none;">
+          <h3 class="section-title">🔗 Select Purchase to Sell Against</h3>
+          <div class="form-grid">
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label class="form-label" for="sellPurchaseSelect">Open Purchase *</label>
+              <select class="form-input" id="sellPurchaseSelect">
+                <option value="">— Select a purchase —</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Entry Mode: General vs Cash Entry -->
+        <div class="form-section">
+          <h3 class="section-title">💵 Entry Mode</h3>
+          <div class="cb-radio-group">
+            <label class="cb-radio-option" id="labelModeGeneral">
+              <input type="radio" name="entryCashMode" id="entryModeGeneral" value="general" checked />
+              <div class="cb-radio-text">
+                <strong>📒 Khata Entry (Normal)</strong>
+                <small>Updates this party's account only</small>
+              </div>
+            </label>
+            <label class="cb-radio-option" id="labelModeCash">
+              <input type="radio" name="entryCashMode" id="entryModeCash" value="cash" />
+              <div class="cb-radio-text">
+                <strong>💵 Cash Entry (نقدی انٹری)</strong>
+                <small>Also updates Cash In Hand balance</small>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Amount Section (Jama vs Banam) -->
+        <div class="form-section">
+          <h3 class="section-title" id="entryAmountSectionTitle">💰 Amount</h3>
+          <div class="form-grid">
+            <div class="form-group" id="groupNaam" style="display: none; grid-column: 1 / -1;">
+              <label class="form-label cb-naam-label" for="entryNaam">Banam / Naam Amount (Debit) ▼</label>
+              <input class="form-input cb-naam-input" type="number" id="entryNaam" min="0" step="any" placeholder="0" />
+            </div>
+            <div class="form-group" id="groupJama" style="grid-column: 1 / -1;">
+              <label class="form-label cb-jama-label" for="entryJama">Jama Amount (Credit) ▲</label>
+              <input class="form-input cb-jama-input" type="number" id="entryJama" min="0" step="any" placeholder="0" />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary btn-lg" id="btnSaveEntry">💾 Save Entry</button>
+          <button type="button" class="btn btn-secondary btn-lg" id="btnEntryFormCancel">Cancel</button>
+        </div>
+      </form>
+    </section>
+
+
+
   </main>
 
   <!-- ═══ Bottom Tab Navigation ═══ -->
@@ -367,7 +574,47 @@
       <span class="tab-icon">🧶</span>
       <span class="tab-label">Yarn Stock</span>
     </button>
+    <button class="bottom-nav-tab" id="tabCashbook" data-tab="cashbook">
+      <span class="tab-icon">📒</span>
+      <span class="tab-label">Cashbook</span>
+    </button>
   </nav>
+
+  <!-- ═══ Add/Edit Party Modal ═══ -->
+  <div class="modal-overlay hidden" id="partyModal">
+    <div class="modal" style="max-width: 440px;">
+      <h3 class="modal-title" id="partyModalTitle">Add New Party</h3>
+      <form id="partyForm" onsubmit="event.preventDefault(); savePartyModal();">
+        <input type="hidden" id="partyModalId" />
+        <div class="form-group" style="margin-bottom: 0.875rem;">
+          <label class="form-label" for="partyModalName">Party Name *</label>
+          <input type="text" class="form-input" id="partyModalName" required placeholder="e.g. Usama Faisal" autocomplete="off" />
+        </div>
+        <div class="form-row" style="margin-bottom: 0.875rem;">
+          <div class="form-group" style="flex: 1;">
+            <label class="form-label" for="partyModalAmount">Amount (₹)</label>
+            <input type="number" class="form-input" id="partyModalAmount" min="0" step="any" placeholder="0" />
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label class="form-label" for="partyModalType">Type</label>
+            <select class="form-select" id="partyModalType">
+              <option value="jama">🟢 Jama (Credit / جمع)</option>
+              <option value="banam">🔴 Banam (Debit / بنام)</option>
+              <option value="cash">💵 Cash Party (نقدی / کیش)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+          <label class="form-label" for="partyModalPhone">Phone (Optional)</label>
+          <input type="tel" class="form-input" id="partyModalPhone" placeholder="03xx-xxxxxxx" />
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closePartyModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btnSavePartyModal">💾 Save Party</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- ═══ Confirm Modal ═══ -->
   <div class="modal-overlay hidden" id="confirmModal">
@@ -384,7 +631,7 @@
   <!-- ═══ Toast Container ═══ -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <script src="/app.js?v=1.2.0"></script>
+  <script src="/app.js?v=1.4.5"></script>
 </body>
 </html>
 
