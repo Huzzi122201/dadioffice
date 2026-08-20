@@ -2208,14 +2208,14 @@ function handleTradeTypeChange() {
 
 function handleCashModeToggle() {
   const isCash = $('entryModeCash') ? $('entryModeCash').checked : false;
-  const side = $('entrySide') ? $('entrySide').value : 'jama';
-
-  if ($('entryTypeSection')) $('entryTypeSection').style.display = 'none';
+  const isSell = $('entryTypeSell') ? $('entryTypeSell').checked : false;
 
   if (isCash) {
+    if ($('entryTypeSection')) $('entryTypeSection').style.display = 'none';
     if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = 'none';
   } else {
-    if (side === 'banam') {
+    if ($('entryTypeSection')) $('entryTypeSection').style.display = '';
+    if (isSell) {
       if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = '';
     } else {
       if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = 'none';
@@ -2235,8 +2235,8 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
   $('editEntryId').value = '';
   $('entryDate').value = toInputDate(new Date());
 
-  // Hide trade type radio section from form UI
-  if ($('entryTypeSection')) $('entryTypeSection').style.display = 'none';
+  // Show trade type radio section
+  if ($('entryTypeSection')) $('entryTypeSection').style.display = '';
   if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = 'none';
 
   // Determine active side
@@ -2256,8 +2256,20 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
     $('btnSaveEntry').style.borderColor = '#15803d';
     $('btnSaveEntry').textContent = '💾 Save Jama Entry (جمع)';
 
-    // Jama Entry: Auto set to Purchase
-    if ($('entryTypePurchase')) $('entryTypePurchase').checked = true;
+    // Jama Entry: Show Purchase Entry & Normal Entry options (hide Sell option)
+    if ($('wrapperTypeNormal')) $('wrapperTypeNormal').style.display = '';
+    if ($('wrapperTypePurchase')) $('wrapperTypePurchase').style.display = '';
+    if ($('wrapperTypeSell')) $('wrapperTypeSell').style.display = 'none';
+
+    if (editData) {
+      if (editData.isPurchase && $('entryTypePurchase')) {
+        $('entryTypePurchase').checked = true;
+      } else if ($('entryTypeNormal')) {
+        $('entryTypeNormal').checked = true;
+      }
+    } else {
+      if ($('entryTypePurchase')) $('entryTypePurchase').checked = true; // Default to Purchase for Jama
+    }
     if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = 'none';
 
   } else {
@@ -2269,10 +2281,27 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
     $('btnSaveEntry').style.borderColor = '#b91c1c';
     $('btnSaveEntry').textContent = '💾 Save Banam Entry (بنام)';
 
-    // Banam Entry: Auto set to Sell
-    if ($('entryTypeSell')) $('entryTypeSell').checked = true;
-    if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = '';
-    await populateOpenPurchasesSelect(editData ? editData.linkedPurchaseId : null);
+    // Banam Entry: Show Sell Entry & Normal Entry options (hide Purchase option)
+    if ($('wrapperTypeNormal')) $('wrapperTypeNormal').style.display = '';
+    if ($('wrapperTypePurchase')) $('wrapperTypePurchase').style.display = 'none';
+    if ($('wrapperTypeSell')) $('wrapperTypeSell').style.display = '';
+
+    if (editData) {
+      if (editData.isSell && $('entryTypeSell')) {
+        $('entryTypeSell').checked = true;
+      } else if ($('entryTypeNormal')) {
+        $('entryTypeNormal').checked = true;
+      }
+    } else {
+      if ($('entryTypeSell')) $('entryTypeSell').checked = true; // Default to Sell for Banam
+    }
+
+    if ($('entryTypeSell') && $('entryTypeSell').checked) {
+      if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = '';
+      await populateOpenPurchasesSelect(editData ? editData.linkedPurchaseId : null);
+    } else {
+      if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = 'none';
+    }
   }
 
   // Fetch or set Roker No
