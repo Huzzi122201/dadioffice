@@ -27,27 +27,31 @@ async function connectDB() {
   if (isConnected && mongoose.connection.readyState === 1) return;
   const atlasUri = process.env.MONGODB_URI;
   if (!atlasUri) {
-    console.error('❌ MONGODB_URI is not set in environment variables.');
-    return;
+    throw new Error('MONGODB_URI environment variable is missing. Please add MONGODB_URI in Vercel Project Settings -> Environment Variables.');
   }
 
-  try {
-    const db = await mongoose.connect(atlasUri, {
-      serverSelectionTimeoutMS: 10000,
-    });
-    isConnected = db.connections[0].readyState === 1;
-    console.log('✅ Connected to MongoDB Atlas');
-  } catch (err) {
-    console.error('❌ Atlas connection failed:', err.message);
-    console.error('👉 Please check your IP whitelist on MongoDB Atlas (https://cloud.mongodb.com)');
-  }
+  const db = await mongoose.connect(atlasUri, {
+    serverSelectionTimeoutMS: 10000,
+  });
+  isConnected = db.connections[0].readyState === 1;
+  console.log('✅ Connected to MongoDB Atlas');
 }
 
 app.use(async (req, res, next) => {
-  if (process.env.MONGODB_URI) {
+  try {
     await connectDB();
+    next();
+  } catch (err) {
+    console.error('❌ Atlas connection failed:', err.message);
+    if (req.path.startsWith('/api/')) {
+      return res.status(500).json({
+        error: 'Database Connection Error',
+        message: err.message,
+        hint: 'Make sure MONGODB_URI is set in Vercel environment variables and Network Access on MongoDB Atlas includes 0.0.0.0/0 (Allow Access from Anywhere).'
+      });
+    }
+    next();
   }
-  next();
 });
 
 // ── API Routes ─────────────────────────────────────────────
