@@ -2178,10 +2178,10 @@ async function populateOpenPurchasesSelect(selectedId = null) {
     const url = selectedId ? `${CB_API}/open-purchases?includeId=${encodeURIComponent(selectedId)}` : `${CB_API}/open-purchases`;
     const openPurchases = await apiGet(url);
     if (!openPurchases || openPurchases.length === 0) {
-      select.innerHTML = '<option value="">— No open purchases available —</option>';
+      select.innerHTML = '<option value="">— None (No open purchases available) —</option>';
       return;
     }
-    let html = '<option value="">— Select a purchase —</option>';
+    let html = '<option value="">— None (Optional / Regular Entry) —</option>';
     openPurchases.forEach(p => {
       const isSel = (selectedId && (p._id === selectedId || p._id === String(selectedId))) ? 'selected' : '';
       const amount = (p.naam || 0) + (p.jama || 0);
@@ -2195,24 +2195,27 @@ async function populateOpenPurchasesSelect(selectedId = null) {
 
 function handleTradeTypeChange() {
   const isSell = $('entryTypeSell') ? $('entryTypeSell').checked : false;
+  const isCash = $('entryModeCash') ? $('entryModeCash').checked : false;
   if ($('sellPurchaseSection')) {
-    $('sellPurchaseSection').style.display = isSell ? '' : 'none';
-    if (isSell) {
+    if (isSell && !isCash) {
+      $('sellPurchaseSection').style.display = '';
       populateOpenPurchasesSelect();
+    } else {
+      $('sellPurchaseSection').style.display = 'none';
     }
   }
 }
 
 function handleCashModeToggle() {
   const isCash = $('entryModeCash') ? $('entryModeCash').checked : false;
-  const side = $('entrySide') ? $('entrySide').value : 'jama';
+  const isSell = $('entryTypeSell') ? $('entryTypeSell').checked : false;
 
   if (isCash) {
     if ($('entryTypeSection')) $('entryTypeSection').style.display = 'none';
     if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = 'none';
   } else {
     if ($('entryTypeSection')) $('entryTypeSection').style.display = '';
-    if (side === 'banam') {
+    if (isSell) {
       if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = '';
     } else {
       if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = 'none';
@@ -2253,12 +2256,20 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
     $('btnSaveEntry').style.borderColor = '#15803d';
     $('btnSaveEntry').textContent = '💾 Save Jama Entry (جمع)';
 
-    // Jama Entry: Show Purchase Entry option only (hide Normal & Sell)
-    if ($('wrapperTypeNormal')) $('wrapperTypeNormal').style.display = 'none';
-    if ($('wrapperTypeSell')) $('wrapperTypeSell').style.display = 'none';
+    // Jama Entry: Allow Normal Entry & Purchase Entry options (hide Sell option)
+    if ($('wrapperTypeNormal')) $('wrapperTypeNormal').style.display = '';
     if ($('wrapperTypePurchase')) $('wrapperTypePurchase').style.display = '';
-    if ($('entryTypePurchase')) $('entryTypePurchase').checked = true;
+    if ($('wrapperTypeSell')) $('wrapperTypeSell').style.display = 'none';
+
+    if (editData && editData.isPurchase) {
+      if ($('entryTypePurchase')) $('entryTypePurchase').checked = true;
+    } else if (editData && !editData.isPurchase && !editData.isSell) {
+      if ($('entryTypeNormal')) $('entryTypeNormal').checked = true;
+    } else {
+      if ($('entryTypePurchase')) $('entryTypePurchase').checked = true;
+    }
     if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = 'none';
+
   } else {
     $('entryFormTitle').textContent = editData ? '✏️ Edit Banam Entry (بنام)' : (preSelectRokerNo ? `🔴 Add Banam Entry to Roker #${preSelectRokerNo}` : '🔴 New Banam Entry (بنام)');
     $('groupNaam').style.display = '';
@@ -2268,13 +2279,25 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
     $('btnSaveEntry').style.borderColor = '#b91c1c';
     $('btnSaveEntry').textContent = '💾 Save Banam Entry (بنام)';
 
-    // Banam Entry: Show Sell Entry option only (hide Normal & Purchase)
-    if ($('wrapperTypeNormal')) $('wrapperTypeNormal').style.display = 'none';
+    // Banam Entry: Allow Normal Entry & Sell Entry options (hide Purchase option)
+    if ($('wrapperTypeNormal')) $('wrapperTypeNormal').style.display = '';
     if ($('wrapperTypePurchase')) $('wrapperTypePurchase').style.display = 'none';
     if ($('wrapperTypeSell')) $('wrapperTypeSell').style.display = '';
-    if ($('entryTypeSell')) $('entryTypeSell').checked = true;
-    if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = '';
-    await populateOpenPurchasesSelect(editData ? editData.linkedPurchaseId : null);
+
+    if (editData && editData.isSell) {
+      if ($('entryTypeSell')) $('entryTypeSell').checked = true;
+    } else if (editData && !editData.isPurchase && !editData.isSell) {
+      if ($('entryTypeNormal')) $('entryTypeNormal').checked = true;
+    } else {
+      if ($('entryTypeSell')) $('entryTypeSell').checked = true;
+    }
+
+    if ($('entryTypeSell') && $('entryTypeSell').checked) {
+      if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = '';
+      await populateOpenPurchasesSelect(editData ? editData.linkedPurchaseId : null);
+    } else {
+      if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = 'none';
+    }
   }
 
   // Fetch or set Roker No
@@ -2316,15 +2339,6 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
     } else {
       if ($('entryModeGeneral')) $('entryModeGeneral').checked = true;
     }
-    if (editData.isPurchase && $('entryTypePurchase')) {
-      if ($('wrapperTypePurchase')) $('wrapperTypePurchase').style.display = '';
-      $('entryTypePurchase').checked = true;
-    } else if (editData.isSell && $('entryTypeSell')) {
-      if ($('wrapperTypeSell')) $('wrapperTypeSell').style.display = '';
-      $('entryTypeSell').checked = true;
-      if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = '';
-      await populateOpenPurchasesSelect(editData.linkedPurchaseId);
-    }
   } else {
     if ($('entryModeGeneral')) $('entryModeGeneral').checked = true;
   }
@@ -2360,15 +2374,11 @@ $('entryForm').addEventListener('submit', async (e) => {
 
   const rokerNoVal = parseInt($('entryRokerNo').value) || 0;
   const isCashVal = $('entryModeCash') ? $('entryModeCash').checked : false;
+  const isPurchaseVal = !isCashVal && ($('entryTypePurchase') ? $('entryTypePurchase').checked : false);
+  const isSellVal = !isCashVal && ($('entryTypeSell') ? $('entryTypeSell').checked : false);
+  const linkedPurchaseIdVal = (isSellVal && $('sellPurchaseSelect')) ? ($('sellPurchaseSelect').value || null) : null;
+
   const side = $('entrySide').value;
-  const isPurchaseVal = !isCashVal && (side === 'jama');
-  const isSellVal = !isCashVal && (side === 'banam');
-  const linkedPurchaseIdVal = isSellVal && $('sellPurchaseSelect') ? $('sellPurchaseSelect').value : null;
-
-  if (isSellVal && !linkedPurchaseIdVal) {
-    return toast('Please select an open purchase to sell against', 'error');
-  }
-
   const naamVal = (side === 'banam') ? (parseFloat($('entryNaam').value) || 0) : 0;
   const jamaVal = (side === 'jama') ? (parseFloat($('entryJama').value) || 0) : 0;
   const rateVal = parseFloat($('entryRate').value) || 0;
