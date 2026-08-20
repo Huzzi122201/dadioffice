@@ -2181,7 +2181,7 @@ async function populateOpenPurchasesSelect(selectedId = null) {
       select.innerHTML = '<option value="">— None (No open purchases available) —</option>';
       return;
     }
-    let html = '<option value="">— None (Optional / Regular Entry) —</option>';
+    let html = '<option value="">— None (Optional / Unlinked) —</option>';
     openPurchases.forEach(p => {
       const isSel = (selectedId && (p._id === selectedId || p._id === String(selectedId))) ? 'selected' : '';
       const amount = (p.naam || 0) + (p.jama || 0);
@@ -2208,14 +2208,14 @@ function handleTradeTypeChange() {
 
 function handleCashModeToggle() {
   const isCash = $('entryModeCash') ? $('entryModeCash').checked : false;
-  const isSell = $('entryTypeSell') ? $('entryTypeSell').checked : false;
+  const side = $('entrySide') ? $('entrySide').value : 'jama';
 
   if (isCash) {
     if ($('entryTypeSection')) $('entryTypeSection').style.display = 'none';
     if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = 'none';
   } else {
     if ($('entryTypeSection')) $('entryTypeSection').style.display = '';
-    if (isSell) {
+    if (side === 'banam') {
       if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = '';
     } else {
       if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = 'none';
@@ -2256,18 +2256,11 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
     $('btnSaveEntry').style.borderColor = '#15803d';
     $('btnSaveEntry').textContent = '💾 Save Jama Entry (جمع)';
 
-    // Jama Entry: Allow Normal Entry & Purchase Entry options (hide Sell option)
-    if ($('wrapperTypeNormal')) $('wrapperTypeNormal').style.display = '';
-    if ($('wrapperTypePurchase')) $('wrapperTypePurchase').style.display = '';
+    // Jama Entry: Purchase Entry only (hide Normal & Sell)
+    if ($('wrapperTypeNormal')) $('wrapperTypeNormal').style.display = 'none';
     if ($('wrapperTypeSell')) $('wrapperTypeSell').style.display = 'none';
-
-    if (editData && editData.isPurchase) {
-      if ($('entryTypePurchase')) $('entryTypePurchase').checked = true;
-    } else if (editData && !editData.isPurchase && !editData.isSell) {
-      if ($('entryTypeNormal')) $('entryTypeNormal').checked = true;
-    } else {
-      if ($('entryTypePurchase')) $('entryTypePurchase').checked = true;
-    }
+    if ($('wrapperTypePurchase')) $('wrapperTypePurchase').style.display = '';
+    if ($('entryTypePurchase')) $('entryTypePurchase').checked = true;
     if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = 'none';
 
   } else {
@@ -2279,25 +2272,13 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
     $('btnSaveEntry').style.borderColor = '#b91c1c';
     $('btnSaveEntry').textContent = '💾 Save Banam Entry (بنام)';
 
-    // Banam Entry: Allow Normal Entry & Sell Entry options (hide Purchase option)
-    if ($('wrapperTypeNormal')) $('wrapperTypeNormal').style.display = '';
+    // Banam Entry: Sell Entry only (hide Normal & Purchase)
+    if ($('wrapperTypeNormal')) $('wrapperTypeNormal').style.display = 'none';
     if ($('wrapperTypePurchase')) $('wrapperTypePurchase').style.display = 'none';
     if ($('wrapperTypeSell')) $('wrapperTypeSell').style.display = '';
-
-    if (editData && editData.isSell) {
-      if ($('entryTypeSell')) $('entryTypeSell').checked = true;
-    } else if (editData && !editData.isPurchase && !editData.isSell) {
-      if ($('entryTypeNormal')) $('entryTypeNormal').checked = true;
-    } else {
-      if ($('entryTypeSell')) $('entryTypeSell').checked = true;
-    }
-
-    if ($('entryTypeSell') && $('entryTypeSell').checked) {
-      if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = '';
-      await populateOpenPurchasesSelect(editData ? editData.linkedPurchaseId : null);
-    } else {
-      if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = 'none';
-    }
+    if ($('entryTypeSell')) $('entryTypeSell').checked = true;
+    if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = '';
+    await populateOpenPurchasesSelect(editData ? editData.linkedPurchaseId : null);
   }
 
   // Fetch or set Roker No
@@ -2374,8 +2355,9 @@ $('entryForm').addEventListener('submit', async (e) => {
 
   const rokerNoVal = parseInt($('entryRokerNo').value) || 0;
   const isCashVal = $('entryModeCash') ? $('entryModeCash').checked : false;
-  const isPurchaseVal = !isCashVal && ($('entryTypePurchase') ? $('entryTypePurchase').checked : false);
-  const isSellVal = !isCashVal && ($('entryTypeSell') ? $('entryTypeSell').checked : false);
+  const side = $('entrySide').value;
+  const isPurchaseVal = !isCashVal && (side === 'jama');
+  const isSellVal = !isCashVal && (side === 'banam');
   const linkedPurchaseIdVal = (isSellVal && $('sellPurchaseSelect')) ? ($('sellPurchaseSelect').value || null) : null;
 
   const side = $('entrySide').value;
