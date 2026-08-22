@@ -399,6 +399,7 @@
         <div class="cb-header-btns">
           <button class="btn btn-success" id="btnRokerAddJama" style="background: #15803d; color: #fff; border-color: #15803d;">🟢 ＋ Add Jama (جمع)</button>
           <button class="btn btn-danger" id="btnRokerAddBanam" style="background: #b91c1c; color: #fff; border-color: #b91c1c;">🔴 ＋ Add Banam (بنام)</button>
+          <button class="btn btn-warning" id="btnEndRoker" style="background: #d97706; color: #fff; border-color: #d97706;">🏁 End Roker (اختتام)</button>
         </div>
       </div>
 
@@ -463,15 +464,19 @@
 
         <!-- Bags / Meters & Rate Section -->
         <div class="form-section" id="entryBagSection">
-          <h3 class="section-title">📦 Bags / Meters & Rate (Optional)</h3>
-          <div class="form-grid">
+          <h3 class="section-title">📦 Quantity (Bags / Meters) & Rate (Optional)</h3>
+          <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
             <div class="form-group">
-              <label class="form-label" for="entryBags">No. of Bags / Meters</label>
-              <input class="form-input" type="number" id="entryBags" min="0" step="any" placeholder="Optional (e.g. 100)" />
+              <label class="form-label" for="entryBags">No. of Bags</label>
+              <input class="form-input" type="number" id="entryBags" min="0" step="any" placeholder="Bags (e.g. 100)" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="entryMeters">Meters (میٹر)</label>
+              <input class="form-input" type="number" id="entryMeters" min="0" step="any" placeholder="Meters (e.g. 500)" />
             </div>
             <div class="form-group">
               <label class="form-label" for="entryRate">Rate (₹)</label>
-              <input class="form-input" type="number" id="entryRate" min="0" step="any" placeholder="Optional (e.g. 2500)" />
+              <input class="form-input" type="number" id="entryRate" min="0" step="any" placeholder="Rate (e.g. 2500)" />
             </div>
           </div>
         </div>
@@ -624,6 +629,21 @@
       <div class="modal-actions">
         <button class="btn btn-secondary" id="confirmCancel">Cancel</button>
         <button class="btn btn-danger" id="confirmOk">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ End Roker Modal ═══ -->
+  <div class="modal-overlay hidden" id="endRokerModal">
+    <div class="modal" style="max-width: 380px; padding: 1rem;">
+      <h3 class="modal-title" id="endRokerModalTitle" style="color: #d97706; display: flex; align-items: center; gap: 0.4rem; font-size: 1rem;">
+        🏁 End Roker Summary (اختتام روکر)
+      </h3>
+      <div id="endRokerModalBody" style="margin: 0.65rem 0;">
+        <!-- populated by JS -->
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="btnCloseEndRokerModal" style="background: var(--accent-primary);">Close</button>
       </div>
     </div>
   </div>

@@ -242,6 +242,28 @@ router.get('/khata/:khataNo', async (req, res) => {
 // ═══════════════════════════════════════════════════════════
 
 
+async function getCashInHandBalance(upToRokerNo = null) {
+  const cashInHandParty = await CashbookParty.findOne({
+    $or: [{ khataNo: 95 }, { nameNorm: 'cash in hand' }]
+  }).lean();
+  if (!cashInHandParty) return 0;
+
+  const query = { khataNo: cashInHandParty.khataNo };
+  if (upToRokerNo !== null && upToRokerNo !== undefined) {
+    query.rokerNo = { $lt: upToRokerNo };
+  }
+
+  const cihEntries = await CashbookEntry.find(query).lean();
+  let cihNaam = 0, cihJama = 0;
+  cihEntries.forEach(e => {
+    cihNaam += e.naam || 0;
+    cihJama += e.jama || 0;
+  });
+  const opening = Number(cashInHandParty.openingBalance) || 0;
+  const openingNet = (cashInHandParty.balanceType === 'jama' || cashInHandParty.balanceType === 'cash') ? opening : cashInHandParty.balanceType === 'banam' ? -opening : 0;
+  return openingNet + cihJama - cihNaam;
+}
+
 // ── GET /api/cashbook/rokers ── List all rokers with summaries
 router.get('/rokers', async (req, res) => {
   try {
@@ -264,10 +286,19 @@ router.get('/rokers', async (req, res) => {
       { $sort: { rokerNo: -1 } },
     ]);
 
-    let filtered = rokers;
+    const enriched = await Promise.all(rokers.map(async (r) => {
+      const prevCashInHand = await getCashInHandBalance(r.rokerNo);
+      return {
+        ...r,
+        cashInHand: prevCashInHand,
+        endRokerValue: (r.totalJama || 0) + prevCashInHand,
+      };
+    }));
+
+    let filtered = enriched;
     if (search && search.trim()) {
       const q = search.trim().toLowerCase();
-      filtered = rokers.filter(r => 
+      filtered = enriched.filter(r => 
         String(r.rokerNo).includes(q) || 
         (r.parties && r.parties.some(p => p && p.toLowerCase().includes(q)))
       );
@@ -293,7 +324,34 @@ router.get('/roker/:rokerNo', async (req, res) => {
     const totalNaam = entries.reduce((s, e) => s + (e.naam || 0), 0);
     const totalJama = entries.reduce((s, e) => s + (e.jama || 0), 0);
     const totalBags = entries.reduce((s, e) => s + (e.bags || 0), 0);
+    const totalMeters = entries.reduce((s, e) => s + (e.meters || 0), 0);
     const date = entries[0]?.date || new Date();
+
+    const cashInHandBalance = await getCashInHandBalance(rokerNo);
+    const endRokerValue = totalJama + cashInHandBalance;
+
+    // Calculate Bag Purchases vs Bag Sells
+    const bagPurchases = entries.filter(e => e.isPurchase && (e.bags || 0) > 0);
+    const bagSells = entries.filter(e => e.isSell && (e.bags || 0) > 0);
+    const totalPurBags = bagPurchases.reduce((s, p) => s + (p.bags || 0), 0);
+    const totalPurBagAmt = bagPurchases.reduce((s, p) => s + (p.jama || 0) + (p.naam || 0), 0);
+    const totalSellBags = bagSells.reduce((s, s1) => s + (s1.bags || 0), 0);
+    const totalSellBagAmt = bagSells.reduce((s, s1) => s + (s1.jama || 0) + (s1.naam || 0), 0);
+    const bagDiff = totalSellBagAmt - totalPurBagAmt;
+    const bagsMatch = (totalPurBags > 0 && totalPurBags === totalSellBags);
+
+    // Calculate Meter Purchases vs Meter Sells
+    const meterPurchases = entries.filter(e => e.isPurchase && (e.meters || 0) > 0);
+    const meterSells = entries.filter(e => e.isSell && (e.meters || 0) > 0);
+    const totalPurMeters = meterPurchases.reduce((s, p) => s + (p.meters || 0), 0);
+    const totalPurMeterAmt = meterPurchases.reduce((s, p) => s + (p.jama || 0) + (p.naam || 0), 0);
+    const totalSellMeters = meterSells.reduce((s, s1) => s + (s1.meters || 0), 0);
+    const totalSellMeterAmt = meterSells.reduce((s, s1) => s + (s1.jama || 0) + (s1.naam || 0), 0);
+    const meterDiff = totalSellMeterAmt - totalPurMeterAmt;
+    const metersMatch = (totalPurMeters > 0 && totalPurMeters === totalSellMeters);
+
+    const existingBagPL = entries.find(e => e.isAutoProfitLossEntry && e.description && e.description.includes('Bag Purchase/Sell Summary'));
+    const existingMeterPL = entries.find(e => e.isAutoProfitLossEntry && e.description && e.description.includes('Meter Purchase/Sell Summary'));
 
     res.json({
       rokerNo,
@@ -303,7 +361,171 @@ router.get('/roker/:rokerNo', async (req, res) => {
         totalNaam,
         totalJama,
         totalBags,
+        totalMeters,
+        cashInHand: cashInHandBalance,
+        endRokerValue,
         entryCount: entries.length,
+        bagSummary: {
+          totalPurchaseBags: totalPurBags,
+          totalPurchaseAmount: totalPurBagAmt,
+          totalSellBags: totalSellBags,
+          totalSellAmount: totalSellBagAmt,
+          difference: bagDiff,
+          bagsMatch,
+          isAlreadyPosted: Boolean(existingBagPL),
+          purchases: bagPurchases.map(p => ({ partyName: p.partyName, qty: p.bags, rate: p.ratePerBag, amount: (p.jama || 0) + (p.naam || 0) })),
+          sells: bagSells.map(s => ({ partyName: s.partyName, qty: s.bags, rate: s.ratePerBag, amount: (s.jama || 0) + (s.naam || 0) })),
+        },
+        meterSummary: {
+          totalPurchaseMeters: totalPurMeters,
+          totalPurchaseAmount: totalPurMeterAmt,
+          totalSellMeters: totalSellMeters,
+          totalSellAmount: totalSellMeterAmt,
+          difference: meterDiff,
+          metersMatch,
+          isAlreadyPosted: Boolean(existingMeterPL),
+          purchases: meterPurchases.map(p => ({ partyName: p.partyName, qty: p.meters, rate: p.ratePerBag, amount: (p.jama || 0) + (p.naam || 0) })),
+          sells: meterSells.map(s => ({ partyName: s.partyName, qty: s.meters, rate: s.ratePerBag, amount: (s.jama || 0) + (s.naam || 0) })),
+        },
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/cashbook/roker/:rokerNo/calculate-bag-nafa-nuqsan ──
+// Calculates aggregated Bag & Meter Purchases vs Sells for the roker and posts Nafa/Nuqsaan entries to Party N
+router.post('/roker/:rokerNo/calculate-bag-nafa-nuqsan', async (req, res) => {
+  try {
+    const rokerNo = parseInt(req.params.rokerNo, 10);
+    if (isNaN(rokerNo)) return res.status(400).json({ error: 'Invalid roker number' });
+
+    const entries = await CashbookEntry.find({ rokerNo, isAutoCounterEntry: { $ne: true } }).lean();
+
+    // Bag Summary
+    const bagPurchases = entries.filter(e => e.isPurchase && (e.bags || 0) > 0);
+    const bagSells = entries.filter(e => e.isSell && (e.bags || 0) > 0);
+    const totalPurBags = bagPurchases.reduce((s, p) => s + (p.bags || 0), 0);
+    const totalPurBagAmt = bagPurchases.reduce((s, p) => s + (p.jama || 0) + (p.naam || 0), 0);
+    const totalSellBags = bagSells.reduce((s, s1) => s + (s1.bags || 0), 0);
+    const totalSellBagAmt = bagSells.reduce((s, s1) => s + (s1.jama || 0) + (s1.naam || 0), 0);
+    const bagDiff = totalSellBagAmt - totalPurBagAmt;
+    const bagsMatch = (totalPurBags > 0 && totalPurBags === totalSellBags);
+
+    // Meter Summary
+    const meterPurchases = entries.filter(e => e.isPurchase && (e.meters || 0) > 0);
+    const meterSells = entries.filter(e => e.isSell && (e.meters || 0) > 0);
+    const totalPurMeters = meterPurchases.reduce((s, p) => s + (p.meters || 0), 0);
+    const totalPurMeterAmt = meterPurchases.reduce((s, p) => s + (p.jama || 0) + (p.naam || 0), 0);
+    const totalSellMeters = meterSells.reduce((s, s1) => s + (s1.meters || 0), 0);
+    const totalSellMeterAmt = meterSells.reduce((s, s1) => s + (s1.jama || 0) + (s1.naam || 0), 0);
+    const meterDiff = totalSellMeterAmt - totalPurMeterAmt;
+    const metersMatch = (totalPurMeters > 0 && totalPurMeters === totalSellMeters);
+
+    let postedBagEntry = null;
+    let postedMeterEntry = null;
+
+    if (req.body.postToN) {
+      const nParty = await resolveOrCreateParty('N', null, 'general');
+      if (nParty) {
+        // Post Bag Summary
+        if (bagsMatch && bagDiff !== 0) {
+          const existingBag = await CashbookEntry.findOne({
+            rokerNo,
+            isAutoProfitLossEntry: true,
+            description: { $regex: /Bag Purchase\/Sell Summary/i }
+          });
+          if (existingBag) {
+            existingBag.naam = bagDiff < 0 ? Math.abs(bagDiff) : 0;
+            existingBag.jama = bagDiff > 0 ? bagDiff : 0;
+            existingBag.description = bagDiff > 0
+              ? `Nafa (نفع) — Bag Purchase/Sell Summary (Roker #${rokerNo}: ${totalPurBags} bags)`
+              : `Nuqsaan (نقصان) — Bag Purchase/Sell Summary (Roker #${rokerNo}: ${totalPurBags} bags)`;
+            await existingBag.save();
+            postedBagEntry = existingBag;
+          } else {
+            const date = entries[0]?.date || new Date();
+            const bagPLEntry = new CashbookEntry({
+              rokerNo,
+              khataNo: nParty.khataNo,
+              partyId: nParty._id,
+              partyName: nParty.name,
+              partyType: nParty.type,
+              date: toUtcDate(date),
+              description: bagDiff > 0
+                ? `Nafa (نفع) — Bag Purchase/Sell Summary (Roker #${rokerNo}: ${totalPurBags} bags)`
+                : `Nuqsaan (نقصان) — Bag Purchase/Sell Summary (Roker #${rokerNo}: ${totalPurBags} bags)`,
+              naam: bagDiff < 0 ? Math.abs(bagDiff) : 0,
+              jama: bagDiff > 0 ? bagDiff : 0,
+              bags: 0,
+              meters: 0,
+              isAutoProfitLossEntry: true,
+            });
+            await bagPLEntry.save();
+            postedBagEntry = bagPLEntry;
+          }
+        }
+
+        // Post Meter Summary
+        if (metersMatch && meterDiff !== 0) {
+          const existingMeter = await CashbookEntry.findOne({
+            rokerNo,
+            isAutoProfitLossEntry: true,
+            description: { $regex: /Meter Purchase\/Sell Summary/i }
+          });
+          if (existingMeter) {
+            existingMeter.naam = meterDiff < 0 ? Math.abs(meterDiff) : 0;
+            existingMeter.jama = meterDiff > 0 ? meterDiff : 0;
+            existingMeter.description = meterDiff > 0
+              ? `Nafa (نفع) — Meter Purchase/Sell Summary (Roker #${rokerNo}: ${totalPurMeters} meters)`
+              : `Nuqsaan (نقصان) — Meter Purchase/Sell Summary (Roker #${rokerNo}: ${totalPurMeters} meters)`;
+            await existingMeter.save();
+            postedMeterEntry = existingMeter;
+          } else {
+            const date = entries[0]?.date || new Date();
+            const meterPLEntry = new CashbookEntry({
+              rokerNo,
+              khataNo: nParty.khataNo,
+              partyId: nParty._id,
+              partyName: nParty.name,
+              partyType: nParty.type,
+              date: toUtcDate(date),
+              description: meterDiff > 0
+                ? `Nafa (نفع) — Meter Purchase/Sell Summary (Roker #${rokerNo}: ${totalPurMeters} meters)`
+                : `Nuqsaan (نقصان) — Meter Purchase/Sell Summary (Roker #${rokerNo}: ${totalPurMeters} meters)`,
+              naam: meterDiff < 0 ? Math.abs(meterDiff) : 0,
+              jama: meterDiff > 0 ? meterDiff : 0,
+              bags: 0,
+              meters: 0,
+              isAutoProfitLossEntry: true,
+            });
+            await meterPLEntry.save();
+            postedMeterEntry = meterPLEntry;
+          }
+        }
+      }
+    }
+
+    res.json({
+      rokerNo,
+      bagSummary: {
+        totalPurchaseBags: totalPurBags,
+        totalPurchaseAmount: totalPurBagAmt,
+        totalSellBags: totalSellBags,
+        totalSellAmount: totalSellBagAmt,
+        difference: bagDiff,
+        bagsMatch,
+        isAlreadyPosted: Boolean(postedBagEntry),
+      },
+      meterSummary: {
+        totalPurchaseMeters: totalPurMeters,
+        totalPurchaseAmount: totalPurMeterAmt,
+        totalSellMeters: totalSellMeters,
+        totalSellAmount: totalSellMeterAmt,
+        difference: meterDiff,
+        metersMatch,
+        isAlreadyPosted: Boolean(postedMeterEntry),
       },
     });
   } catch (err) {
@@ -315,7 +537,7 @@ router.get('/roker/:rokerNo', async (req, res) => {
 router.get('/next-roker', async (req, res) => {
   try {
     const last = await CashbookEntry.findOne().sort({ rokerNo: -1 }).lean();
-    res.json({ nextRokerNo: last ? last.rokerNo + 1 : 1 });
+    res.json({ nextRokerNo: last ? last.rokerNo + 1 : 61 });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -387,13 +609,13 @@ router.post('/entries', async (req, res) => {
     let sharedRokerNo = parseInt(req.body.rokerNo, 10);
     if (isNaN(sharedRokerNo) || sharedRokerNo <= 0) {
       const last = await CashbookEntry.findOne().sort({ rokerNo: -1 }).lean();
-      sharedRokerNo = last ? last.rokerNo + 1 : 1;
+      sharedRokerNo = last ? last.rokerNo + 1 : 61;
     }
 
     for (const item of rawEntries) {
       const {
         rokerNo, khataNo, partyName, partyType, date, description, naam, jama,
-        txnType, bags, ratePerBag, purchaseRef, allocateRef, note,
+        txnType, bags, meters, ratePerBag, purchaseRef, allocateRef, note,
       } = item;
 
       // Find or create party
@@ -445,15 +667,18 @@ router.post('/entries', async (req, res) => {
       const linkedPurchaseId = isSellEntry ? (item.linkedPurchaseId || null) : null;
 
       // Sell entry validation
+      const entryMeters = parseFloat(meters) || parseFloat(item.meters) || 0;
       const entryBags = parseFloat(bags) || 0;
+      const tradeQty = entryMeters > 0 ? entryMeters : entryBags;
+
       if (isSellEntry && linkedPurchaseId) {
         const purchaseDoc = await CashbookEntry.findById(linkedPurchaseId);
         if (!purchaseDoc || !purchaseDoc.isPurchase) {
           return res.status(400).json({ error: 'Invalid purchase reference for sell entry.' });
         }
-        if (entryBags > purchaseDoc.remainingBags) {
+        if (tradeQty > purchaseDoc.remainingBags) {
           return res.status(400).json({
-            error: `Cannot sell ${entryBags} bags/meters. Purchase has only ${purchaseDoc.remainingBags} remaining.`
+            error: `Cannot sell ${tradeQty} meters/bags. Purchase has only ${purchaseDoc.remainingBags} remaining.`
           });
         }
       }
@@ -470,6 +695,7 @@ router.post('/entries', async (req, res) => {
         jama: jamaVal,
         txnType: txnType || 'general',
         bags: entryBags,
+        meters: entryMeters,
         ratePerBag: parseFloat(ratePerBag) || 0,
         isCash: isCashEntry,
         purchaseRef: purchaseRef || null,
@@ -477,53 +703,11 @@ router.post('/entries', async (req, res) => {
         note: note || '',
         isPurchase: isPurchaseEntry,
         isSell: isSellEntry,
-        linkedPurchaseId: linkedPurchaseId,
-        remainingBags: isPurchaseEntry ? entryBags : 0,
+        linkedPurchaseId: null,
+        remainingBags: 0,
       });
 
       await entry.save();
-
-      // ── Purchase/Sell: Deduct bags from purchase when sell is created ──
-      if (isSellEntry && linkedPurchaseId) {
-        const purchaseDoc = await CashbookEntry.findById(linkedPurchaseId);
-        if (purchaseDoc) {
-          purchaseDoc.remainingBags = (purchaseDoc.remainingBags || 0) - entryBags;
-          await purchaseDoc.save();
-
-          // Check if purchase is fully sold (remainingBags === 0)
-          if (purchaseDoc.remainingBags <= 0) {
-            const allSells = await CashbookEntry.find({ linkedPurchaseId: purchaseDoc._id, isSell: true }).lean();
-            const totalSellAmount = allSells.reduce((sum, s) => sum + (s.jama || 0) + (s.naam || 0), 0);
-            const purchaseAmount = (purchaseDoc.naam || 0) + (purchaseDoc.jama || 0);
-            const difference = totalSellAmount - purchaseAmount;
-
-            if (difference !== 0) {
-              const nParty = await resolveOrCreateParty('N', null, 'general');
-              if (nParty) {
-                const profitLossEntry = new CashbookEntry({
-                  rokerNo: finalRokerNo,
-                  khataNo: nParty.khataNo,
-                  partyId: nParty._id,
-                  partyName: nParty.name,
-                  partyType: nParty.type,
-                  date: toUtcDate(date),
-                  description: difference > 0
-                    ? `Nafa (\u0646\u0641\u0639) \u2014 Purchase: ${purchaseDoc.partyName} (${purchaseDoc.bags} bags)`
-                    : `Nuqsaan (\u0646\u0642\u0635\u0627\u0646) \u2014 Purchase: ${purchaseDoc.partyName} (${purchaseDoc.bags} bags)`,
-                  naam: difference < 0 ? Math.abs(difference) : 0,
-                  jama: difference > 0 ? difference : 0,
-                  bags: 0,
-                  isAutoProfitLossEntry: true,
-                  linkedPurchaseId: purchaseDoc._id,
-                });
-                await profitLossEntry.save();
-                purchaseDoc.linkedProfitLossEntryId = profitLossEntry._id;
-                await purchaseDoc.save();
-              }
-            }
-          }
-        }
-      }
 
       // If Cash Entry is turned ON and this is not already the Cash In Hand party
       if (isCashEntry && party.name.trim().toLowerCase() !== 'cash in hand') {
@@ -598,7 +782,7 @@ router.put('/entries/:id', async (req, res) => {
 
     const {
       rokerNo, khataNo, partyName, partyType, date, description, naam, jama,
-      bags, ratePerBag, note, isCash, isPurchase, isSell, linkedPurchaseId,
+      bags, meters, ratePerBag, note, isCash, isPurchase, isSell, linkedPurchaseId,
     } = req.body;
 
     if (partyName && partyName.trim()) {
@@ -620,6 +804,7 @@ router.put('/entries/:id', async (req, res) => {
     if (naam !== undefined) entry.naam = parseFloat(naam) || 0;
     if (jama !== undefined) entry.jama = parseFloat(jama) || 0;
     if (bags !== undefined) entry.bags = parseFloat(bags) || 0;
+    if (meters !== undefined) entry.meters = parseFloat(meters) || 0;
     if (ratePerBag !== undefined) entry.ratePerBag = parseFloat(ratePerBag) || 0;
     if (note !== undefined) entry.note = note || '';
 
@@ -635,7 +820,7 @@ router.put('/entries/:id', async (req, res) => {
 
     if (isPurchase !== undefined) entry.isPurchase = Boolean(isPurchase);
     if (isSell !== undefined) entry.isSell = Boolean(isSell);
-    if (linkedPurchaseId !== undefined) entry.linkedPurchaseId = linkedPurchaseId;
+    entry.linkedPurchaseId = null;
 
     if (entry.isCash) {
       entry.isPurchase = false;
@@ -643,61 +828,7 @@ router.put('/entries/:id', async (req, res) => {
       entry.linkedPurchaseId = null;
     }
 
-    // Restore old purchase remaining bags if previously a sell entry
-    if (oldIsSell && oldLinkedPurchaseId) {
-      const oldPurchase = await CashbookEntry.findById(oldLinkedPurchaseId);
-      if (oldPurchase) {
-        oldPurchase.remainingBags = (oldPurchase.remainingBags || 0) + oldBags;
-        if (oldPurchase.linkedProfitLossEntryId) {
-          await CashbookEntry.findByIdAndDelete(oldPurchase.linkedProfitLossEntryId);
-          oldPurchase.linkedProfitLossEntryId = null;
-        }
-        await oldPurchase.save();
-      }
-    }
-
     await entry.save();
-
-    // Deduct new bags from linked purchase if sell entry
-    if (entry.isSell && entry.linkedPurchaseId) {
-      const newPurchase = await CashbookEntry.findById(entry.linkedPurchaseId);
-      if (newPurchase) {
-        newPurchase.remainingBags = (newPurchase.remainingBags || 0) - entry.bags;
-        await newPurchase.save();
-
-        if (newPurchase.remainingBags <= 0) {
-          const allSells = await CashbookEntry.find({ linkedPurchaseId: newPurchase._id, isSell: true }).lean();
-          const totalSellAmount = allSells.reduce((sum, s) => sum + (s.jama || 0) + (s.naam || 0), 0);
-          const purchaseAmount = (newPurchase.naam || 0) + (newPurchase.jama || 0);
-          const difference = totalSellAmount - purchaseAmount;
-
-          if (difference !== 0) {
-            const nParty = await resolveOrCreateParty('N', null, 'general');
-            if (nParty) {
-              const profitLossEntry = new CashbookEntry({
-                rokerNo: entry.rokerNo,
-                khataNo: nParty.khataNo,
-                partyId: nParty._id,
-                partyName: nParty.name,
-                partyType: nParty.type,
-                date: entry.date,
-                description: difference > 0
-                  ? `Nafa (نفع) — Purchase: ${newPurchase.partyName} (${newPurchase.bags} bags)`
-                  : `Nuqsaan (نقصان) — Purchase: ${newPurchase.partyName} (${newPurchase.bags} bags)`,
-                naam: difference < 0 ? Math.abs(difference) : 0,
-                jama: difference > 0 ? difference : 0,
-                bags: 0,
-                isAutoProfitLossEntry: true,
-                linkedPurchaseId: newPurchase._id,
-              });
-              await profitLossEntry.save();
-              newPurchase.linkedProfitLossEntryId = profitLossEntry._id;
-              await newPurchase.save();
-            }
-          }
-        }
-      }
-    }
 
     // Handle linked counter entry updates
     if (entry.partyName && entry.partyName.trim().toLowerCase() !== 'cash in hand') {
@@ -801,24 +932,37 @@ router.delete('/entries/:id', async (req, res) => {
 //  PURCHASE / SELL TRACKING
 // ═══════════════════════════════════════════════════════════
 
-// ── GET /api/cashbook/open-purchases ── Purchases with remaining bags > 0 ──
+// ── GET /api/cashbook/open-purchases ── Meter purchases with remaining meters > 0 ──
 router.get('/open-purchases', async (req, res) => {
   try {
     const { includeId } = req.query;
-    let query = { isPurchase: true };
+
+    const meterFilter = {
+      $or: [
+        { meters: { $gt: 0 } },
+        { bags: 0 }
+      ]
+    };
+
+    let query = {
+      isPurchase: true,
+      remainingBags: { $gt: 0 },
+      ...meterFilter
+    };
+
     if (includeId) {
       const mongoose = require('mongoose');
       if (mongoose.Types.ObjectId.isValid(includeId)) {
-        query.$or = [
-          { remainingBags: { $gt: 0 } },
-          { _id: new mongoose.Types.ObjectId(includeId) }
-        ];
-      } else {
-        query.remainingBags = { $gt: 0 };
+        query = {
+          isPurchase: true,
+          $or: [
+            { remainingBags: { $gt: 0 }, $or: [{ meters: { $gt: 0 } }, { bags: 0 }] },
+            { _id: new mongoose.Types.ObjectId(includeId) }
+          ]
+        };
       }
-    } else {
-      query.remainingBags = { $gt: 0 };
     }
+
     const purchases = await CashbookEntry.find(query)
       .sort({ date: -1, createdAt: -1 })
       .lean();
@@ -828,44 +972,139 @@ router.get('/open-purchases', async (req, res) => {
   }
 });
 
-// ── GET /api/cashbook/purchase-sell-overview ── All purchases with sell details ──
+// ── GET /api/cashbook/purchase-sell-overview ── All purchases with sell details & roker summaries ──
 router.get('/purchase-sell-overview', async (req, res) => {
   try {
-    const purchases = await CashbookEntry.find({ isPurchase: true })
+    const allPurchases = await CashbookEntry.find({ isPurchase: true, isAutoProfitLossEntry: { $ne: true } })
       .sort({ date: -1, createdAt: -1 })
       .lean();
 
-    const overview = await Promise.all(purchases.map(async (p) => {
-      const sells = await CashbookEntry.find({ linkedPurchaseId: p._id, isSell: true })
-        .sort({ date: 1 })
-        .lean();
+    const overview = [];
 
-      const totalSoldBags = sells.reduce((sum, s) => sum + (s.bags || 0), 0);
-      const totalSellAmount = sells.reduce((sum, s) => sum + (s.jama || 0) + (s.naam || 0), 0);
-      const purchaseAmount = (p.naam || 0) + (p.jama || 0);
-      const remainingBags = p.remainingBags || 0;
-      const isFullySold = remainingBags <= 0 && totalSoldBags > 0;
-      const profitLoss = isFullySold ? totalSellAmount - purchaseAmount : null;
+    // Group purchases by rokerNo
+    const rokerMap = new Map();
+    allPurchases.forEach(p => {
+      if (!rokerMap.has(p.rokerNo)) rokerMap.set(p.rokerNo, []);
+      rokerMap.get(p.rokerNo).push(p);
+    });
 
-      // Get profit/loss entry if exists
-      let profitLossEntry = null;
-      if (p.linkedProfitLossEntryId) {
-        profitLossEntry = await CashbookEntry.findById(p.linkedProfitLossEntryId).lean();
+    const rokerNumbers = Array.from(rokerMap.keys()).sort((a, b) => b - a);
+
+    for (const rokerNo of rokerNumbers) {
+      const rokerPurchases = rokerMap.get(rokerNo);
+      const purchaseIds = rokerPurchases.map(p => p._id);
+      const linkedSellsCount = await CashbookEntry.countDocuments({ linkedPurchaseId: { $in: purchaseIds }, isSell: true });
+
+      if (linkedSellsCount > 0 && rokerNo <= 62) {
+        // Render individual linked purchase cards for historical rokers
+        for (const p of rokerPurchases) {
+          const sells = await CashbookEntry.find({ linkedPurchaseId: p._id, isSell: true })
+            .sort({ date: 1 })
+            .lean();
+
+          const isMeter = (p.meters > 0) || (p.bags === 0);
+          const totalSoldBags = sells.reduce((sum, s) => sum + (s.bags || 0), 0);
+          const totalSoldMeters = sells.reduce((sum, s) => sum + (s.meters || 0), 0);
+          const totalSellAmount = sells.reduce((sum, s) => sum + (s.jama || 0) + (s.naam || 0), 0);
+          const purchaseAmount = (p.naam || 0) + (p.jama || 0);
+
+          const initialQty = isMeter ? (p.meters || 0) : (p.bags || 0);
+          const totalSoldQty = isMeter ? totalSoldMeters : totalSoldBags;
+          const remainingQty = (p.remainingBags !== undefined && p.remainingBags !== null && p.remainingBags > 0)
+            ? p.remainingBags
+            : Math.max(0, initialQty - totalSoldQty);
+
+          const isFullySold = (remainingQty <= 0) && (totalSoldQty > 0);
+          const profitLoss = isFullySold ? totalSellAmount - purchaseAmount : null;
+
+          overview.push({
+            ...p,
+            isAggregateSummary: false,
+            isMeter,
+            unitLabel: isMeter ? 'meters' : 'bags',
+            initialQty,
+            purchaseAmount,
+            sells,
+            totalSoldBags,
+            totalSoldMeters,
+            totalSoldQty,
+            totalSellAmount,
+            remainingQty,
+            remainingBags: remainingQty,
+            isFullySold,
+            profitLoss,
+            sellCount: sells.length,
+          });
+        }
+      } else {
+        // Aggregate Roker Summary Cards for Roker #64 (and rokers without per-purchase linking)
+        const allRokerEntries = await CashbookEntry.find({ rokerNo, isAutoCounterEntry: { $ne: true } }).lean();
+
+        // 1) Bag Summary Card
+        const bagPurchases = allRokerEntries.filter(e => e.isPurchase && (e.bags || 0) > 0);
+        const bagSells = allRokerEntries.filter(e => e.isSell && (e.bags || 0) > 0);
+
+        if (bagPurchases.length > 0 || bagSells.length > 0) {
+          const totalPurBags = bagPurchases.reduce((s, p) => s + (p.bags || 0), 0);
+          const totalPurBagAmt = bagPurchases.reduce((s, p) => s + (p.jama || 0) + (p.naam || 0), 0);
+          const totalSellBags = bagSells.reduce((s, s1) => s + (s1.bags || 0), 0);
+          const totalSellBagAmt = bagSells.reduce((s, s1) => s + (s1.jama || 0) + (s1.naam || 0), 0);
+          const bagDiff = totalSellBagAmt - totalPurBagAmt;
+          const bagsMatch = (totalPurBags > 0 && totalPurBags === totalSellBags);
+
+          overview.push({
+            _id: `roker-${rokerNo}-bags`,
+            rokerNo,
+            partyName: `📦 Roker #${rokerNo} — Bag Purchase & Sell Summary`,
+            date: allRokerEntries[0]?.date || new Date(),
+            isAggregateSummary: true,
+            unitLabel: 'bags',
+            initialQty: totalPurBags,
+            purchaseAmount: totalPurBagAmt,
+            totalSoldQty: totalSellBags,
+            totalSellAmount: totalSellBagAmt,
+            remainingQty: Math.max(0, totalPurBags - totalSellBags),
+            isFullySold: bagsMatch,
+            profitLoss: bagsMatch ? bagDiff : null,
+            purchases: bagPurchases,
+            sells: bagSells,
+            sellCount: bagSells.length,
+          });
+        }
+
+        // 2) Meter Summary Card
+        const meterPurchases = allRokerEntries.filter(e => e.isPurchase && (e.meters || 0) > 0);
+        const meterSells = allRokerEntries.filter(e => e.isSell && (e.meters || 0) > 0);
+
+        if (meterPurchases.length > 0 || meterSells.length > 0) {
+          const totalPurMeters = meterPurchases.reduce((s, p) => s + (p.meters || 0), 0);
+          const totalPurMeterAmt = meterPurchases.reduce((s, p) => s + (p.jama || 0) + (p.naam || 0), 0);
+          const totalSellMeters = meterSells.reduce((s, s1) => s + (s1.meters || 0), 0);
+          const totalSellMeterAmt = meterSells.reduce((s, s1) => s + (s1.jama || 0) + (s1.naam || 0), 0);
+          const meterDiff = totalSellMeterAmt - totalPurMeterAmt;
+          const metersMatch = (totalPurMeters > 0 && totalPurMeters === totalSellMeters);
+
+          overview.push({
+            _id: `roker-${rokerNo}-meters`,
+            rokerNo,
+            partyName: `📏 Roker #${rokerNo} — Meter Purchase & Sell Summary`,
+            date: allRokerEntries[0]?.date || new Date(),
+            isAggregateSummary: true,
+            unitLabel: 'meters',
+            initialQty: totalPurMeters,
+            purchaseAmount: totalPurMeterAmt,
+            totalSoldQty: totalSellMeters,
+            totalSellAmount: totalSellMeterAmt,
+            remainingQty: Math.max(0, totalPurMeters - totalSellMeters),
+            isFullySold: metersMatch,
+            profitLoss: metersMatch ? meterDiff : null,
+            purchases: meterPurchases,
+            sells: meterSells,
+            sellCount: meterSells.length,
+          });
+        }
       }
-
-      return {
-        ...p,
-        purchaseAmount,
-        sells,
-        totalSoldBags,
-        totalSellAmount,
-        remainingBags,
-        isFullySold,
-        profitLoss,
-        profitLossEntry,
-        sellCount: sells.length,
-      };
-    }));
+    }
 
     res.json(overview);
   } catch (err) {

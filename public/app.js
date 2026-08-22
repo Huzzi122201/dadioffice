@@ -1444,6 +1444,14 @@ async function loadCashbookDashboard() {
       const url = `${CB_API}/rokers${search ? '?search=' + encodeURIComponent(search) : ''}`;
       const rokers = await apiGet(url);
 
+      // Client fallback for Cash In Hand balance if server hasn't restarted
+      let fallbackCih = 0;
+      try {
+        const parties = await apiGet(`${CB_API}/parties`);
+        const cih = parties.find(p => p.khataNo === 95 || (p.nameNorm && p.nameNorm === 'cash in hand'));
+        if (cih) fallbackCih = cih.balance;
+      } catch (e) {}
+
       const totalEntries = rokers.reduce((sum, r) => sum + (r.entryCount || 0), 0);
       const totalBags = rokers.reduce((sum, r) => sum + (r.totalBags || 0), 0);
       const totalNaam = rokers.reduce((sum, r) => sum + (r.totalNaam || 0), 0);
@@ -1466,6 +1474,7 @@ async function loadCashbookDashboard() {
         <div class="cb-roker-list">
           ${rokers.map(r => {
             const partiesStr = (r.parties && r.parties.length > 0) ? r.parties.filter(Boolean).join(', ') : 'No parties';
+            const endVal = r.endRokerValue || ((r.totalJama || 0) + (r.cashInHand || fallbackCih));
             return `
               <div class="cb-roker-card" onclick="openRokerDetail(${r.rokerNo})">
                 <div class="cb-roker-card-left">
@@ -1485,6 +1494,7 @@ async function loadCashbookDashboard() {
                   <div class="cb-roker-totals-row">
                     ${r.totalNaam > 0 ? `<span class="cb-roker-naam-val">Naam: ${fmtCurrency(r.totalNaam)}</span>` : ''}
                     ${r.totalJama > 0 ? `<span class="cb-roker-jama-val">Jama: ${fmtCurrency(r.totalJama)}</span>` : ''}
+                    <span class="cb-roker-jama-val" style="color: #d97706; font-weight: 800;">End Roker: ${fmtCurrency(endVal)}</span>
                   </div>
                 </div>
               </div>
@@ -1574,8 +1584,85 @@ async function loadCashbookDashboard() {
       $('cbMainList').innerHTML = `
         <div class="cb-purchase-list">
           ${filtered.map(p => {
+            if (p.isAggregateSummary) {
+              const statusIcon = p.isFullySold ? '✅' : '⏳';
+              const statusText = p.isFullySold ? 'Fully Sold' : `Partially Sold (${p.totalSoldQty}/${p.initialQty} ${p.unitLabel})`;
+              const statusClass = p.isFullySold ? 'ps-status-sold' : 'ps-status-partial';
+
+              let profitLossHtml = '';
+              if (p.profitLoss !== null) {
+                if (p.profitLoss > 0) {
+                  profitLossHtml = '<span class="ps-profit">🟢 Nafa: ' + fmtCurrency(p.profitLoss) + '</span>';
+                } else if (p.profitLoss < 0) {
+                  profitLossHtml = '<span class="ps-loss">🔴 Nuqsaan: ' + fmtCurrency(Math.abs(p.profitLoss)) + '</span>';
+                } else {
+                  profitLossHtml = '<span class="ps-breakeven">⚪ Break Even</span>';
+                }
+              }
+
+              const purRows = (p.purchases || []).map(pur => '<tr>' +
+                '<td>' + formatDate(pur.date) + '</td>' +
+                '<td><strong style="color: var(--accent-primary); cursor: pointer;" onclick="openKhata(' + pur.khataNo + ')">' + escapeHtml(pur.partyName) + ' ↗</strong></td>' +
+                '<td>R#' + pur.rokerNo + '</td>' +
+                '<td>' + (pur.bags > 0 ? pur.bags : '—') + '</td>' +
+                '<td>' + (pur.meters > 0 ? pur.meters : '—') + '</td>' +
+                '<td>' + (pur.ratePerBag ? fmtCurrency(pur.ratePerBag) : '—') + '</td>' +
+                '<td style="text-align:right">' + fmtCurrency((pur.naam || 0) + (pur.jama || 0)) + '</td>' +
+                '</tr>'
+              ).join('');
+
+              const sellRows = (p.sells || []).map(s => '<tr>' +
+                '<td>' + formatDate(s.date) + '</td>' +
+                '<td><strong style="color: var(--accent-primary); cursor: pointer;" onclick="openKhata(' + s.khataNo + ')">' + escapeHtml(s.partyName) + ' ↗</strong></td>' +
+                '<td>R#' + s.rokerNo + '</td>' +
+                '<td>' + (s.bags > 0 ? s.bags : '—') + '</td>' +
+                '<td>' + (s.meters > 0 ? s.meters : '—') + '</td>' +
+                '<td>' + (s.ratePerBag ? fmtCurrency(s.ratePerBag) : '—') + '</td>' +
+                '<td style="text-align:right">' + fmtCurrency((s.naam || 0) + (s.jama || 0)) + '</td>' +
+                '</tr>'
+              ).join('');
+
+              return '<div class="cb-purchase-card">' +
+                '<div class="cb-purchase-header" onclick="this.parentElement.classList.toggle(\'expanded\')">' +
+                  '<div class="cb-purchase-left">' +
+                    '<span class="cb-purchase-badge" style="background: rgba(13, 148, 136, 0.15); color: #0d9488;">🏁 R#' + p.rokerNo + '</span>' +
+                    '<div class="cb-purchase-info">' +
+                      '<div class="cb-purchase-party">' + escapeHtml(p.partyName) + '</div>' +
+                      '<div class="cb-purchase-meta">' + formatDate(p.date) + ' · Pur: ' + p.initialQty + ' ' + p.unitLabel + ' (' + fmtCurrency(p.purchaseAmount) + ') | Sell: ' + p.totalSoldQty + ' ' + p.unitLabel + ' (' + fmtCurrency(p.totalSellAmount) + ')</div>' +
+                    '</div>' +
+                  '</div>' +
+                  '<div class="cb-purchase-right">' +
+                    '<span class="ps-status ' + statusClass + '">' + statusIcon + ' ' + statusText + '</span>' +
+                    '<div class="cb-purchase-remaining">Remaining: <strong>' + p.remainingQty + '</strong> ' + p.unitLabel + '</div>' +
+                    profitLossHtml +
+                    '<span class="ps-expand-icon">▼</span>' +
+                  '</div>' +
+                '</div>' +
+                '<div class="cb-purchase-sells">' +
+                  '<h4 style="margin: 0.75rem 0 0.5rem; font-size: 0.875rem; color: #15803d;">🛒 Purchase Entries (' + (p.purchases || []).length + ') — Total: ' + fmtCurrency(p.purchaseAmount) + '</h4>' +
+                  '<div class="cb-khata-table-wrapper" style="margin-bottom: 1rem;"><table class="cb-khata-table">' +
+                    '<thead><tr><th>Date</th><th>Purchased From</th><th>Roker</th><th>Bags</th><th>Meters</th><th>Rate</th><th style="text-align:right">Amount</th></tr></thead>' +
+                    '<tbody>' + (purRows || '<tr><td colspan="7">No purchases</td></tr>') + '</tbody>' +
+                  '</table></div>' +
+                  '<h4 style="margin: 0.75rem 0 0.5rem; font-size: 0.875rem; color: #b91c1c;">🏷️ Sell Entries (' + (p.sells || []).length + ') — Total: ' + fmtCurrency(p.totalSellAmount) + '</h4>' +
+                  '<div class="cb-khata-table-wrapper"><table class="cb-khata-table">' +
+                    '<thead><tr><th>Date</th><th>Sold To</th><th>Roker</th><th>Bags</th><th>Meters</th><th>Rate</th><th style="text-align:right">Amount</th></tr></thead>' +
+                    '<tbody>' + (sellRows || '<tr><td colspan="7">No sells</td></tr>') + '</tbody>' +
+                  '</table></div>' +
+                  '<div style="margin-top: 0.75rem; padding: 0.5rem 0.75rem; background: var(--bg-surface-secondary); border-radius: 6px; font-weight: 700; font-size: 0.8125rem; text-align: right;">' +
+                    'Formula: Sell Total (' + fmtCurrency(p.totalSellAmount) + ') - Purchase Total (' + fmtCurrency(p.purchaseAmount) + ') = Net Nafa/Nuqsaan: ' + fmtCurrency(p.profitLoss || 0) +
+                  '</div>' +
+                '</div>' +
+              '</div>';
+            }
+
+            const isMeter = p.meters > 0 || (p.bags === 0);
+            const totalQty = isMeter ? (p.meters || 0) : (p.bags || 0);
+            const unit = isMeter ? 'meters' : 'bags';
+            const soldQty = isMeter ? (p.totalSoldMeters || 0) : (p.totalSoldBags || 0);
+
             const statusIcon = p.isFullySold ? '✅' : (p.sellCount > 0 ? '⏳' : '📦');
-            const statusText = p.isFullySold ? 'Fully Sold' : (p.sellCount > 0 ? 'Partially Sold (' + p.totalSoldBags + '/' + p.bags + ')' : 'Unsold');
+            const statusText = p.isFullySold ? 'Fully Sold' : (p.sellCount > 0 ? `Partially Sold (${soldQty}/${totalQty} ${unit})` : 'Unsold');
             const statusClass = p.isFullySold ? 'ps-status-sold' : (p.sellCount > 0 ? 'ps-status-partial' : 'ps-status-unsold');
 
             let profitLossHtml = '';
@@ -1593,12 +1680,15 @@ async function loadCashbookDashboard() {
               '<td>' + formatDate(s.date) + '</td>' +
               '<td><strong style="color: var(--accent-primary); cursor: pointer;" onclick="openKhata(' + s.khataNo + ')">' + escapeHtml(s.partyName) + ' ↗</strong></td>' +
               '<td>R#' + s.rokerNo + '</td>' +
-              '<td>' + (s.bags || '—') + '</td>' +
+              '<td>' + (s.bags > 0 ? s.bags : '—') + '</td>' +
+              '<td>' + (s.meters > 0 ? s.meters : '—') + '</td>' +
               '<td>' + (s.ratePerBag ? fmtCurrency(s.ratePerBag) : '—') + '</td>' +
               '<td style="text-align:right">' + fmtCurrency((s.naam || 0) + (s.jama || 0)) + '</td>' +
               '<td><button class="btn-action delete" onclick="event.stopPropagation(); deleteCbEntry(\'' + s._id + '\')" title="Delete Sell">🗑️</button></td>' +
               '</tr>'
             ).join('');
+
+            const qtyText = isMeter ? `${p.meters} meters` : `${p.bags} bags`;
 
             return '<div class="cb-purchase-card">' +
               '<div class="cb-purchase-header" onclick="this.parentElement.classList.toggle(\'expanded\')">' +
@@ -1606,12 +1696,12 @@ async function loadCashbookDashboard() {
                   '<span class="cb-purchase-badge">🛒 R#' + p.rokerNo + '</span>' +
                   '<div class="cb-purchase-info">' +
                     '<div class="cb-purchase-party">' + escapeHtml(p.partyName) + '</div>' +
-                    '<div class="cb-purchase-meta">' + formatDate(p.date) + ' · ' + p.bags + ' bags × ' + fmtCurrency(p.ratePerBag || 0) + ' = ' + fmtCurrency(p.purchaseAmount) + '</div>' +
+                    '<div class="cb-purchase-meta">' + formatDate(p.date) + ' · ' + qtyText + ' × ' + fmtCurrency(p.ratePerBag || 0) + ' = ' + fmtCurrency(p.purchaseAmount) + '</div>' +
                   '</div>' +
                 '</div>' +
                 '<div class="cb-purchase-right">' +
                   '<span class="ps-status ' + statusClass + '">' + statusIcon + ' ' + statusText + '</span>' +
-                  '<div class="cb-purchase-remaining">Remaining: <strong>' + p.remainingBags + '</strong> bags</div>' +
+                  '<div class="cb-purchase-remaining">Remaining: <strong>' + (p.remainingQty !== undefined ? p.remainingQty : p.remainingBags) + '</strong> ' + unit + '</div>' +
                   profitLossHtml +
                   '<span class="ps-expand-icon">▼</span>' +
                 '</div>' +
@@ -1620,13 +1710,13 @@ async function loadCashbookDashboard() {
                 '<div class="cb-purchase-sells">' +
                   '<h4 style="margin: 0.75rem 0 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">🏷️ Sell Entries (' + p.sellCount + ')</h4>' +
                   '<div class="cb-khata-table-wrapper"><table class="cb-khata-table">' +
-                    '<thead><tr><th>Date</th><th>Sold To</th><th>Roker</th><th>Bags</th><th>Rate</th><th style="text-align:right">Amount</th><th>Actions</th></tr></thead>' +
+                    '<thead><tr><th>Date</th><th>Sold To</th><th>Roker</th><th>Bags</th><th>Meters</th><th>Rate</th><th style="text-align:right">Amount</th><th>Actions</th></tr></thead>' +
                     '<tbody>' + sellRows + '</tbody>' +
-                    '<tfoot><tr style="font-weight:700;"><td colspan="3">Totals</td><td>' + p.totalSoldBags + '</td><td>—</td><td style="text-align:right">' + fmtCurrency(p.totalSellAmount) + '</td><td></td></tr></tfoot>' +
+                    '<tfoot><tr style="font-weight:700;"><td colspan="3">Totals</td><td>' + (p.totalSoldBags || '—') + '</td><td>' + (p.totalSoldMeters || '—') + '</td><td>—</td><td style="text-align:right">' + fmtCurrency(p.totalSellAmount) + '</td><td></td></tr></tfoot>' +
                   '</table></div>' +
                 '</div>'
               :
-                '<div class="cb-purchase-sells"><p style="padding: 0.75rem; color: var(--text-muted); font-size: 0.8125rem;">No sell entries yet.</p></div>'
+                '<div class="cb-purchase-sells"><p style="padding: 0.75rem; color: var(--text-muted); font-size: 0.8125rem;">No sell entries linked.</p></div>'
               ) +
             '</div>';
           }).join('')}
@@ -1825,6 +1915,18 @@ async function openRokerDetail(rokerNo) {
   try {
     const data = await apiGet(`${CB_API}/roker/${rokerNo}`);
     currentRokerNo = rokerNo;
+
+    // Client fallback to fetch Khata #95 Cash In Hand balance if missing from server API
+    let cashInHandVal = data.summary.cashInHand;
+    if (cashInHandVal === undefined || cashInHandVal === 0) {
+      try {
+        const parties = await apiGet(`${CB_API}/parties`);
+        const cih = parties.find(p => p.khataNo === 95 || (p.nameNorm && p.nameNorm === 'cash in hand'));
+        if (cih) cashInHandVal = cih.balance;
+      } catch (e) {}
+    }
+    data.summary.cashInHand = cashInHandVal || 0;
+    data.summary.endRokerValue = (data.summary.totalJama || 0) + (cashInHandVal || 0);
     currentRokerData = data;
 
     $('rokerDetailTitle').textContent = `📜 Roker #${rokerNo} (${formatDate(data.date)})`;
@@ -1845,6 +1947,12 @@ async function openRokerDetail(rokerNo) {
               <div class="cb-roker-stat-lbl">Total Bags</div>
             </div>
           ` : ''}
+          ${data.summary.totalMeters > 0 ? `
+            <div class="cb-roker-stat-item">
+              <div class="cb-roker-stat-val">📏 ${data.summary.totalMeters}</div>
+              <div class="cb-roker-stat-lbl">Total Meters</div>
+            </div>
+          ` : ''}
           <div class="cb-roker-stat-item">
             <div class="cb-roker-stat-val" style="color: #b91c1c;">${fmtCurrency(data.summary.totalNaam)}</div>
             <div class="cb-roker-stat-lbl">Total Naam</div>
@@ -1852,6 +1960,14 @@ async function openRokerDetail(rokerNo) {
           <div class="cb-roker-stat-item">
             <div class="cb-roker-stat-val" style="color: #15803d;">${fmtCurrency(data.summary.totalJama)}</div>
             <div class="cb-roker-stat-lbl">Total Jama</div>
+          </div>
+          <div class="cb-roker-stat-item">
+            <div class="cb-roker-stat-val" style="color: #0284c7;">${fmtCurrency(data.summary.cashInHand || 0)}</div>
+            <div class="cb-roker-stat-lbl">Cash in Hand</div>
+          </div>
+          <div class="cb-roker-stat-item highlight-end-roker" onclick="openEndRokerModal()" title="Click to view End Roker calculation breakdown">
+            <div class="cb-roker-stat-val" style="color: #d97706; font-size: 1.25rem;">${fmtCurrency(data.summary.endRokerValue || 0)}</div>
+            <div class="cb-roker-stat-lbl" style="color: #d97706;">🏁 End Roker (Jama + Cash)</div>
           </div>
         </div>
       </div>
@@ -1876,6 +1992,7 @@ async function openRokerDetail(rokerNo) {
                 <th>Khata #</th>
                 <th>Description</th>
                 <th>Bags</th>
+                <th>Meters</th>
                 <th style="text-align:right">Naam (Debit)</th>
                 <th style="text-align:right">Jama (Credit)</th>
                 <th>Actions</th>
@@ -1894,6 +2011,7 @@ async function openRokerDetail(rokerNo) {
                   <td class="col-roker">#${e.khataNo}</td>
                   <td class="col-desc" title="${escapeHtml(e.description)}">${escapeHtml(e.description)}</td>
                   <td class="col-bags">${e.bags > 0 ? e.bags : '—'}</td>
+                  <td class="col-meters">${e.meters > 0 ? e.meters : '—'}</td>
                   <td class="col-naam">${e.naam > 0 ? fmtCurrency(e.naam) : '—'}</td>
                   <td class="col-jama">${e.jama > 0 ? fmtCurrency(e.jama) : '—'}</td>
                   <td>
@@ -1907,6 +2025,7 @@ async function openRokerDetail(rokerNo) {
               <tr>
                 <td colspan="4"><strong>Totals for Roker #${rokerNo}</strong></td>
                 <td class="col-bags"><strong>${data.summary.totalBags > 0 ? data.summary.totalBags : '—'}</strong></td>
+                <td class="col-meters"><strong>${data.summary.totalMeters > 0 ? data.summary.totalMeters : '—'}</strong></td>
                 <td class="col-naam"><strong>${fmtCurrency(data.summary.totalNaam)}</strong></td>
                 <td class="col-jama"><strong>${fmtCurrency(data.summary.totalJama)}</strong></td>
                 <td></td>
@@ -2009,7 +2128,8 @@ async function openKhata(khataNo) {
                 <th>Date</th>
                 <th>Roker #</th>
                 <th>Description</th>
-                <th>Bags / Meters</th>
+                <th>Bags</th>
+                <th>Meters</th>
                 <th style="text-align:right">Naam (Debit)</th>
                 <th style="text-align:right">Jama (Credit)</th>
                 <th style="text-align:right">Remaining (Balance)</th>
@@ -2032,6 +2152,7 @@ async function openKhata(khataNo) {
                       ${e.isCash ? '<span style="background: #dcfce7; color: #15803d; font-size: 0.65rem; padding: 2px 5px; margin-left: 4px; border-radius: 4px; font-weight: 700;">💵 Cash</span>' : ''}
                     </td>
                     <td class="col-bags">${e.bags > 0 ? e.bags : '—'}</td>
+                    <td class="col-meters">${e.meters > 0 ? e.meters : '—'}</td>
                     <td class="col-naam">${e.naam > 0 ? fmtCurrency(e.naam) : '—'}</td>
                     <td class="col-jama">${e.jama > 0 ? fmtCurrency(e.jama) : '—'}</td>
                     <td class="col-remaining ${remClass}">${fmtCurrency(e.remaining)}</td>
@@ -2173,19 +2294,20 @@ function openNewRokerForm() {
 async function populateOpenPurchasesSelect(selectedId = null) {
   const select = $('sellPurchaseSelect');
   if (!select) return;
-  select.innerHTML = '<option value="">— Loading open purchases... —</option>';
+  select.innerHTML = '<option value="">— Loading open meter purchases... —</option>';
   try {
     const url = selectedId ? `${CB_API}/open-purchases?includeId=${encodeURIComponent(selectedId)}` : `${CB_API}/open-purchases`;
     const openPurchases = await apiGet(url);
     if (!openPurchases || openPurchases.length === 0) {
-      select.innerHTML = '<option value="">— None (No open purchases available) —</option>';
+      select.innerHTML = '<option value="">— None (No open meter purchases available) —</option>';
       return;
     }
     let html = '<option value="">— None (Optional / Unlinked) —</option>';
     openPurchases.forEach(p => {
       const isSel = (selectedId && (p._id === selectedId || p._id === String(selectedId))) ? 'selected' : '';
       const amount = (p.naam || 0) + (p.jama || 0);
-      html += `<option value="${p._id}" ${isSel}>R#${p.rokerNo} - ${escapeHtml(p.partyName)} (${p.remainingBags} bags left @ ${fmtCurrency(p.ratePerBag || 0)} = ${fmtCurrency(amount)})</option>`;
+      const qtyLeft = (p.meters && p.meters > 0) ? p.meters : p.remainingBags;
+      html += `<option value="${p._id}" ${isSel}>R#${p.rokerNo} - ${escapeHtml(p.partyName)} (${qtyLeft} meters left @ ${fmtCurrency(p.ratePerBag || 0)} = ${fmtCurrency(amount)})</option>`;
     });
     select.innerHTML = html;
   } catch (err) {
@@ -2234,6 +2356,13 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
   $('entryForm').reset();
   $('editEntryId').value = '';
   $('entryDate').value = toInputDate(new Date());
+  $('entryPartyName').value = preSelectPartyName || '';
+  $('entryDescription').value = '';
+  $('entryBags').value = '';
+  if ($('entryMeters')) $('entryMeters').value = '';
+  $('entryRate').value = '';
+  $('entryNaam').value = '';
+  $('entryJama').value = '';
 
   // Show trade type radio section
   if ($('entryTypeSection')) $('entryTypeSection').style.display = '';
@@ -2334,7 +2463,8 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
     $('entryRokerNo').value = editData.rokerNo || '';
     $('entryPartyName').value = editData.partyName || '';
     $('entryDescription').value = editData.description || '';
-    $('entryBags').value = editData.bags || '';
+    $('entryBags').value = (editData.bags && editData.bags > 0) ? editData.bags : '';
+    if ($('entryMeters')) $('entryMeters').value = (editData.meters && editData.meters > 0) ? editData.meters : '';
     $('entryRate').value = editData.ratePerBag || '';
     $('entryNaam').value = editData.naam || '';
     $('entryJama').value = editData.jama || '';
@@ -2351,10 +2481,12 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
   showView(viewEntryForm);
 }
 
-// Real-time automatic multiplication (Bags/Meters x Rate)
+// Real-time automatic multiplication (Bags or Meters x Rate)
 function updateCalculatedAmount() {
-  const qty = parseFloat($('entryBags').value) || 0;
+  const bags = parseFloat($('entryBags').value) || 0;
+  const meters = parseFloat($('entryMeters').value) || 0;
   const rate = parseFloat($('entryRate').value) || 0;
+  const qty = bags > 0 ? bags : meters;
   if (qty > 0 && rate > 0) {
     const total = Math.round(qty * rate);
     const side = $('entrySide').value;
@@ -2367,6 +2499,7 @@ function updateCalculatedAmount() {
 }
 
 if ($('entryBags')) $('entryBags').addEventListener('input', updateCalculatedAmount);
+if ($('entryMeters')) $('entryMeters').addEventListener('input', updateCalculatedAmount);
 if ($('entryRate')) $('entryRate').addEventListener('input', updateCalculatedAmount);
 
 // Submit entry form
@@ -2398,6 +2531,7 @@ $('entryForm').addEventListener('submit', async (e) => {
     date: $('entryDate').value,
     description: $('entryDescription').value.trim() || '—',
     bags: parseFloat($('entryBags').value) || 0,
+    meters: parseFloat($('entryMeters').value) || 0,
     ratePerBag: rateVal,
     naam: naamVal,
     jama: jamaVal,
@@ -2513,6 +2647,195 @@ if ($('btnRokerAddBanam')) {
   });
 }
 
+if ($('btnEndRoker')) {
+  $('btnEndRoker').addEventListener('click', () => {
+    openEndRokerModal();
+  });
+}
+
+if ($('btnCloseEndRokerModal')) {
+  $('btnCloseEndRokerModal').addEventListener('click', () => {
+    closeEndRokerModal();
+  });
+}
+
+function openEndRokerModal() {
+  if (!currentRokerData || !currentRokerData.summary) {
+    toast('No roker data available', 'error');
+    return;
+  }
+  const s = currentRokerData.summary;
+  const rokerNo = currentRokerNo;
+  const rokerDate = formatDate(currentRokerData.date);
+
+  const totalNaam = s.totalNaam || 0;
+  const totalJama = s.totalJama || 0;
+  const cashInHand = s.cashInHand || 0;
+  const endRokerValue = s.endRokerValue || (totalJama + cashInHand);
+
+  const bs = s.bagSummary || {};
+  const ms = s.meterSummary || {};
+  let tradeSummaryHtml = '';
+
+  const hasBags = (bs.totalPurchaseBags > 0 || bs.totalSellBags > 0);
+  const hasMeters = (ms.totalPurchaseMeters > 0 || ms.totalSellMeters > 0);
+
+  if (hasBags) {
+    const diffLabel = bs.difference > 0 ? '🟢 Net Bag Nafa' : bs.difference < 0 ? '🔴 Net Bag Nuqsaan' : '⚪ Break Even';
+    const statusNotice = bs.bagsMatch
+      ? (bs.isAlreadyPosted
+          ? `<div style="margin-top: 0.3rem; padding: 0.25rem 0.4rem; background: #dcfce7; color: #15803d; border-radius: 4px; font-weight: 700; font-size: 0.72rem; text-align: center;">✅ Bag Nafa/Nuqsaan Posted (${fmtCurrency(Math.abs(bs.difference))})</div>`
+          : `<button class="btn btn-success" style="width: 100%; margin-top: 0.3rem; background: #15803d; font-weight: 700; padding: 0.25rem; font-size: 0.75rem;" onclick="postBagNafaNuqsanToN(${rokerNo})">💾 Post Bag Nafa/Nuqsaan (${fmtCurrency(Math.abs(bs.difference))})</button>`
+        )
+      : `<div style="margin-top: 0.3rem; padding: 0.25rem 0.4rem; background: #fef3c7; color: #b45309; border-radius: 4px; font-size: 0.72rem; text-align: center;">⚠️ Bag Purchases (${bs.totalPurchaseBags}) & Sells (${bs.totalSellBags}) differ.</div>`;
+
+    const bagPurListHtml = (bs.purchases || []).map(p => `<tr><td>${escapeHtml(p.partyName)}</td><td>${p.qty} bags</td><td>${fmtCurrency(p.rate)}</td><td style="text-align:right">${fmtCurrency(p.amount)}</td></tr>`).join('');
+    const bagSellListHtml = (bs.sells || []).map(s => `<tr><td>${escapeHtml(s.partyName)}</td><td>${s.qty} bags</td><td>${fmtCurrency(s.rate)}</td><td style="text-align:right">${fmtCurrency(s.amount)}</td></tr>`).join('');
+
+    const bagDetailsHtml = `
+      <details style="margin-top: 0.35rem; font-size: 0.72rem; color: var(--text-muted);">
+        <summary style="cursor: pointer; font-weight: 700; color: var(--accent-primary);">📜 View Bag Calculation Details (${(bs.purchases || []).length} Pur, ${(bs.sells || []).length} Sells)</summary>
+        <div style="margin-top: 0.35rem; border-top: 1px dashed var(--border); padding-top: 0.35rem;">
+          <div style="font-weight: 700; color: #15803d;">🛒 Bag Purchases (${fmtCurrency(bs.totalPurchaseAmount)}):</div>
+          <table class="cb-khata-table" style="font-size: 0.7rem; margin-bottom: 0.35rem;">
+            <thead><tr><th>Party</th><th>Bags</th><th>Rate</th><th style="text-align:right">Amount</th></tr></thead>
+            <tbody>${bagPurListHtml || '<tr><td colspan="4">No bag purchases</td></tr>'}</tbody>
+          </table>
+          <div style="font-weight: 700; color: #b91c1c;">🏷️ Bag Sells (${fmtCurrency(bs.totalSellAmount)}):</div>
+          <table class="cb-khata-table" style="font-size: 0.7rem;">
+            <thead><tr><th>Party</th><th>Bags</th><th>Rate</th><th style="text-align:right">Amount</th></tr></thead>
+            <tbody>${bagSellListHtml || '<tr><td colspan="4">No bag sells</td></tr>'}</tbody>
+          </table>
+          <div style="font-size: 0.7rem; margin-top: 0.25rem; font-weight: 700; text-align: right; color: var(--text-primary);">
+            Formula: Sells (${fmtCurrency(bs.totalSellAmount)}) - Purchases (${fmtCurrency(bs.totalPurchaseAmount)}) = Net Nafa: ${fmtCurrency(bs.difference)}
+          </div>
+        </div>
+      </details>
+    `;
+
+    tradeSummaryHtml += `
+      <div class="end-roker-calc-box" style="margin-top: 0.4rem; border-color: rgba(30, 64, 175, 0.2);">
+        <div style="font-weight: 700; color: var(--accent-primary); font-size: 0.78rem; margin-bottom: 0.2rem;">
+          📦 Bag Purchase & Sell Summary
+        </div>
+        <div class="end-roker-row">
+          <span>🛒 Purchases (${bs.totalPurchaseBags} bags):</span>
+          <strong>${fmtCurrency(bs.totalPurchaseAmount)}</strong>
+        </div>
+        <div class="end-roker-row">
+          <span>🏷️ Sells (${bs.totalSellBags} bags):</span>
+          <strong>${fmtCurrency(bs.totalSellAmount)}</strong>
+        </div>
+        <div class="end-roker-row" style="border-top: 1px dashed var(--border); padding-top: 0.2rem; margin-top: 0.1rem;">
+          <span>${diffLabel}:</span>
+          <strong style="font-size: 0.88rem; color: ${bs.difference >= 0 ? '#15803d' : '#b91c1c'};">${fmtCurrency(Math.abs(bs.difference))}</strong>
+        </div>
+        ${bagDetailsHtml}
+        ${statusNotice}
+      </div>
+    `;
+  }
+
+  if (hasMeters) {
+    const diffLabel = ms.difference > 0 ? '🟢 Net Meter Nafa' : ms.difference < 0 ? '🔴 Net Meter Nuqsaan' : '⚪ Break Even';
+    const statusNotice = ms.metersMatch
+      ? (ms.isAlreadyPosted
+          ? `<div style="margin-top: 0.3rem; padding: 0.25rem 0.4rem; background: #dcfce7; color: #15803d; border-radius: 4px; font-weight: 700; font-size: 0.72rem; text-align: center;">✅ Meter Nafa/Nuqsaan Posted (${fmtCurrency(Math.abs(ms.difference))})</div>`
+          : `<button class="btn btn-success" style="width: 100%; margin-top: 0.3rem; background: #0284c7; font-weight: 700; padding: 0.25rem; font-size: 0.75rem;" onclick="postBagNafaNuqsanToN(${rokerNo})">💾 Post Meter Nafa/Nuqsaan (${fmtCurrency(Math.abs(ms.difference))})</button>`
+        )
+      : `<div style="margin-top: 0.3rem; padding: 0.25rem 0.4rem; background: #fef3c7; color: #b45309; border-radius: 4px; font-size: 0.72rem; text-align: center;">⚠️ Meter Purchases (${ms.totalPurchaseMeters}) & Sells (${ms.totalSellMeters}) differ.</div>`;
+
+    const meterPurListHtml = (ms.purchases || []).map(p => `<tr><td>${escapeHtml(p.partyName)}</td><td>${p.qty} m</td><td>${fmtCurrency(p.rate)}</td><td style="text-align:right">${fmtCurrency(p.amount)}</td></tr>`).join('');
+    const meterSellListHtml = (ms.sells || []).map(s => `<tr><td>${escapeHtml(s.partyName)}</td><td>${s.qty} m</td><td>${fmtCurrency(s.rate)}</td><td style="text-align:right">${fmtCurrency(s.amount)}</td></tr>`).join('');
+
+    const meterDetailsHtml = `
+      <details style="margin-top: 0.35rem; font-size: 0.72rem; color: var(--text-muted);">
+        <summary style="cursor: pointer; font-weight: 700; color: #0284c7;">📜 View Meter Calculation Details (${(ms.purchases || []).length} Pur, ${(ms.sells || []).length} Sells)</summary>
+        <div style="margin-top: 0.35rem; border-top: 1px dashed var(--border); padding-top: 0.35rem;">
+          <div style="font-weight: 700; color: #0284c7;">🛒 Meter Purchases (${fmtCurrency(ms.totalPurchaseAmount)}):</div>
+          <table class="cb-khata-table" style="font-size: 0.7rem; margin-bottom: 0.35rem;">
+            <thead><tr><th>Party</th><th>Meters</th><th>Rate</th><th style="text-align:right">Amount</th></tr></thead>
+            <tbody>${meterPurListHtml || '<tr><td colspan="4">No meter purchases</td></tr>'}</tbody>
+          </table>
+          <div style="font-weight: 700; color: #b91c1c;">🏷️ Meter Sells (${fmtCurrency(ms.totalSellAmount)}):</div>
+          <table class="cb-khata-table" style="font-size: 0.7rem;">
+            <thead><tr><th>Party</th><th>Meters</th><th>Rate</th><th style="text-align:right">Amount</th></tr></thead>
+            <tbody>${meterSellListHtml || '<tr><td colspan="4">No meter sells</td></tr>'}</tbody>
+          </table>
+          <div style="font-size: 0.7rem; margin-top: 0.25rem; font-weight: 700; text-align: right; color: var(--text-primary);">
+            Formula: Sells (${fmtCurrency(ms.totalSellAmount)}) - Purchases (${fmtCurrency(ms.totalPurchaseAmount)}) = Net Nafa: ${fmtCurrency(ms.difference)}
+          </div>
+        </div>
+      </details>
+    `;
+
+    tradeSummaryHtml += `
+      <div class="end-roker-calc-box" style="margin-top: 0.4rem; border-color: rgba(2, 132, 199, 0.3);">
+        <div style="font-weight: 700; color: #0284c7; font-size: 0.78rem; margin-bottom: 0.2rem;">
+          📏 Meter Purchase & Sell Summary
+        </div>
+        <div class="end-roker-row">
+          <span>🛒 Purchases (${ms.totalPurchaseMeters} meters):</span>
+          <strong>${fmtCurrency(ms.totalPurchaseAmount)}</strong>
+        </div>
+        <div class="end-roker-row">
+          <span>🏷️ Sells (${ms.totalSellMeters} meters):</span>
+          <strong>${fmtCurrency(ms.totalSellAmount)}</strong>
+        </div>
+        <div class="end-roker-row" style="border-top: 1px dashed var(--border); padding-top: 0.2rem; margin-top: 0.1rem;">
+          <span>${diffLabel}:</span>
+          <strong style="font-size: 0.88rem; color: ${ms.difference >= 0 ? '#15803d' : '#b91c1c'};">${fmtCurrency(Math.abs(ms.difference))}</strong>
+        </div>
+        ${meterDetailsHtml}
+        ${statusNotice}
+      </div>
+    `;
+  }
+
+  $('endRokerModalTitle').textContent = `🏁 End Roker Summary (Roker #${rokerNo})`;
+  $('endRokerModalBody').innerHTML = `
+    <div class="end-roker-calc-box">
+      <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.35rem;">
+        📅 Date: <strong>${rokerDate}</strong> · Roker #${rokerNo}
+      </div>
+      <div class="end-roker-row">
+        <span style="color: var(--text-secondary);">🟢 Total Jama (جمع):</span>
+        <strong style="color: #15803d; font-size: 0.9rem;">${fmtCurrency(totalJama)}</strong>
+      </div>
+      <div class="end-roker-row">
+        <span style="color: var(--text-secondary);">🔴 Total Naam (بنام):</span>
+        <strong style="color: #b91c1c; font-size: 0.9rem;">${fmtCurrency(totalNaam)}</strong>
+      </div>
+      <div class="end-roker-row" style="background: rgba(2, 132, 199, 0.05); padding: 0.25rem 0.35rem; border-radius: 4px; margin: 0.15rem 0;">
+        <span style="color: #0284c7; font-weight: 600;">💵 Cash in Hand:</span>
+        <strong style="color: #0284c7; font-size: 0.9rem;">+ ${fmtCurrency(cashInHand)}</strong>
+      </div>
+      <div class="end-roker-row total">
+        <span style="color: #d97706;">🏁 End Roker Total:</span>
+        <strong style="color: #d97706; font-size: 1.1rem;">${fmtCurrency(endRokerValue)}</strong>
+      </div>
+    </div>
+    ${tradeSummaryHtml}
+  `;
+
+  $('endRokerModal').classList.remove('hidden');
+}
+
+function closeEndRokerModal() {
+  $('endRokerModal').classList.add('hidden');
+}
+
+async function postBagNafaNuqsanToN(rokerNo) {
+  try {
+    await apiPost(`${CB_API}/roker/${rokerNo}/calculate-bag-nafa-nuqsan`, { postToN: true });
+    toast(`Nafa/Nuqsaan posted to Party "N" for Roker #${rokerNo}!`);
+    openRokerDetail(rokerNo);
+    closeEndRokerModal();
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
 // Make cashbook functions globally available
 window.deleteCbParty = deleteCbParty;
 window.openKhata = openKhata;
@@ -2521,6 +2844,8 @@ window.openNewRokerForm = openNewRokerForm;
 window.openEntryForm = openEntryForm;
 window.openEditEntry = openEditEntry;
 window.deleteCbEntry = deleteCbEntry;
+window.openEndRokerModal = openEndRokerModal;
+window.closeEndRokerModal = closeEndRokerModal;
 
 // ═══════════════════════════════════════════════════════════
 //  INPUT ENHANCEMENTS: Prevent Wheel Spin & Enter Key Navigation

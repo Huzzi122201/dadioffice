@@ -60,8 +60,12 @@ const cashbookEntrySchema = new mongoose.Schema(
       default: 'general',
     },
 
-    // ── Bag Details (for yarn transactions) ─────────────
+    // ── Bag / Meter Details (for transactions) ─────────
     bags: {
+      type: Number,
+      default: 0,
+    },
+    meters: {
       type: Number,
       default: 0,
     },

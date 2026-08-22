@@ -2246,6 +2246,20 @@ body {
   text-align: right;
 }
 
+.cb-roker-stat-item.highlight-end-roker {
+  background: rgba(217, 119, 6, 0.08);
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px dashed rgba(217, 119, 6, 0.4);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cb-roker-stat-item.highlight-end-roker:hover {
+  background: rgba(217, 119, 6, 0.16);
+  transform: translateY(-1px);
+}
+
 .cb-roker-stat-val {
   font-size: 1.125rem;
   font-weight: 800;
@@ -2257,6 +2271,31 @@ body {
   font-weight: 700;
   color: var(--text-muted);
 }
+
+/* ── End Roker Modal Breakdown Box (Compact) ────────────── */
+.end-roker-calc-box {
+  background: var(--bg-surface-secondary, #f8fafc);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 0.85rem;
+}
+
+.end-roker-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem 0;
+  font-size: 0.8125rem;
+}
+
+.end-roker-row.total {
+  border-top: 1px solid var(--border);
+  margin-top: 0.35rem;
+  padding-top: 0.45rem;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
 
 /* ── Mobile Responsive ──────────────────────────────────── */
 @media (max-width: 768px) {
@@ -2448,4 +2487,61 @@ body {
 .cb-purchase-card.expanded .cb-purchase-sells {
   display: block;
 }
+
+/* ── Compact End Roker Modal Styles ───────────────────────── */
+#endRokerModal .modal-container {
+  max-width: 380px !important;
+  width: 92% !important;
+  padding: 0.75rem 0.85rem !important;
+  border-radius: 10px !important;
+}
+
+#endRokerModal .modal-header {
+  padding-bottom: 0.4rem !important;
+  margin-bottom: 0.4rem !important;
+}
+
+#endRokerModal .modal-title {
+  font-size: 0.9rem !important;
+}
+
+.end-roker-calc-box {
+  background: var(--bg-tertiary, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  margin-bottom: 0.35rem;
+}
+
+.end-roker-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  padding: 0.12rem 0;
+}
+
+.end-roker-row.total {
+  font-size: 0.88rem;
+  font-weight: 700;
+  border-top: 1px dashed var(--border, #cbd5e1);
+  padding-top: 0.2rem;
+  margin-top: 0.15rem;
+}
+
+#endRokerModal details summary {
+  user-select: none;
+  font-size: 0.72rem;
+}
+
+#endRokerModal details[open] summary {
+  margin-bottom: 0.25rem;
+}
+
+#endRokerModal .cb-khata-table th,
+#endRokerModal .cb-khata-table td {
+  padding: 0.2rem 0.35rem !important;
+  font-size: 0.68rem !important;
+}
+
 
