@@ -23,7 +23,7 @@ const creditParties = [
   { name: 'Kwist Gudaam', jama: 278515 },
   { name: 'Altaf Lasani', jama: 4041425 },
   { name: 'Abdullah Suleman', jama: 3082730 },
-  { name: 'Farzeen', jama: 648750 },
+  { name: 'Fahad Zain', jama: 648750 },
   { name: 'Nadia Asif', jama: 7224598 },
   { name: 'Ahmed Imran', jama: 5623195 },
   { name: 'Suhail Lal', jama: 3786590 },

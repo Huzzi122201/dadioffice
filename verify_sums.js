@@ -23,7 +23,7 @@ const userJamaList = [
   { name: 'kwist gudaam', amount: 278515 },
   { name: 'altaf lasani', amount: 4041425 },
   { name: 'abdullah suleman', amount: 3082730 },
-  { name: 'farzeen', amount: 648750 },
+  { name: 'fahad zain', amount: 648750 },
   { name: 'nadia asif', amount: 7224598 },
   { name: 'ahmed imran', amount: 5623195 },
   { name: 'suhail lal', amount: 3786590 },
