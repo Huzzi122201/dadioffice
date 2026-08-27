@@ -1501,7 +1501,6 @@ async function loadCashbookDashboard() {
         <div class="cb-roker-list">
           ${rokers.map(r => {
             const partiesStr = (r.parties && r.parties.length > 0) ? r.parties.filter(Boolean).join(', ') : 'No parties';
-            const endVal = r.endRokerValue || ((r.totalJama || 0) + (r.cashInHand || fallbackCih));
             return `
               <div class="cb-roker-card" onclick="openRokerDetail(${r.rokerNo})">
                 <div class="cb-roker-card-left">
@@ -1519,11 +1518,7 @@ async function loadCashbookDashboard() {
                   </div>
                 </div>
                 <div class="cb-roker-card-right">
-                  <div class="cb-roker-totals-row">
-                    ${r.totalNaam > 0 ? `<span class="cb-roker-naam-val">Naam: ${fmtCurrency(r.totalNaam)}</span>` : ''}
-                    ${r.totalJama > 0 ? `<span class="cb-roker-jama-val">Jama: ${fmtCurrency(r.totalJama)}</span>` : ''}
-                    <span class="cb-roker-jama-val" style="color: #d97706; font-weight: 800;">End Roker: ${fmtCurrency(endVal)}</span>
-                  </div>
+                  <span style="color: var(--accent-primary); font-weight: 700; font-size: 0.8125rem;">View Roker ↗</span>
                 </div>
               </div>
             `;
