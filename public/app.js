@@ -2497,6 +2497,16 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
 
   handleCashModeToggle();
   showView(viewEntryForm);
+
+  // Set default cursor / focus to Date input
+  setTimeout(() => {
+    if ($('entryDate')) {
+      $('entryDate').focus();
+      if (typeof $('entryDate').select === 'function') {
+        $('entryDate').select();
+      }
+    }
+  }, 50);
 }
 
 // Real-time automatic multiplication (Bags or Meters x Rate)
