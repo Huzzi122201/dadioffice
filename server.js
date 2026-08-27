@@ -66,11 +66,19 @@ app.get('*', (req, res) => {
 
 // ── Local Server Start ─────────────────────────────────────
 if (require.main === module) {
-  connectDB().then(() => {
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
+  connectDB()
+    .then(() => {
+      app.listen(PORT, '0.0.0.0', () => {
+        console.log(`🚀 Server running on http://localhost:${PORT}`);
+      });
+    })
+    .catch((err) => {
+      console.error('❌ Failed to connect to MongoDB Atlas at startup:', err.message);
+      app.listen(PORT, '0.0.0.0', () => {
+        console.log(`⚠️ Server running in offline/degraded mode on http://localhost:${PORT}`);
+        console.log(`👉 Check MongoDB Atlas Network Access (IP Whitelist) or cluster status.`);
+      });
     });
-  });
 }
 
 // Export app for Vercel

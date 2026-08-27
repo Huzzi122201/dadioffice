@@ -1727,9 +1727,16 @@ body {
   text-align: center;
 }
 
-.cb-khata-table .col-bags {
+.cb-khata-table .col-bags,
+.cb-khata-table .col-meters {
   text-align: center;
   font-weight: 600;
+}
+
+.cb-khata-table .col-rate {
+  text-align: right;
+  font-weight: 600;
+  color: var(--text-secondary);
 }
 
 .cb-khata-table .col-desc {

@@ -56,11 +56,12 @@ router.get('/parties', async (req, res) => {
     // Attach summary stats for each party
     const enriched = await Promise.all(parties.map(async (p) => {
       const entries = await CashbookEntry.find({ khataNo: p.khataNo }).lean();
-      let totalNaam = 0, totalJama = 0, totalBags = 0, txnCount = entries.length;
+      let totalNaam = 0, totalJama = 0, totalBags = 0, totalMeters = 0, txnCount = entries.length;
       entries.forEach(e => {
         totalNaam += e.naam || 0;
         totalJama += e.jama || 0;
         totalBags += e.bags || 0;
+        totalMeters += e.meters || 0;
       });
       const opening = Number(p.openingBalance) || 0;
       const openingNet = (p.balanceType === 'jama' || p.balanceType === 'cash') ? opening : p.balanceType === 'banam' ? -opening : 0;
@@ -71,6 +72,7 @@ router.get('/parties', async (req, res) => {
         totalJama,
         balance,
         totalBags,
+        totalMeters,
         txnCount,
       };
     }));
@@ -229,6 +231,7 @@ router.get('/khata/:khataNo', async (req, res) => {
         totalJama,
         balance: runningBalance,
         totalBags: entries.reduce((s, e) => s + (e.bags || 0), 0),
+        totalMeters: entries.reduce((s, e) => s + (e.meters || 0), 0),
         entryCount: entries.length,
       },
     });
@@ -280,6 +283,7 @@ router.get('/rokers', async (req, res) => {
           totalNaam: { $sum: '$naam' },
           totalJama: { $sum: '$jama' },
           totalBags: { $sum: '$bags' },
+          totalMeters: { $sum: '$meters' },
           parties: { $addToSet: '$partyName' },
         },
       },

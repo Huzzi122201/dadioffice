@@ -1487,6 +1487,7 @@ async function loadCashbookDashboard() {
                     <div class="cb-roker-meta">
                       <span>${r.entryCount} ${r.entryCount === 1 ? 'entry' : 'entries'}</span>
                       ${r.totalBags > 0 ? `<span> · 📦 ${r.totalBags} bags</span>` : ''}
+                      ${r.totalMeters > 0 ? `<span> · 📏 ${r.totalMeters} meters</span>` : ''}
                     </div>
                   </div>
                 </div>
@@ -1540,6 +1541,7 @@ async function loadCashbookDashboard() {
                       ${p.phone ? `<span>📞 ${escapeHtml(p.phone)}</span>` : ''}
                       <span>${p.txnCount || 0} entries</span>
                       ${p.totalBags ? `<span> · 📦 ${p.totalBags} bags</span>` : ''}
+                      ${p.totalMeters ? `<span> · 📏 ${p.totalMeters} meters</span>` : ''}
                     </div>
                   </div>
                 </div>
@@ -1773,6 +1775,7 @@ async function loadCashbookDashboard() {
                   ${p.phone ? `<span>📞 ${escapeHtml(p.phone)}</span>` : ''}
                   <span>${p.txnCount || 0} entries</span>
                   ${p.totalBags ? `<span> · 📦 ${p.totalBags} bags</span>` : ''}
+                  ${p.totalMeters ? `<span> · 📏 ${p.totalMeters} meters</span>` : ''}
                 </div>
               </div>
             </div>
@@ -1993,6 +1996,7 @@ async function openRokerDetail(rokerNo) {
                 <th>Description</th>
                 <th>Bags</th>
                 <th>Meters</th>
+                <th>Rate</th>
                 <th style="text-align:right">Naam (Debit)</th>
                 <th style="text-align:right">Jama (Credit)</th>
                 <th>Actions</th>
@@ -2012,6 +2016,7 @@ async function openRokerDetail(rokerNo) {
                   <td class="col-desc" title="${escapeHtml(e.description)}">${escapeHtml(e.description)}</td>
                   <td class="col-bags">${e.bags > 0 ? e.bags : '—'}</td>
                   <td class="col-meters">${e.meters > 0 ? e.meters : '—'}</td>
+                  <td class="col-rate">${e.ratePerBag > 0 ? fmtCurrency(e.ratePerBag) : '—'}</td>
                   <td class="col-naam">${e.naam > 0 ? fmtCurrency(e.naam) : '—'}</td>
                   <td class="col-jama">${e.jama > 0 ? fmtCurrency(e.jama) : '—'}</td>
                   <td>
@@ -2026,6 +2031,7 @@ async function openRokerDetail(rokerNo) {
                 <td colspan="4"><strong>Totals for Roker #${rokerNo}</strong></td>
                 <td class="col-bags"><strong>${data.summary.totalBags > 0 ? data.summary.totalBags : '—'}</strong></td>
                 <td class="col-meters"><strong>${data.summary.totalMeters > 0 ? data.summary.totalMeters : '—'}</strong></td>
+                <td class="col-rate">—</td>
                 <td class="col-naam"><strong>${fmtCurrency(data.summary.totalNaam)}</strong></td>
                 <td class="col-jama"><strong>${fmtCurrency(data.summary.totalJama)}</strong></td>
                 <td></td>
@@ -2086,6 +2092,8 @@ async function openKhata(khataNo) {
               <span>Khata #${p.khataNo}</span>
               ${p.phone ? `<span>📞 ${escapeHtml(p.phone)}</span>` : ''}
               ${p.description ? `<span>${escapeHtml(p.description)}</span>` : ''}
+              ${s.totalBags > 0 ? `<span> · 📦 ${s.totalBags} bags</span>` : ''}
+              ${(s.totalMeters && s.totalMeters > 0) ? `<span> · 📏 ${s.totalMeters} meters</span>` : ''}
             </div>
           </div>
         </div>
@@ -2113,6 +2121,8 @@ async function openKhata(khataNo) {
           <td class="col-roker"><span style="font-size: 0.75rem; color: var(--accent-primary); font-weight: 800;">OPENING</span></td>
           <td class="col-desc"><em>Initial Khata Amount / ابتدائی رقم</em></td>
           <td class="col-bags">—</td>
+          <td class="col-meters">—</td>
+          <td class="col-rate">—</td>
           <td class="col-naam">${data.initialType === 'banam' ? fmtCurrency(data.initialAmount) : '—'}</td>
           <td class="col-jama">${(data.initialType === 'jama' || data.initialType === 'cash') ? fmtCurrency(data.initialAmount) : '—'}</td>
           <td class="col-remaining ${data.initialBalance > 0 ? 'positive' : data.initialBalance < 0 ? 'negative' : ''}"><strong>${fmtCurrency(data.initialBalance)}</strong></td>
@@ -2130,6 +2140,7 @@ async function openKhata(khataNo) {
                 <th>Description</th>
                 <th>Bags</th>
                 <th>Meters</th>
+                <th>Rate</th>
                 <th style="text-align:right">Naam (Debit)</th>
                 <th style="text-align:right">Jama (Credit)</th>
                 <th style="text-align:right">Remaining (Balance)</th>
@@ -2153,6 +2164,7 @@ async function openKhata(khataNo) {
                     </td>
                     <td class="col-bags">${e.bags > 0 ? e.bags : '—'}</td>
                     <td class="col-meters">${e.meters > 0 ? e.meters : '—'}</td>
+                    <td class="col-rate">${e.ratePerBag > 0 ? fmtCurrency(e.ratePerBag) : '—'}</td>
                     <td class="col-naam">${e.naam > 0 ? fmtCurrency(e.naam) : '—'}</td>
                     <td class="col-jama">${e.jama > 0 ? fmtCurrency(e.jama) : '—'}</td>
                     <td class="col-remaining ${remClass}">${fmtCurrency(e.remaining)}</td>
@@ -2169,6 +2181,8 @@ async function openKhata(khataNo) {
               <tr>
                 <td colspan="3"><strong>Cumulative Totals</strong></td>
                 <td class="col-bags"><strong>${s.totalBags > 0 ? s.totalBags : '—'}</strong></td>
+                <td class="col-meters"><strong>${(s.totalMeters && s.totalMeters > 0) ? s.totalMeters : '—'}</strong></td>
+                <td class="col-rate">—</td>
                 <td class="col-naam"><strong>${fmtCurrency(s.totalNaam)}</strong></td>
                 <td class="col-jama"><strong>${fmtCurrency(s.totalJama)}</strong></td>
                 <td class="col-remaining ${balClass}"><strong>${fmtCurrency(s.balance)}</strong></td>
