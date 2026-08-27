@@ -2886,6 +2886,16 @@ document.addEventListener('wheel', (e) => {
   }
 }, { passive: true });
 
+// 2. Auto-scroll form controls and radio button cards into view when focused
+document.addEventListener('focusin', (e) => {
+  const target = e.target;
+  if (!target || !target.closest('form')) return;
+  const scrollTarget = target.closest('.cb-radio-option') || target.closest('.form-group') || target;
+  if (scrollTarget && typeof scrollTarget.scrollIntoView === 'function') {
+    scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+});
+
 // 2. Keyboard Navigation in forms:
 //    - 'Shift' key selects the focused radio button immediately.
 //    - 'Enter' key advances focus to next field (or submits on final amount / submit button).
@@ -2927,6 +2937,13 @@ document.addEventListener('keydown', (e) => {
       e.preventDefault();
       const nextField = focusable[index];
       nextField.focus();
+
+      // Smoothly auto-scroll the radio button card or form-group into view
+      const scrollTarget = nextField.closest('.cb-radio-option') || nextField.closest('.form-group') || nextField;
+      if (scrollTarget && typeof scrollTarget.scrollIntoView === 'function') {
+        scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
       if (typeof nextField.select === 'function' && nextField.type !== 'radio') {
         nextField.select();
       }
