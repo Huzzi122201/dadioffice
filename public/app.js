@@ -2552,8 +2552,8 @@ $('entryForm').addEventListener('submit', async (e) => {
   const isSellVal = !isCashVal && (side === 'banam');
   const linkedPurchaseIdVal = (isSellVal && $('sellPurchaseSelect')) ? ($('sellPurchaseSelect').value || null) : null;
 
-  const naamVal = (side === 'banam') ? (parseFloat($('entryNaam').value) || 0) : 0;
-  const jamaVal = (side === 'jama') ? (parseFloat($('entryJama').value) || 0) : 0;
+  const naamVal = (side === 'banam') ? Math.round(parseFloat($('entryNaam').value) || 0) : 0;
+  const jamaVal = (side === 'jama') ? Math.round(parseFloat($('entryJama').value) || 0) : 0;
   const rateVal = parseFloat($('entryRate').value) || 0;
 
   if (naamVal <= 0 && jamaVal <= 0) {

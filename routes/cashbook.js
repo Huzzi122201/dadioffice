@@ -628,8 +628,8 @@ router.post('/entries', async (req, res) => {
         return res.status(400).json({ error: 'Party Name is required.' });
       }
 
-      const naamVal = parseFloat(naam) || 0;
-      const jamaVal = parseFloat(jama) || 0;
+      const naamVal = Math.round(parseFloat(naam) || 0);
+      const jamaVal = Math.round(parseFloat(jama) || 0);
       if (naamVal > 0 && jamaVal > 0) {
         return res.status(400).json({ error: 'Entry can have either Naam or Jama, not both.' });
       }
@@ -814,8 +814,8 @@ router.put('/entries/:id', async (req, res) => {
 
     if (date) entry.date = toUtcDate(date);
     if (description !== undefined) entry.description = description || '';
-    if (naam !== undefined) entry.naam = parseFloat(naam) || 0;
-    if (jama !== undefined) entry.jama = parseFloat(jama) || 0;
+    if (naam !== undefined) entry.naam = Math.round(parseFloat(naam) || 0);
+    if (jama !== undefined) entry.jama = Math.round(parseFloat(jama) || 0);
     if (bags !== undefined) entry.bags = parseFloat(bags) || 0;
     if (meters !== undefined) entry.meters = parseFloat(meters) || 0;
     if (ratePerBag !== undefined) entry.ratePerBag = parseFloat(ratePerBag) || 0;
