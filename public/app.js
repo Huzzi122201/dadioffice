@@ -2894,44 +2894,62 @@ document.addEventListener('wheel', (e) => {
   }
 }, { passive: true });
 
-// 2. On Enter key press: advance focus to the next visible input field in the form
+// 2. Keyboard Navigation in forms:
+//    - 'Shift' key selects the focused radio button immediately.
+//    - 'Enter' key advances focus to the next visible input / radio / select field in the form.
+//    - 'Enter' on final amount directly submits the form.
 document.addEventListener('keydown', (e) => {
-  if (e.key !== 'Enter') return;
   const target = e.target;
-  if (!target || target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON' || target.type === 'submit') return;
+  if (!target) return;
 
-  const form = target.closest('form');
-  if (!form) return;
-
-  // If user is on Naam input in entryForm and has typed a positive amount, save on Enter directly
-  if (target.id === 'entryNaam' && parseFloat(target.value) > 0) {
-    e.preventDefault();
-    form.requestSubmit();
-    return;
+  // Handle Shift key to select the currently focused radio button
+  if (e.key === 'Shift' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+    if (target.tagName === 'INPUT' && target.type === 'radio') {
+      if (!target.checked) {
+        target.checked = true;
+        target.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      return;
+    }
   }
 
-  // Find all visible, focusable input controls inside the form
-  const focusable = Array.from(form.querySelectorAll(
-    'input:not([type="hidden"]):not([type="submit"]):not([type="radio"]):not([disabled]), select:not([disabled]), textarea:not([disabled])'
-  )).filter(el => {
-    return el.offsetParent !== null && window.getComputedStyle(el).display !== 'none';
-  });
+  // Handle Enter key navigation
+  if (e.key === 'Enter') {
+    if (target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON' || target.type === 'submit') return;
 
-  const index = focusable.indexOf(target);
-  if (index >= 0 && index < focusable.length - 1) {
-    e.preventDefault();
-    const nextField = focusable[index + 1];
-    nextField.focus();
-    if (typeof nextField.select === 'function') {
-      nextField.select();
-    }
-  } else if (index === focusable.length - 1) {
-    e.preventDefault();
-    const submitBtn = form.querySelector('button[type="submit"]');
-    if (submitBtn) {
-      submitBtn.click();
-    } else {
+    const form = target.closest('form');
+    if (!form) return;
+
+    // If user is on Naam or Jama input in entryForm and has typed a positive amount, save on Enter directly
+    if ((target.id === 'entryNaam' || target.id === 'entryJama') && parseFloat(target.value) > 0) {
+      e.preventDefault();
       form.requestSubmit();
+      return;
+    }
+
+    // Find all visible, focusable input controls inside the form (including radio buttons)
+    const focusable = Array.from(form.querySelectorAll(
+      'input:not([type="hidden"]):not([type="submit"]):not([disabled]), select:not([disabled]), textarea:not([disabled])'
+    )).filter(el => {
+      return el.offsetParent !== null && window.getComputedStyle(el).display !== 'none';
+    });
+
+    const index = focusable.indexOf(target);
+    if (index >= 0 && index < focusable.length - 1) {
+      e.preventDefault();
+      const nextField = focusable[index + 1];
+      nextField.focus();
+      if (typeof nextField.select === 'function' && nextField.type !== 'radio') {
+        nextField.select();
+      }
+    } else if (index === focusable.length - 1) {
+      e.preventDefault();
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.click();
+      } else {
+        form.requestSubmit();
+      }
     }
   }
 });
