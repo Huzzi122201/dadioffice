@@ -474,24 +474,6 @@ calcFields.forEach((f) => {
   $(f).addEventListener('input', updatePreview);
 });
 
-// Enter key moves to next input field
-invoiceForm.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
-    e.preventDefault();
-    const inputs = Array.from(invoiceForm.querySelectorAll('input:not([type="hidden"])'));
-    const index = inputs.indexOf(e.target);
-    if (index >= 0 && index < inputs.length - 1) {
-      const nextInput = inputs[index + 1];
-      nextInput.focus();
-      if (nextInput.type === 'text' || nextInput.type === 'number') {
-        nextInput.select();
-      }
-    } else {
-      $('btnSave').click();
-    }
-  }
-});
-
 // Submit form
 invoiceForm.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -2896,8 +2878,9 @@ document.addEventListener('wheel', (e) => {
 
 // 2. Keyboard Navigation in forms:
 //    - 'Shift' key selects the focused radio button immediately.
-//    - 'Enter' key advances focus to the next visible input / radio / select field in the form.
-//    - 'Enter' on final amount directly submits the form.
+//    - 'Enter' key advances focus to next field (or submits on final amount / submit button).
+//    - 'ArrowDown' / 'ArrowRight': moves forward to next input / radio button / field.
+//    - 'ArrowUp' / 'ArrowLeft': moves backward to previous input / radio button / field.
 document.addEventListener('keydown', (e) => {
   const target = e.target;
   if (!target) return;
@@ -2913,12 +2896,36 @@ document.addEventListener('keydown', (e) => {
     }
   }
 
+  const form = target.closest('form');
+  if (!form) return;
+
+  // Do not intercept keyboard shortcuts in textareas
+  if (target.tagName === 'TEXTAREA') return;
+
+  // Helper to get all currently visible focusable controls
+  const getFocusable = () => {
+    return Array.from(form.querySelectorAll(
+      'input:not([type="hidden"]):not([type="submit"]):not([disabled]), select:not([disabled]), textarea:not([disabled])'
+    )).filter(el => {
+      return el.offsetParent !== null && window.getComputedStyle(el).display !== 'none';
+    });
+  };
+
+  const moveTo = (index) => {
+    const focusable = getFocusable();
+    if (index >= 0 && index < focusable.length) {
+      e.preventDefault();
+      const nextField = focusable[index];
+      nextField.focus();
+      if (typeof nextField.select === 'function' && nextField.type !== 'radio') {
+        nextField.select();
+      }
+    }
+  };
+
   // Handle Enter key navigation
   if (e.key === 'Enter') {
-    if (target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON' || target.type === 'submit') return;
-
-    const form = target.closest('form');
-    if (!form) return;
+    if (target.tagName === 'BUTTON' || target.type === 'submit') return;
 
     // If user is on Naam or Jama input in entryForm and has typed a positive amount, save on Enter directly
     if ((target.id === 'entryNaam' || target.id === 'entryJama') && parseFloat(target.value) > 0) {
@@ -2927,21 +2934,10 @@ document.addEventListener('keydown', (e) => {
       return;
     }
 
-    // Find all visible, focusable input controls inside the form (including radio buttons)
-    const focusable = Array.from(form.querySelectorAll(
-      'input:not([type="hidden"]):not([type="submit"]):not([disabled]), select:not([disabled]), textarea:not([disabled])'
-    )).filter(el => {
-      return el.offsetParent !== null && window.getComputedStyle(el).display !== 'none';
-    });
-
+    const focusable = getFocusable();
     const index = focusable.indexOf(target);
     if (index >= 0 && index < focusable.length - 1) {
-      e.preventDefault();
-      const nextField = focusable[index + 1];
-      nextField.focus();
-      if (typeof nextField.select === 'function' && nextField.type !== 'radio') {
-        nextField.select();
-      }
+      moveTo(index + 1);
     } else if (index === focusable.length - 1) {
       e.preventDefault();
       const submitBtn = form.querySelector('button[type="submit"]');
@@ -2949,6 +2945,43 @@ document.addEventListener('keydown', (e) => {
         submitBtn.click();
       } else {
         form.requestSubmit();
+      }
+    }
+    return;
+  }
+
+  // Handle Arrow Down / Up / Right / Left navigation
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+    // Don't intercept arrow keys inside <select> dropdowns (needed to choose dropdown options)
+    if (target.tagName === 'SELECT') return;
+
+    const focusable = getFocusable();
+    const index = focusable.indexOf(target);
+    if (index === -1) return;
+
+    if (e.key === 'ArrowDown') {
+      if (index < focusable.length - 1) {
+        moveTo(index + 1);
+      }
+    } else if (e.key === 'ArrowUp') {
+      if (index > 0) {
+        moveTo(index - 1);
+      }
+    } else if (e.key === 'ArrowRight') {
+      const isRadio = target.type === 'radio';
+      const atEnd = target.selectionEnd === target.value?.length || target.type === 'number';
+      if (isRadio || atEnd) {
+        if (index < focusable.length - 1) {
+          moveTo(index + 1);
+        }
+      }
+    } else if (e.key === 'ArrowLeft') {
+      const isRadio = target.type === 'radio';
+      const atStart = target.selectionStart === 0 || target.type === 'number';
+      if (isRadio || atStart) {
+        if (index > 0) {
+          moveTo(index - 1);
+        }
       }
     }
   }
