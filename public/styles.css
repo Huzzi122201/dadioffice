@@ -1828,9 +1828,11 @@ body {
 }
 
 .cb-khata-table .col-desc {
-  max-width: 170px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-word;
+  min-width: 140px;
+  max-width: 320px;
+  line-height: 1.3;
 }
 
 .cb-khata-table .btn-action {
@@ -2519,7 +2521,10 @@ body {
   }
 
   .cb-khata-table .col-desc {
-    max-width: 120px !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    min-width: 120px !important;
+    max-width: none !important;
   }
 
   .cb-purchase-summary-grid {
@@ -2589,7 +2594,10 @@ body {
   }
 
   .cb-khata-table .col-desc {
-    max-width: 95px !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    min-width: 110px !important;
+    max-width: none !important;
   }
 
   .cb-khata-table .btn-action {
