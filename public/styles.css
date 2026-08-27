@@ -1902,6 +1902,8 @@ body {
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--transition);
+  scroll-margin-top: 140px;
+  scroll-margin-bottom: 80px;
 }
 
 .cb-radio-option input[type="radio"] {

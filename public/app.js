@@ -2892,13 +2892,19 @@ document.addEventListener('wheel', (e) => {
 function scrollElementIntoComfortView(el) {
   if (!el) return;
   const scrollTarget = el.closest('.cb-radio-option') || el.closest('.form-section') || el.closest('.form-group') || el;
-  try {
-    scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  } catch (err) {
+  setTimeout(() => {
+    try {
+      scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch (err) {}
+
     const rect = scrollTarget.getBoundingClientRect();
-    const desiredY = window.pageYOffset + rect.top - (window.innerHeight / 3);
-    window.scrollTo({ top: Math.max(0, desiredY), behavior: 'smooth' });
-  }
+    const docScrollY = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    const targetY = docScrollY + rect.top - 140;
+    window.scrollTo({
+      top: Math.max(0, targetY),
+      behavior: 'smooth'
+    });
+  }, 10);
 }
 
 // 2. Auto-scroll form controls and radio button cards into center view when focused
