@@ -1391,7 +1391,34 @@ $('tabCashbook').addEventListener('click', () => {
 // ── Format Currency ───────────────────────────────────────
 function fmtCurrency(n) {
   if (n == null || isNaN(n)) return '₹ 0';
-  return '₹ ' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+  const num = Number(n);
+  const hasDecimals = num % 1 !== 0;
+  return '₹ ' + num.toLocaleString('en-IN', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: hasDecimals ? 2 : 0,
+  });
+}
+
+// ── Format Rate (Preserves floating decimals e.g. 387.26, 430.70, 42,500) ───
+function fmtRate(n) {
+  if (n == null || isNaN(n) || Number(n) === 0) return '—';
+  const num = Number(n);
+  const hasDecimals = num % 1 !== 0;
+  return num.toLocaleString('en-IN', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: hasDecimals ? 2 : 0,
+  });
+}
+
+// ── Get/Calculate Entry Rate (ratePerBag or Amount / Qty if rate is empty) ───
+function getEntryRate(e) {
+  if (e.ratePerBag && Number(e.ratePerBag) > 0) return Number(e.ratePerBag);
+  const qty = (e.meters && e.meters > 0) ? e.meters : (e.bags && e.bags > 0) ? e.bags : 0;
+  const amt = (e.jama && e.jama > 0) ? e.jama : (e.naam && e.naam > 0) ? e.naam : 0;
+  if (qty > 0 && amt > 0) {
+    return Math.round((amt / qty) * 100) / 100;
+  }
+  return 0;
 }
 
 // ── Subnav Switcher (Rokers vs Khata vs Parties vs PurchaseSell) ─────────
@@ -1608,7 +1635,7 @@ async function loadCashbookDashboard() {
                 '<td>R#' + pur.rokerNo + '</td>' +
                 '<td>' + (pur.bags > 0 ? pur.bags : '—') + '</td>' +
                 '<td>' + (pur.meters > 0 ? pur.meters : '—') + '</td>' +
-                '<td>' + (pur.ratePerBag ? fmtCurrency(pur.ratePerBag) : '—') + '</td>' +
+                '<td>' + (pur.ratePerBag || pur.rate ? fmtRate(pur.ratePerBag || pur.rate) : '—') + '</td>' +
                 '<td style="text-align:right">' + fmtCurrency((pur.naam || 0) + (pur.jama || 0)) + '</td>' +
                 '</tr>'
               ).join('');
@@ -1619,7 +1646,7 @@ async function loadCashbookDashboard() {
                 '<td>R#' + s.rokerNo + '</td>' +
                 '<td>' + (s.bags > 0 ? s.bags : '—') + '</td>' +
                 '<td>' + (s.meters > 0 ? s.meters : '—') + '</td>' +
-                '<td>' + (s.ratePerBag ? fmtCurrency(s.ratePerBag) : '—') + '</td>' +
+                '<td>' + (s.ratePerBag || s.rate ? fmtRate(s.ratePerBag || s.rate) : '—') + '</td>' +
                 '<td style="text-align:right">' + fmtCurrency((s.naam || 0) + (s.jama || 0)) + '</td>' +
                 '</tr>'
               ).join('');
@@ -1684,7 +1711,7 @@ async function loadCashbookDashboard() {
               '<td>R#' + s.rokerNo + '</td>' +
               '<td>' + (s.bags > 0 ? s.bags : '—') + '</td>' +
               '<td>' + (s.meters > 0 ? s.meters : '—') + '</td>' +
-              '<td>' + (s.ratePerBag ? fmtCurrency(s.ratePerBag) : '—') + '</td>' +
+              '<td>' + (s.ratePerBag || s.rate ? fmtRate(s.ratePerBag || s.rate) : '—') + '</td>' +
               '<td style="text-align:right">' + fmtCurrency((s.naam || 0) + (s.jama || 0)) + '</td>' +
               '<td><button class="btn-action delete" onclick="event.stopPropagation(); deleteCbEntry(\'' + s._id + '\')" title="Delete Sell">🗑️</button></td>' +
               '</tr>'
@@ -1698,7 +1725,7 @@ async function loadCashbookDashboard() {
                   '<span class="cb-purchase-badge">🛒 R#' + p.rokerNo + '</span>' +
                   '<div class="cb-purchase-info">' +
                     '<div class="cb-purchase-party">' + escapeHtml(p.partyName) + '</div>' +
-                    '<div class="cb-purchase-meta">' + formatDate(p.date) + ' · ' + qtyText + ' × ' + fmtCurrency(p.ratePerBag || 0) + ' = ' + fmtCurrency(p.purchaseAmount) + '</div>' +
+                    '<div class="cb-purchase-meta">' + formatDate(p.date) + ' · ' + qtyText + ' × ' + fmtRate(p.ratePerBag || 0) + ' = ' + fmtCurrency(p.purchaseAmount) + '</div>' +
                   '</div>' +
                 '</div>' +
                 '<div class="cb-purchase-right">' +
@@ -2016,7 +2043,7 @@ async function openRokerDetail(rokerNo) {
                   <td class="col-desc" title="${escapeHtml(e.description)}">${escapeHtml(e.description)}</td>
                   <td class="col-bags">${e.bags > 0 ? e.bags : '—'}</td>
                   <td class="col-meters">${e.meters > 0 ? e.meters : '—'}</td>
-                  <td class="col-rate">${e.ratePerBag > 0 ? fmtCurrency(e.ratePerBag) : '—'}</td>
+                  <td class="col-rate">${fmtRate(getEntryRate(e))}</td>
                   <td class="col-naam">${e.naam > 0 ? fmtCurrency(e.naam) : '—'}</td>
                   <td class="col-jama">${e.jama > 0 ? fmtCurrency(e.jama) : '—'}</td>
                   <td>
@@ -2164,7 +2191,7 @@ async function openKhata(khataNo) {
                     </td>
                     <td class="col-bags">${e.bags > 0 ? e.bags : '—'}</td>
                     <td class="col-meters">${e.meters > 0 ? e.meters : '—'}</td>
-                    <td class="col-rate">${e.ratePerBag > 0 ? fmtCurrency(e.ratePerBag) : '—'}</td>
+                    <td class="col-rate">${fmtRate(getEntryRate(e))}</td>
                     <td class="col-naam">${e.naam > 0 ? fmtCurrency(e.naam) : '—'}</td>
                     <td class="col-jama">${e.jama > 0 ? fmtCurrency(e.jama) : '—'}</td>
                     <td class="col-remaining ${remClass}">${fmtCurrency(e.remaining)}</td>
@@ -2703,8 +2730,8 @@ function openEndRokerModal() {
         )
       : `<div style="margin-top: 0.3rem; padding: 0.25rem 0.4rem; background: #fef3c7; color: #b45309; border-radius: 4px; font-size: 0.72rem; text-align: center;">⚠️ Bag Purchases (${bs.totalPurchaseBags}) & Sells (${bs.totalSellBags}) differ.</div>`;
 
-    const bagPurListHtml = (bs.purchases || []).map(p => `<tr><td>${escapeHtml(p.partyName)}</td><td>${p.qty} bags</td><td>${fmtCurrency(p.rate)}</td><td style="text-align:right">${fmtCurrency(p.amount)}</td></tr>`).join('');
-    const bagSellListHtml = (bs.sells || []).map(s => `<tr><td>${escapeHtml(s.partyName)}</td><td>${s.qty} bags</td><td>${fmtCurrency(s.rate)}</td><td style="text-align:right">${fmtCurrency(s.amount)}</td></tr>`).join('');
+    const bagPurListHtml = (bs.purchases || []).map(p => `<tr><td>${escapeHtml(p.partyName)}</td><td>${p.qty} bags</td><td>${fmtRate(p.rate)}</td><td style="text-align:right">${fmtCurrency(p.amount)}</td></tr>`).join('');
+    const bagSellListHtml = (bs.sells || []).map(s => `<tr><td>${escapeHtml(s.partyName)}</td><td>${s.qty} bags</td><td>${fmtRate(s.rate)}</td><td style="text-align:right">${fmtCurrency(s.amount)}</td></tr>`).join('');
 
     const bagDetailsHtml = `
       <details style="margin-top: 0.35rem; font-size: 0.72rem; color: var(--text-muted);">
@@ -2759,8 +2786,8 @@ function openEndRokerModal() {
         )
       : `<div style="margin-top: 0.3rem; padding: 0.25rem 0.4rem; background: #fef3c7; color: #b45309; border-radius: 4px; font-size: 0.72rem; text-align: center;">⚠️ Meter Purchases (${ms.totalPurchaseMeters}) & Sells (${ms.totalSellMeters}) differ.</div>`;
 
-    const meterPurListHtml = (ms.purchases || []).map(p => `<tr><td>${escapeHtml(p.partyName)}</td><td>${p.qty} m</td><td>${fmtCurrency(p.rate)}</td><td style="text-align:right">${fmtCurrency(p.amount)}</td></tr>`).join('');
-    const meterSellListHtml = (ms.sells || []).map(s => `<tr><td>${escapeHtml(s.partyName)}</td><td>${s.qty} m</td><td>${fmtCurrency(s.rate)}</td><td style="text-align:right">${fmtCurrency(s.amount)}</td></tr>`).join('');
+    const meterPurListHtml = (ms.purchases || []).map(p => `<tr><td>${escapeHtml(p.partyName)}</td><td>${p.qty} m</td><td>${fmtRate(p.rate)}</td><td style="text-align:right">${fmtCurrency(p.amount)}</td></tr>`).join('');
+    const meterSellListHtml = (ms.sells || []).map(s => `<tr><td>${escapeHtml(s.partyName)}</td><td>${s.qty} m</td><td>${fmtRate(s.rate)}</td><td style="text-align:right">${fmtCurrency(s.amount)}</td></tr>`).join('');
 
     const meterDetailsHtml = `
       <details style="margin-top: 0.35rem; font-size: 0.72rem; color: var(--text-muted);">

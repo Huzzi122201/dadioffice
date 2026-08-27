@@ -687,6 +687,15 @@ router.post('/entries', async (req, res) => {
         }
       }
 
+      let parsedRate = parseFloat(ratePerBag) || 0;
+      if (!parsedRate && (entryBags > 0 || entryMeters > 0)) {
+        const qty = entryMeters > 0 ? entryMeters : entryBags;
+        const amt = jamaVal > 0 ? jamaVal : naamVal;
+        if (qty > 0 && amt > 0) {
+          parsedRate = Math.round((amt / qty) * 100) / 100;
+        }
+      }
+
       const entry = new CashbookEntry({
         rokerNo: finalRokerNo,
         khataNo: party.khataNo,
@@ -700,7 +709,7 @@ router.post('/entries', async (req, res) => {
         txnType: txnType || 'general',
         bags: entryBags,
         meters: entryMeters,
-        ratePerBag: parseFloat(ratePerBag) || 0,
+        ratePerBag: parsedRate,
         isCash: isCashEntry,
         purchaseRef: purchaseRef || null,
         allocateRef: allocateRef || null,
@@ -811,6 +820,13 @@ router.put('/entries/:id', async (req, res) => {
     if (meters !== undefined) entry.meters = parseFloat(meters) || 0;
     if (ratePerBag !== undefined) entry.ratePerBag = parseFloat(ratePerBag) || 0;
     if (note !== undefined) entry.note = note || '';
+    if (!entry.ratePerBag && ((entry.meters || 0) > 0 || (entry.bags || 0) > 0)) {
+      const qty = (entry.meters && entry.meters > 0) ? entry.meters : (entry.bags || 0);
+      const amt = (entry.jama && entry.jama > 0) ? entry.jama : (entry.naam || 0);
+      if (qty > 0 && amt > 0) {
+        entry.ratePerBag = Math.round((amt / qty) * 100) / 100;
+      }
+    }
 
     // Validate naam/jama
     if (entry.naam > 0 && entry.jama > 0) {
