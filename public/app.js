@@ -2498,12 +2498,14 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
   handleCashModeToggle();
   showView(viewEntryForm);
 
-  // Set default cursor / focus to Date input
+  // Set default cursor / focus to Date input without selecting whole text
   setTimeout(() => {
-    if ($('entryDate')) {
-      $('entryDate').focus();
-      if (typeof $('entryDate').select === 'function') {
-        $('entryDate').select();
+    const dInput = $('entryDate');
+    if (dInput) {
+      dInput.focus();
+      const len = dInput.value ? dInput.value.length : 0;
+      if (typeof dInput.setSelectionRange === 'function') {
+        dInput.setSelectionRange(len, len);
       }
     }
   }, 50);
