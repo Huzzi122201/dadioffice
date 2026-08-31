@@ -56,13 +56,20 @@ router.get('/parties', async (req, res) => {
     // Attach summary stats for each party
     const enriched = await Promise.all(parties.map(async (p) => {
       const entries = await CashbookEntry.find({ khataNo: p.khataNo }).lean();
-      let totalNaam = 0, totalJama = 0, totalBags = 0, totalMeters = 0, txnCount = entries.length;
+      let totalNaam = 0, totalJama = 0, txnCount = entries.length;
       entries.forEach(e => {
         totalNaam += e.naam || 0;
         totalJama += e.jama || 0;
-        totalBags += e.bags || 0;
-        totalMeters += e.meters || 0;
       });
+
+      const jamaBags = entries.filter(e => e.jama > 0).reduce((s, e) => s + (e.bags || 0), 0);
+      const naamBags = entries.filter(e => e.naam > 0).reduce((s, e) => s + (e.bags || 0), 0);
+      const totalBags = jamaBags > 0 ? jamaBags : naamBags;
+
+      const jamaMeters = entries.filter(e => e.jama > 0).reduce((s, e) => s + (e.meters || 0), 0);
+      const naamMeters = entries.filter(e => e.naam > 0).reduce((s, e) => s + (e.meters || 0), 0);
+      const totalMeters = jamaMeters > 0 ? jamaMeters : naamMeters;
+
       const opening = Number(p.openingBalance) || 0;
       const openingNet = (p.balanceType === 'jama' || p.balanceType === 'cash') ? opening : p.balanceType === 'banam' ? -opening : 0;
       const balance = openingNet + totalJama - totalNaam;
@@ -230,8 +237,16 @@ router.get('/khata/:khataNo', async (req, res) => {
         totalNaam,
         totalJama,
         balance: runningBalance,
-        totalBags: entries.reduce((s, e) => s + (e.bags || 0), 0),
-        totalMeters: entries.reduce((s, e) => s + (e.meters || 0), 0),
+        totalBags: (() => {
+          const jB = entries.filter(e => e.jama > 0).reduce((s, e) => s + (e.bags || 0), 0);
+          const nB = entries.filter(e => e.naam > 0).reduce((s, e) => s + (e.bags || 0), 0);
+          return jB > 0 ? jB : nB;
+        })(),
+        totalMeters: (() => {
+          const jM = entries.filter(e => e.jama > 0).reduce((s, e) => s + (e.meters || 0), 0);
+          const nM = entries.filter(e => e.naam > 0).reduce((s, e) => s + (e.meters || 0), 0);
+          return jM > 0 ? jM : nM;
+        })(),
         entryCount: entries.length,
       },
     });
