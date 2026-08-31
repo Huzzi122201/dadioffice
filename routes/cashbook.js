@@ -282,8 +282,16 @@ router.get('/rokers', async (req, res) => {
           entryCount: { $sum: 1 },
           totalNaam: { $sum: '$naam' },
           totalJama: { $sum: '$jama' },
-          totalBags: { $sum: '$bags' },
-          totalMeters: { $sum: '$meters' },
+          totalBags: {
+            $sum: {
+              $cond: [{ $gt: ['$jama', 0] }, '$bags', 0]
+            }
+          },
+          totalMeters: {
+            $sum: {
+              $cond: [{ $gt: ['$jama', 0] }, '$meters', 0]
+            }
+          },
           parties: { $addToSet: '$partyName' },
         },
       },
@@ -327,8 +335,8 @@ router.get('/roker/:rokerNo', async (req, res) => {
 
     const totalNaam = entries.reduce((s, e) => s + (e.naam || 0), 0);
     const totalJama = entries.reduce((s, e) => s + (e.jama || 0), 0);
-    const totalBags = entries.reduce((s, e) => s + (e.bags || 0), 0);
-    const totalMeters = entries.reduce((s, e) => s + (e.meters || 0), 0);
+    const totalBags = entries.filter(e => (e.jama || 0) > 0).reduce((s, e) => s + (e.bags || 0), 0);
+    const totalMeters = entries.filter(e => (e.jama || 0) > 0).reduce((s, e) => s + (e.meters || 0), 0);
     const date = entries[0]?.date || new Date();
 
     const cashInHandBalance = await getCashInHandBalance(rokerNo);
