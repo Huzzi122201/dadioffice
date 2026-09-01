@@ -2263,131 +2263,28 @@ async function shareRokerAsPDF(rokerNo) {
   }
 }
 
-// ── Generate Chatha (Monthly Balance Sheet PDF) ──────────
+// ── Generate Chatha (Overall Parties Balance Sheet PDF) ───
 if ($('btnGenerateChatha')) {
   $('btnGenerateChatha').addEventListener('click', () => {
-    showChathaMonthPicker();
+    generateChathaPDF();
   });
 }
 
-function showChathaMonthPicker() {
-  // Default to current month
-  const now = new Date();
-  const defaultMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
-
-  // Build list of last 12 months as quick-select buttons
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  let quickBtns = '';
-  for (let i = 0; i < 12; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const val = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-    const label = monthNames[d.getMonth()] + ' ' + d.getFullYear();
-    const isActive = i === 0 ? 'background: #7c3aed; color: #fff; border-color: #7c3aed;' : '';
-    quickBtns += `<button type="button" class="chatha-month-btn" data-month="${val}" style="padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; font-size: 0.8125rem; font-weight: 600; transition: all 0.2s; ${isActive}">${label}</button>`;
-  }
-
-  // Create modal overlay
-  const overlay = document.createElement('div');
-  overlay.id = 'chathaMonthOverlay';
-  overlay.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); z-index:9999; display:flex; align-items:center; justify-content:center; animation: fadeIn 0.2s ease;';
-
-  overlay.innerHTML = `
-    <div style="background: var(--bg-surface, #1e293b); border-radius: 12px; padding: 24px; max-width: 440px; width: 90%; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 1px solid var(--border-color, #334155);">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <h3 style="margin: 0; font-size: 1.125rem; font-weight: 700; color: var(--text-primary, #f1f5f9);">📋 Generate Monthly Chatha</h3>
-        <button type="button" id="chathaMonthClose" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: var(--text-secondary, #94a3b8); padding: 4px;">✕</button>
-      </div>
-      <p style="font-size: 0.8125rem; color: var(--text-secondary, #94a3b8); margin: 0 0 16px 0;">Select the month for the balance sheet summary:</p>
-      
-      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
-        <label style="font-size: 0.8125rem; font-weight: 600; color: var(--text-primary, #f1f5f9); white-space: nowrap;">Specific Month:</label>
-        <input type="month" id="chathaMonthInput" value="${defaultMonth}" style="flex: 1; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color, #334155); background: var(--bg-surface-secondary, #0f172a); color: var(--text-primary, #f1f5f9); font-size: 0.875rem;" />
-      </div>
-
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px;">
-        ${quickBtns}
-      </div>
-
-      <div style="display: flex; gap: 10px;">
-        <button type="button" id="chathaMonthGenerate" style="flex: 1; padding: 10px; background: #7c3aed; color: #fff; border: none; border-radius: 8px; font-weight: 700; font-size: 0.875rem; cursor: pointer; transition: background 0.2s;">📄 Generate PDF</button>
-        <button type="button" id="chathaMonthCancel" style="flex: 0.5; padding: 10px; background: var(--bg-surface-secondary, #0f172a); color: var(--text-secondary, #94a3b8); border: 1px solid var(--border-color, #334155); border-radius: 8px; font-weight: 600; font-size: 0.875rem; cursor: pointer;">Cancel</button>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(overlay);
-
-  let selectedMonth = defaultMonth;
-
-  // Quick-select button clicks
-  overlay.querySelectorAll('.chatha-month-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      overlay.querySelectorAll('.chatha-month-btn').forEach(b => {
-        b.style.background = '';
-        b.style.color = '';
-        b.style.borderColor = '#e2e8f0';
-        b.classList.remove('selected');
-      });
-      btn.style.background = '#7c3aed';
-      btn.style.color = '#fff';
-      btn.style.borderColor = '#7c3aed';
-      btn.classList.add('selected');
-      selectedMonth = btn.dataset.month;
-      document.getElementById('chathaMonthInput').value = selectedMonth;
-    });
-  });
-
-  // Manual input change
-  document.getElementById('chathaMonthInput').addEventListener('change', (e) => {
-    selectedMonth = e.target.value;
-    overlay.querySelectorAll('.chatha-month-btn').forEach(b => {
-      b.style.background = '';
-      b.style.color = '';
-      b.style.borderColor = '#e2e8f0';
-      b.classList.remove('selected');
-      if (b.dataset.month === selectedMonth) {
-        b.style.background = '#7c3aed';
-        b.style.color = '#fff';
-        b.style.borderColor = '#7c3aed';
-        b.classList.add('selected');
-      }
-    });
-  });
-
-  // Generate button
-  document.getElementById('chathaMonthGenerate').addEventListener('click', () => {
-    overlay.remove();
-    generateChathaPDF(selectedMonth);
-  });
-
-  // Close / Cancel
-  document.getElementById('chathaMonthClose').addEventListener('click', () => overlay.remove());
-  document.getElementById('chathaMonthCancel').addEventListener('click', () => overlay.remove());
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-}
-
-async function generateChathaPDF(month) {
+async function generateChathaPDF() {
   try {
     toast('Generating Chatha PDF...', 'info');
-    const parties = await apiGet(`${CB_API}/chatha?month=${encodeURIComponent(month)}`);
+    const parties = await apiGet(`${CB_API}/parties`);
     if (!parties || parties.length === 0) {
-      toast('No active party data found for ' + month, 'info');
+      toast('No party data found in Khata.', 'info');
       return;
     }
 
-    // Parse month for display
-    const [year, mon] = month.split('-').map(Number);
-    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-    const monthLabel = monthNames[mon - 1] + ' ' + year;
+    // Separate into Jama (balance > 0) and Banam (balance < 0), skip settled (balance == 0)
+    const jamaParties = parties.filter(p => p.balance > 0).sort((a, b) => b.balance - a.balance);
+    const banamParties = parties.filter(p => p.balance < 0).sort((a, b) => a.balance - b.balance);
 
-    // Separate into Jama (closingBalance > 0) and Banam (closingBalance < 0)
-    const jamaParties = parties.filter(p => p.closingBalance > 0).sort((a, b) => b.closingBalance - a.closingBalance);
-    const banamParties = parties.filter(p => p.closingBalance < 0).sort((a, b) => a.closingBalance - b.closingBalance);
-
-    const totalJama = jamaParties.reduce((s, p) => s + p.closingBalance, 0);
-    const totalBanam = banamParties.reduce((s, p) => s + Math.abs(p.closingBalance), 0);
-    const totalMonthJama = parties.reduce((s, p) => s + (p.monthJama || 0), 0);
-    const totalMonthNaam = parties.reduce((s, p) => s + (p.monthNaam || 0), 0);
+    const totalJama = jamaParties.reduce((s, p) => s + p.balance, 0);
+    const totalBanam = banamParties.reduce((s, p) => s + Math.abs(p.balance), 0);
 
     const maxRows = Math.max(jamaParties.length, banamParties.length);
 
@@ -2405,7 +2302,7 @@ async function generateChathaPDF(month) {
         rowsHtml += `
           <td style="padding: 6px 4px; font-size: 10px; text-align: center; color: #64748b;">${i + 1}</td>
           <td style="padding: 6px 6px; font-size: 10px; font-weight: 600; color: #0f172a;">${escapeHtml(bp.name)}</td>
-          <td style="padding: 6px 6px; font-size: 10px; text-align: right; font-weight: 700; color: #b91c1c;">${fmtCurrency(Math.abs(bp.closingBalance))}</td>
+          <td style="padding: 6px 6px; font-size: 10px; text-align: right; font-weight: 700; color: #b91c1c;">${fmtCurrency(Math.abs(bp.balance))}</td>
         `;
       } else {
         rowsHtml += `<td colspan="3" style="padding: 6px 4px;"></td>`;
@@ -2419,7 +2316,7 @@ async function generateChathaPDF(month) {
         rowsHtml += `
           <td style="padding: 6px 4px; font-size: 10px; text-align: center; color: #64748b;">${i + 1}</td>
           <td style="padding: 6px 6px; font-size: 10px; font-weight: 600; color: #0f172a;">${escapeHtml(jp.name)}</td>
-          <td style="padding: 6px 6px; font-size: 10px; text-align: right; font-weight: 700; color: #15803d;">${fmtCurrency(jp.closingBalance)}</td>
+          <td style="padding: 6px 6px; font-size: 10px; text-align: right; font-weight: 700; color: #15803d;">${fmtCurrency(jp.balance)}</td>
         `;
       } else {
         rowsHtml += `<td colspan="3" style="padding: 6px 4px;"></td>`;
@@ -2439,10 +2336,9 @@ async function generateChathaPDF(month) {
       <div style="padding: 16px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #0f172a; background: #ffffff; width: 680px; max-width: 680px; box-sizing: border-box;">
         
         <!-- Header -->
-        <div style="background: linear-gradient(135deg, #4c1d95, #7c3aed); color: #ffffff; padding: 14px 18px; border-radius: 6px; margin-bottom: 14px; text-align: center;">
+        <div style="background: linear-gradient(135deg, #0f172a, #1e3a8a); color: #ffffff; padding: 14px 18px; border-radius: 6px; margin-bottom: 14px; text-align: center;">
           <h1 style="margin: 0; font-size: 20px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #ffffff;">📋 CHATHA / چٹھا</h1>
-          <p style="margin: 4px 0 0 0; font-size: 13px; color: #e9d5ff; font-weight: 700;">${monthLabel}</p>
-          <p style="margin: 2px 0 0 0; font-size: 10px; color: #c4b5fd;">All Parties Balance Sheet · ${parties.length} Active Parties · Generated: ${dateStr}</p>
+          <p style="margin: 4px 0 0 0; font-size: 11.5px; color: #93c5fd;">All Parties Ledger Summary · ${jamaParties.length + banamParties.length} Active Parties · ${dateStr}</p>
         </div>
 
         <!-- Two-Column Table -->
@@ -2492,7 +2388,7 @@ async function generateChathaPDF(month) {
               </td>
               <td style="padding: 0; width: 2px; background: #0f172a;"></td>
               <td colspan="3" style="padding: 6px 6px; text-align: center; color: #64748b;">
-                Month: ${monthLabel}
+                Total Parties: ${jamaParties.length + banamParties.length}
               </td>
             </tr>
           </tfoot>
@@ -2500,14 +2396,60 @@ async function generateChathaPDF(month) {
 
         <!-- Footer -->
         <div style="margin-top: 14px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 6px; font-size: 9px; color: #94a3b8;">
-          Chatha / چٹھا · ${monthLabel} · Generated ${dateStr}
+          Chatha / چٹھا · Generated via Textile Costing & Cashbook Application · ${dateStr}
         </div>
       </div>
     `;
 
     document.body.appendChild(container);
 
-    const fileName = `Chatha_${monthLabel.replace(/\s+/g, '_')}.pdf`;
+    const fileName = `Chatha_${dateStr.replace(/\s+/g, '_')}.pdf`;
+    const opt = {
+      margin: [6, 6, 6, 6],
+      filename: fileName,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 700 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    if (typeof html2pdf !== 'undefined') {
+      const pdfWorker = html2pdf().set(opt).from(container.firstElementChild);
+      const pdfBlob = await pdfWorker.output('blob');
+      if (container.parentNode) document.body.removeChild(container);
+
+      const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+        try {
+          await navigator.share({
+            files: [pdfFile],
+            title: `Chatha - ${dateStr}`,
+            text: `Chatha / چٹھا - All Parties Balance Sheet (${dateStr})`,
+          });
+          toast('Shared Chatha PDF successfully!', 'success');
+          return;
+        } catch (shareErr) {
+          if (shareErr.name === 'AbortError') return;
+        }
+      }
+
+      // Download fallback
+      const downloadUrl = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+      toast('Downloaded Chatha PDF successfully!', 'success');
+    } else {
+      if (container.parentNode) document.body.removeChild(container);
+      window.print();
+    }
+  } catch (err) {
+    toast('PDF generation failed: ' + err.message, 'error');
+  }
+}
     const opt = {
       margin: [6, 6, 6, 6],
       filename: fileName,
