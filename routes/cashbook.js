@@ -1268,4 +1268,73 @@ router.get('/dashboard', async (req, res) => {
   }
 });
 
+// ═══════════════════════════════════════════════════════════
+//  CHATHA (Monthly Balance Sheet)
+// ═══════════════════════════════════════════════════════════
+
+// GET /api/cashbook/chatha?month=YYYY-MM
+// Returns all parties with their balance calculated from entries in the given month only
+router.get('/chatha', async (req, res) => {
+  try {
+    const { month } = req.query; // e.g. "2026-09"
+    if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+      return res.status(400).json({ error: 'Month parameter required in YYYY-MM format' });
+    }
+
+    const [year, mon] = month.split('-').map(Number);
+    const startDate = new Date(Date.UTC(year, mon - 1, 1, 0, 0, 0));
+    const endDate = new Date(Date.UTC(year, mon, 1, 0, 0, 0)); // first day of next month
+
+    const parties = await CashbookParty.find({}).sort({ khataNo: 1 }).lean();
+
+    const enriched = await Promise.all(parties.map(async (p) => {
+      // Get only entries within the specified month
+      const monthEntries = await CashbookEntry.find({
+        khataNo: p.khataNo,
+        date: { $gte: startDate, $lt: endDate }
+      }).lean();
+
+      let monthNaam = 0, monthJama = 0;
+      monthEntries.forEach(e => {
+        monthNaam += e.naam || 0;
+        monthJama += e.jama || 0;
+      });
+
+      // Calculate carry-forward balance from all entries BEFORE this month
+      const priorEntries = await CashbookEntry.find({
+        khataNo: p.khataNo,
+        date: { $lt: startDate }
+      }).lean();
+
+      let priorNaam = 0, priorJama = 0;
+      priorEntries.forEach(e => {
+        priorNaam += e.naam || 0;
+        priorJama += e.jama || 0;
+      });
+
+      const opening = Number(p.openingBalance) || 0;
+      const openingNet = (p.balanceType === 'jama' || p.balanceType === 'cash') ? opening : p.balanceType === 'banam' ? -opening : 0;
+      const carryForward = openingNet + priorJama - priorNaam;
+      const monthBalance = monthJama - monthNaam;
+      const closingBalance = carryForward + monthBalance;
+
+      return {
+        ...p,
+        carryForward,
+        monthJama,
+        monthNaam,
+        monthBalance,
+        closingBalance,
+        txnCount: monthEntries.length,
+      };
+    }));
+
+    // Only include parties with non-zero closing balance or month activity
+    const active = enriched.filter(p => p.closingBalance !== 0 || p.txnCount > 0);
+    res.json(active);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
