@@ -2279,11 +2279,18 @@ async function generateChathaPDF() {
       return;
     }
 
-    // Separate into Jama (balance > 0) and Banam (balance < 0), skip settled (balance == 0)
-    const jamaParties = parties.filter(p => p.balance > 0).sort((a, b) => b.balance - a.balance);
-    const banamParties = parties.filter(p => p.balance < 0).sort((a, b) => a.balance - b.balance);
+    const isCashInHand = (p) => p.khataNo === 95 || (p.nameNorm && p.nameNorm === 'cash in hand') || (p.name && p.name.trim().toLowerCase() === 'cash in hand');
 
-    const totalJama = jamaParties.reduce((s, p) => s + p.balance, 0);
+    // Place Cash In Hand on the Banam (Debit) side with its balance value as-is
+    const jamaParties = parties
+      .filter(p => !isCashInHand(p) && p.balance > 0)
+      .sort((a, b) => b.balance - a.balance);
+
+    const banamParties = parties
+      .filter(p => isCashInHand(p) ? (p.balance !== 0) : (p.balance < 0))
+      .sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
+
+    const totalJama = jamaParties.reduce((s, p) => s + Math.abs(p.balance), 0);
     const totalBanam = banamParties.reduce((s, p) => s + Math.abs(p.balance), 0);
 
     const maxRows = Math.max(jamaParties.length, banamParties.length);
@@ -2383,8 +2390,8 @@ async function generateChathaPDF() {
               <td style="padding: 8px 6px; text-align: right; color: #15803d; font-size: 11px;">${fmtCurrency(totalJama)}</td>
             </tr>
             <tr style="background: #e2e8f0; font-weight: 800; font-size: 10px;">
-              <td colspan="3" style="padding: 6px 6px; text-align: center; color: ${totalJama >= totalBanam ? '#15803d' : '#b91c1c'};">
-                Net: ${fmtCurrency(Math.abs(totalJama - totalBanam))} ${totalJama >= totalBanam ? '(Jama Surplus)' : '(Banam Surplus)'}
+              <td colspan="3" style="padding: 6px 6px; text-align: center; color: ${totalJama === totalBanam ? '#15803d' : totalJama > totalBanam ? '#15803d' : '#b91c1c'};">
+                Net: ${fmtCurrency(Math.abs(totalJama - totalBanam))} (${totalJama === totalBanam ? 'Balanced / برابر' : totalJama > totalBanam ? 'Jama Surplus' : 'Banam Surplus'})
               </td>
               <td style="padding: 0; width: 2px; background: #0f172a;"></td>
               <td colspan="3" style="padding: 6px 6px; text-align: center; color: #64748b;">
