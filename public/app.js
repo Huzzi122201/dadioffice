@@ -2391,7 +2391,7 @@ async function generateChathaPDF(month) {
 
     const maxRows = Math.max(jamaParties.length, banamParties.length);
 
-    // Build table rows side by side
+    // Build table rows side by side (without Khata No)
     let rowsHtml = '';
     for (let i = 0; i < maxRows; i++) {
       const bp = banamParties[i];
@@ -2403,13 +2403,12 @@ async function generateChathaPDF(month) {
       // LEFT: Banam (بنام) party
       if (bp) {
         rowsHtml += `
-          <td style="padding: 5px 4px; font-size: 9.5px; text-align: center; color: #64748b;">${i + 1}</td>
-          <td style="padding: 5px 4px; font-size: 9.5px; font-weight: 600; color: #0f172a;">${escapeHtml(bp.name)}</td>
-          <td style="padding: 5px 4px; font-size: 9.5px; text-align: center; color: #64748b;">#${bp.khataNo}</td>
-          <td style="padding: 5px 4px; font-size: 9.5px; text-align: right; font-weight: 700; color: #b91c1c;">${fmtCurrency(Math.abs(bp.closingBalance))}</td>
+          <td style="padding: 6px 4px; font-size: 10px; text-align: center; color: #64748b;">${i + 1}</td>
+          <td style="padding: 6px 6px; font-size: 10px; font-weight: 600; color: #0f172a;">${escapeHtml(bp.name)}</td>
+          <td style="padding: 6px 6px; font-size: 10px; text-align: right; font-weight: 700; color: #b91c1c;">${fmtCurrency(Math.abs(bp.closingBalance))}</td>
         `;
       } else {
-        rowsHtml += `<td colspan="4" style="padding: 5px 4px;"></td>`;
+        rowsHtml += `<td colspan="3" style="padding: 6px 4px;"></td>`;
       }
 
       // Divider column
@@ -2418,13 +2417,12 @@ async function generateChathaPDF(month) {
       // RIGHT: Jama (جمع) party
       if (jp) {
         rowsHtml += `
-          <td style="padding: 5px 4px; font-size: 9.5px; text-align: center; color: #64748b;">${i + 1}</td>
-          <td style="padding: 5px 4px; font-size: 9.5px; font-weight: 600; color: #0f172a;">${escapeHtml(jp.name)}</td>
-          <td style="padding: 5px 4px; font-size: 9.5px; text-align: center; color: #64748b;">#${jp.khataNo}</td>
-          <td style="padding: 5px 4px; font-size: 9.5px; text-align: right; font-weight: 700; color: #15803d;">${fmtCurrency(jp.closingBalance)}</td>
+          <td style="padding: 6px 4px; font-size: 10px; text-align: center; color: #64748b;">${i + 1}</td>
+          <td style="padding: 6px 6px; font-size: 10px; font-weight: 600; color: #0f172a;">${escapeHtml(jp.name)}</td>
+          <td style="padding: 6px 6px; font-size: 10px; text-align: right; font-weight: 700; color: #15803d;">${fmtCurrency(jp.closingBalance)}</td>
         `;
       } else {
-        rowsHtml += `<td colspan="4" style="padding: 5px 4px;"></td>`;
+        rowsHtml += `<td colspan="3" style="padding: 6px 4px;"></td>`;
       }
 
       rowsHtml += `</tr>`;
@@ -2438,86 +2436,64 @@ async function generateChathaPDF(month) {
     const dateStr = new Date().toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' });
 
     container.innerHTML = `
-      <div style="padding: 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #0f172a; background: #ffffff; width: 680px; max-width: 680px; box-sizing: border-box;">
+      <div style="padding: 16px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #0f172a; background: #ffffff; width: 680px; max-width: 680px; box-sizing: border-box;">
         
         <!-- Header -->
         <div style="background: linear-gradient(135deg, #4c1d95, #7c3aed); color: #ffffff; padding: 14px 18px; border-radius: 6px; margin-bottom: 14px; text-align: center;">
           <h1 style="margin: 0; font-size: 20px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #ffffff;">📋 CHATHA / چٹھا</h1>
           <p style="margin: 4px 0 0 0; font-size: 13px; color: #e9d5ff; font-weight: 700;">${monthLabel}</p>
-          <p style="margin: 2px 0 0 0; font-size: 10px; color: #c4b5fd;">Generated: ${dateStr} · ${parties.length} Active Parties</p>
-        </div>
-
-        <!-- Summary Bar -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-bottom: 14px;">
-          <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 4px; padding: 7px 5px; text-align: center;">
-            <div style="font-size: 8px; color: #b91c1c; font-weight: 700; text-transform: uppercase;">Total Banam (بنام)</div>
-            <div style="font-size: 12px; font-weight: 800; color: #b91c1c; margin-top: 2px;">${fmtCurrency(totalBanam)}</div>
-            <div style="font-size: 8px; color: #64748b;">${banamParties.length} Parties</div>
-          </div>
-          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; padding: 7px 5px; text-align: center;">
-            <div style="font-size: 8px; color: #15803d; font-weight: 700; text-transform: uppercase;">Total Jama (جمع)</div>
-            <div style="font-size: 12px; font-weight: 800; color: #15803d; margin-top: 2px;">${fmtCurrency(totalJama)}</div>
-            <div style="font-size: 8px; color: #64748b;">${jamaParties.length} Parties</div>
-          </div>
-          <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; padding: 7px 5px; text-align: center;">
-            <div style="font-size: 8px; color: #1d4ed8; font-weight: 700; text-transform: uppercase;">Month Jama</div>
-            <div style="font-size: 12px; font-weight: 800; color: #1d4ed8; margin-top: 2px;">${fmtCurrency(totalMonthJama)}</div>
-          </div>
-          <div style="background: #fefce8; border: 1px solid #fde68a; border-radius: 4px; padding: 7px 5px; text-align: center;">
-            <div style="font-size: 8px; color: #a16207; font-weight: 700; text-transform: uppercase;">Month Naam</div>
-            <div style="font-size: 12px; font-weight: 800; color: #a16207; margin-top: 2px;">${fmtCurrency(totalMonthNaam)}</div>
-          </div>
+          <p style="margin: 2px 0 0 0; font-size: 10px; color: #c4b5fd;">All Parties Balance Sheet · ${parties.length} Active Parties · Generated: ${dateStr}</p>
         </div>
 
         <!-- Two-Column Table -->
         <table style="width: 100%; table-layout: fixed; border-collapse: collapse; border: 1px solid #cbd5e1; border-radius: 4px; overflow: hidden;">
           <colgroup>
             <!-- Left: Banam -->
-            <col style="width: 22px;">
-            <col style="width: 140px;">
-            <col style="width: 46px;">
-            <col style="width: 82px;">
+            <col style="width: 26px;">
+            <col style="width: 200px;">
+            <col style="width: 94px;">
             <!-- Divider -->
             <col style="width: 2px;">
             <!-- Right: Jama -->
-            <col style="width: 22px;">
-            <col style="width: 140px;">
-            <col style="width: 46px;">
-            <col style="width: 82px;">
+            <col style="width: 26px;">
+            <col style="width: 200px;">
+            <col style="width: 94px;">
           </colgroup>
           <thead>
-            <tr style="background: #0f172a; color: #ffffff; font-size: 10px;">
-              <th colspan="4" style="padding: 8px 6px; text-align: center; border-right: 2px solid #fbbf24;">🔴 BANAM / بنام (Debit)</th>
+            <tr style="background: #0f172a; color: #ffffff; font-size: 10.5px;">
+              <th colspan="3" style="padding: 8px 6px; text-align: center; border-right: 2px solid #fbbf24;">🔴 BANAM / بنام (Debit) — ${banamParties.length} Parties</th>
               <th style="padding: 0; width: 2px; background: #fbbf24;"></th>
-              <th colspan="4" style="padding: 8px 6px; text-align: center; border-left: 2px solid #fbbf24;">🟢 JAMA / جمع (Credit)</th>
+              <th colspan="3" style="padding: 8px 6px; text-align: center; border-left: 2px solid #fbbf24;">🟢 JAMA / جمع (Credit) — ${jamaParties.length} Parties</th>
             </tr>
-            <tr style="background: #1e293b; color: #94a3b8; font-size: 9px;">
-              <th style="padding: 5px 4px; text-align: center;">#</th>
-              <th style="padding: 5px 4px; text-align: left;">Party Name</th>
-              <th style="padding: 5px 4px; text-align: center;">Khata</th>
-              <th style="padding: 5px 4px; text-align: right;">Amount</th>
+            <tr style="background: #1e293b; color: #94a3b8; font-size: 9.5px;">
+              <th style="padding: 6px 4px; text-align: center;">#</th>
+              <th style="padding: 6px 6px; text-align: left;">Party Name</th>
+              <th style="padding: 6px 6px; text-align: right;">Amount</th>
               <th style="padding: 0; width: 2px; background: #334155;"></th>
-              <th style="padding: 5px 4px; text-align: center;">#</th>
-              <th style="padding: 5px 4px; text-align: left;">Party Name</th>
-              <th style="padding: 5px 4px; text-align: center;">Khata</th>
-              <th style="padding: 5px 4px; text-align: right;">Amount</th>
+              <th style="padding: 6px 4px; text-align: center;">#</th>
+              <th style="padding: 6px 6px; text-align: left;">Party Name</th>
+              <th style="padding: 6px 6px; text-align: right;">Amount</th>
             </tr>
           </thead>
           <tbody>
             ${rowsHtml}
           </tbody>
           <tfoot>
-            <tr style="background: #f1f5f9; border-top: 2px solid #0f172a; font-weight: 800; font-size: 10px;">
-              <td colspan="3" style="padding: 6px 6px; text-align: left;">Total Banam (${banamParties.length})</td>
-              <td style="padding: 6px 4px; text-align: right; color: #b91c1c; font-size: 11px;">${fmtCurrency(totalBanam)}</td>
+            <tr style="background: #f1f5f9; border-top: 2px solid #0f172a; font-weight: 800; font-size: 10.5px;">
+              <td colspan="2" style="padding: 8px 6px; text-align: left;">Total Banam (${banamParties.length})</td>
+              <td style="padding: 8px 6px; text-align: right; color: #b91c1c; font-size: 11px;">${fmtCurrency(totalBanam)}</td>
               <td style="padding: 0; width: 2px; background: #0f172a;"></td>
-              <td colspan="3" style="padding: 6px 6px; text-align: left;">Total Jama (${jamaParties.length})</td>
-              <td style="padding: 6px 4px; text-align: right; color: #15803d; font-size: 11px;">${fmtCurrency(totalJama)}</td>
+              <td colspan="2" style="padding: 8px 6px; text-align: left;">Total Jama (${jamaParties.length})</td>
+              <td style="padding: 8px 6px; text-align: right; color: #15803d; font-size: 11px;">${fmtCurrency(totalJama)}</td>
             </tr>
             <tr style="background: #e2e8f0; font-weight: 800; font-size: 10px;">
-              <td colspan="4" style="padding: 6px 6px; text-align: center; color: ${totalJama >= totalBanam ? '#15803d' : '#b91c1c'};">Net: ${fmtCurrency(Math.abs(totalJama - totalBanam))} ${totalJama >= totalBanam ? '(Jama Surplus)' : '(Banam Surplus)'}</td>
+              <td colspan="3" style="padding: 6px 6px; text-align: center; color: ${totalJama >= totalBanam ? '#15803d' : '#b91c1c'};">
+                Net: ${fmtCurrency(Math.abs(totalJama - totalBanam))} ${totalJama >= totalBanam ? '(Jama Surplus)' : '(Banam Surplus)'}
+              </td>
               <td style="padding: 0; width: 2px; background: #0f172a;"></td>
-              <td colspan="4" style="padding: 6px 6px; text-align: center; color: #64748b;">Month: ${monthLabel}</td>
+              <td colspan="3" style="padding: 6px 6px; text-align: center; color: #64748b;">
+                Month: ${monthLabel}
+              </td>
             </tr>
           </tfoot>
         </table>
