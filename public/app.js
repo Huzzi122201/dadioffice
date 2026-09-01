@@ -2264,15 +2264,25 @@ async function shareRokerAsPDF(rokerNo) {
 }
 
 // ── Generate Chatha (Overall Parties Balance Sheet PDF) ───
+if ($('btnDownloadChatha')) {
+  $('btnDownloadChatha').addEventListener('click', () => {
+    generateChathaPDF('download');
+  });
+}
+if ($('btnShareChatha')) {
+  $('btnShareChatha').addEventListener('click', () => {
+    generateChathaPDF('share');
+  });
+}
 if ($('btnGenerateChatha')) {
   $('btnGenerateChatha').addEventListener('click', () => {
-    generateChathaPDF();
+    generateChathaPDF('download');
   });
 }
 
-async function generateChathaPDF() {
+async function generateChathaPDF(action = 'download') {
   try {
-    toast('Generating Chatha PDF...', 'info');
+    toast(action === 'share' ? 'Preparing Chatha to share...' : 'Downloading Chatha PDF...', 'info');
     const parties = await apiGet(`${CB_API}/parties`);
     if (!parties || parties.length === 0) {
       toast('No party data found in Khata.', 'info');
@@ -2425,22 +2435,24 @@ async function generateChathaPDF() {
       const pdfBlob = await pdfWorker.output('blob');
       if (container.parentNode) document.body.removeChild(container);
 
-      const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
-      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-        try {
-          await navigator.share({
-            files: [pdfFile],
-            title: `Chatha - ${dateStr}`,
-            text: `Chatha / چٹھا - All Parties Balance Sheet (${dateStr})`,
-          });
-          toast('Shared Chatha PDF successfully!', 'success');
-          return;
-        } catch (shareErr) {
-          if (shareErr.name === 'AbortError') return;
+      if (action === 'share') {
+        const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+          try {
+            await navigator.share({
+              files: [pdfFile],
+              title: `Chatha - ${dateStr}`,
+              text: `Chatha / چٹھا - All Parties Balance Sheet (${dateStr})`,
+            });
+            toast('Shared Chatha PDF successfully!', 'success');
+            return;
+          } catch (shareErr) {
+            if (shareErr.name === 'AbortError') return;
+          }
         }
       }
 
-      // Download fallback
+      // Direct download
       const downloadUrl = URL.createObjectURL(pdfBlob);
       const a = document.createElement('a');
       a.href = downloadUrl;
