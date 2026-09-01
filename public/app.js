@@ -2344,14 +2344,12 @@ async function generateChathaPDF(action = 'download') {
     }
 
     const container = document.createElement('div');
-    container.style.position = 'fixed';
-    container.style.left = '-9999px';
-    container.style.top = '-9999px';
+    container.style.cssText = 'position: absolute; left: 0; top: 0; width: 720px; z-index: -99999; opacity: 0; pointer-events: none;';
 
     const dateStr = new Date().toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' });
 
     container.innerHTML = `
-      <div style="padding: 16px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #0f172a; background: #ffffff; width: 680px; max-width: 680px; box-sizing: border-box;">
+      <div id="chathaPdfRoot" style="padding: 16px 12px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #0f172a; background: #ffffff; width: 720px; max-width: 720px; box-sizing: border-box; margin: 0 auto;">
         
         <!-- Header -->
         <div style="background: linear-gradient(135deg, #0f172a, #1e3a8a); color: #ffffff; padding: 14px 18px; border-radius: 6px; margin-bottom: 14px; text-align: center;">
@@ -2360,30 +2358,30 @@ async function generateChathaPDF(action = 'download') {
         </div>
 
         <!-- Two-Column Table -->
-        <table style="width: 100%; table-layout: fixed; border-collapse: collapse; border: 1px solid #cbd5e1; border-radius: 4px; overflow: hidden;">
+        <table style="width: 100%; table-layout: fixed; border-collapse: collapse; border: 1px solid #cbd5e1; border-radius: 4px; overflow: hidden; margin: 0;">
           <colgroup>
             <!-- Left: Banam -->
-            <col style="width: 28px;">
-            <col style="width: 195px;">
-            <col style="width: 115px;">
+            <col style="width: 32px;">
+            <col style="width: 200px;">
+            <col style="width: 114px;">
             <!-- Divider -->
-            <col style="width: 2px;">
+            <col style="width: 4px;">
             <!-- Right: Jama -->
-            <col style="width: 28px;">
-            <col style="width: 195px;">
-            <col style="width: 115px;">
+            <col style="width: 32px;">
+            <col style="width: 200px;">
+            <col style="width: 114px;">
           </colgroup>
           <thead>
-            <tr style="background: #0f172a; color: #ffffff; font-size: 12px;">
+            <tr style="background: #0f172a; color: #ffffff; font-size: 11.5px;">
               <th colspan="3" style="padding: 9px 6px; text-align: center; border-right: 2px solid #fbbf24; font-weight: 800;">🔴 BANAM / بنام (Debit) — ${banamParties.length} Parties</th>
-              <th style="padding: 0; width: 2px; background: #fbbf24;"></th>
+              <th style="padding: 0; width: 4px; background: #fbbf24;"></th>
               <th colspan="3" style="padding: 9px 6px; text-align: center; border-left: 2px solid #fbbf24; font-weight: 800;">🟢 JAMA / جمع (Credit) — ${jamaParties.length} Parties</th>
             </tr>
-            <tr style="background: #1e293b; color: #cbd5e1; font-size: 11px;">
+            <tr style="background: #1e293b; color: #cbd5e1; font-size: 10.5px;">
               <th style="padding: 7px 4px; text-align: center;">#</th>
               <th style="padding: 7px 6px; text-align: left;">Party Name</th>
               <th style="padding: 7px 6px; text-align: right;">Amount</th>
-              <th style="padding: 0; width: 2px; background: #334155;"></th>
+              <th style="padding: 0; width: 4px; background: #334155;"></th>
               <th style="padding: 7px 4px; text-align: center;">#</th>
               <th style="padding: 7px 6px; text-align: left;">Party Name</th>
               <th style="padding: 7px 6px; text-align: right;">Amount</th>
@@ -2393,18 +2391,18 @@ async function generateChathaPDF(action = 'download') {
             ${rowsHtml}
           </tbody>
           <tfoot>
-            <tr style="background: #f1f5f9; border-top: 2px solid #0f172a; font-weight: 800; font-size: 12px;">
+            <tr style="background: #f1f5f9; border-top: 2px solid #0f172a; font-weight: 800; font-size: 11.5px;">
               <td colspan="2" style="padding: 9px 6px; text-align: left;">Total Banam (${banamParties.length})</td>
-              <td style="padding: 9px 6px; text-align: right; color: #b91c1c; font-size: 12.5px; font-weight: 800;">${fmtCurrency(totalBanam)}</td>
-              <td style="padding: 0; width: 2px; background: #0f172a;"></td>
+              <td style="padding: 9px 6px; text-align: right; color: #b91c1c; font-size: 12px; font-weight: 800;">${fmtCurrency(totalBanam)}</td>
+              <td style="padding: 0; width: 4px; background: #0f172a;"></td>
               <td colspan="2" style="padding: 9px 6px; text-align: left;">Total Jama (${jamaParties.length})</td>
-              <td style="padding: 9px 6px; text-align: right; color: #15803d; font-size: 12.5px; font-weight: 800;">${fmtCurrency(totalJama)}</td>
+              <td style="padding: 9px 6px; text-align: right; color: #15803d; font-size: 12px; font-weight: 800;">${fmtCurrency(totalJama)}</td>
             </tr>
             <tr style="background: #e2e8f0; font-weight: 800; font-size: 11px;">
               <td colspan="3" style="padding: 7px 6px; text-align: center; color: ${totalJama === totalBanam ? '#15803d' : totalJama > totalBanam ? '#15803d' : '#b91c1c'};">
                 Net: ${fmtCurrency(Math.abs(totalJama - totalBanam))} (${totalJama === totalBanam ? 'Balanced / برابر' : totalJama > totalBanam ? 'Jama Surplus' : 'Banam Surplus'})
               </td>
-              <td style="padding: 0; width: 2px; background: #0f172a;"></td>
+              <td style="padding: 0; width: 4px; background: #0f172a;"></td>
               <td colspan="3" style="padding: 7px 6px; text-align: center; color: #64748b;">
                 Total Parties: ${jamaParties.length + banamParties.length}
               </td>
@@ -2423,15 +2421,22 @@ async function generateChathaPDF(action = 'download') {
 
     const fileName = `Chatha_${dateStr.replace(/\s+/g, '_')}.pdf`;
     const opt = {
-      margin: [6, 6, 6, 6],
+      margin: [4, 4, 4, 4],
       filename: fileName,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 700 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        scrollX: 0,
+        scrollY: 0
+      },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
     if (typeof html2pdf !== 'undefined') {
-      const pdfWorker = html2pdf().set(opt).from(container.firstElementChild);
+      const targetElement = container.querySelector('#chathaPdfRoot') || container.firstElementChild;
+      const pdfWorker = html2pdf().set(opt).from(targetElement);
       const pdfBlob = await pdfWorker.output('blob');
       if (container.parentNode) document.body.removeChild(container);
 
