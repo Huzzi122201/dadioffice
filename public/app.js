@@ -2450,52 +2450,6 @@ async function generateChathaPDF() {
     toast('PDF generation failed: ' + err.message, 'error');
   }
 }
-    const opt = {
-      margin: [6, 6, 6, 6],
-      filename: fileName,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 700 },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    if (typeof html2pdf !== 'undefined') {
-      const pdfWorker = html2pdf().set(opt).from(container.firstElementChild);
-      const pdfBlob = await pdfWorker.output('blob');
-      if (container.parentNode) document.body.removeChild(container);
-
-      const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
-      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-        try {
-          await navigator.share({
-            files: [pdfFile],
-            title: `Chatha - ${monthLabel}`,
-            text: `Chatha / چٹھا - ${monthLabel} Balance Sheet`,
-          });
-          toast('Shared Chatha PDF successfully!', 'success');
-          return;
-        } catch (shareErr) {
-          if (shareErr.name === 'AbortError') return;
-        }
-      }
-
-      // Download fallback
-      const downloadUrl = URL.createObjectURL(pdfBlob);
-      const a = document.createElement('a');
-      a.href = downloadUrl;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(downloadUrl);
-      toast('Downloaded Chatha PDF successfully!', 'success');
-    } else {
-      if (container.parentNode) document.body.removeChild(container);
-      window.print();
-    }
-  } catch (err) {
-    toast('PDF generation failed: ' + err.message, 'error');
-  }
-}
 
 // ═══════════════════════════════════════════════════════════
 //  KHATA VIEW (Party History with Running Balance)
