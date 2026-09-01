@@ -2295,7 +2295,7 @@ async function generateChathaPDF() {
 
     const maxRows = Math.max(jamaParties.length, banamParties.length);
 
-    // Build table rows side by side (without Khata No)
+    // Build table rows side by side (without Khata No, with bigger fonts)
     let rowsHtml = '';
     for (let i = 0; i < maxRows; i++) {
       const bp = banamParties[i];
@@ -2307,12 +2307,12 @@ async function generateChathaPDF() {
       // LEFT: Banam (بنام) party
       if (bp) {
         rowsHtml += `
-          <td style="padding: 6px 4px; font-size: 10px; text-align: center; color: #64748b;">${i + 1}</td>
-          <td style="padding: 6px 6px; font-size: 10px; font-weight: 600; color: #0f172a;">${escapeHtml(bp.name)}</td>
-          <td style="padding: 6px 6px; font-size: 10px; text-align: right; font-weight: 700; color: #b91c1c;">${fmtCurrency(Math.abs(bp.balance))}</td>
+          <td style="padding: 7px 4px; font-size: 11.5px; text-align: center; color: #64748b; font-weight: 600;">${i + 1}</td>
+          <td style="padding: 7px 6px; font-size: 12px; font-weight: 700; color: #0f172a;">${escapeHtml(bp.name)}</td>
+          <td style="padding: 7px 6px; font-size: 12px; text-align: right; font-weight: 800; color: #b91c1c;">${fmtCurrency(Math.abs(bp.balance))}</td>
         `;
       } else {
-        rowsHtml += `<td colspan="3" style="padding: 6px 4px;"></td>`;
+        rowsHtml += `<td colspan="3" style="padding: 7px 4px;"></td>`;
       }
 
       // Divider column
@@ -2321,12 +2321,12 @@ async function generateChathaPDF() {
       // RIGHT: Jama (جمع) party
       if (jp) {
         rowsHtml += `
-          <td style="padding: 6px 4px; font-size: 10px; text-align: center; color: #64748b;">${i + 1}</td>
-          <td style="padding: 6px 6px; font-size: 10px; font-weight: 600; color: #0f172a;">${escapeHtml(jp.name)}</td>
-          <td style="padding: 6px 6px; font-size: 10px; text-align: right; font-weight: 700; color: #15803d;">${fmtCurrency(jp.balance)}</td>
+          <td style="padding: 7px 4px; font-size: 11.5px; text-align: center; color: #64748b; font-weight: 600;">${i + 1}</td>
+          <td style="padding: 7px 6px; font-size: 12px; font-weight: 700; color: #0f172a;">${escapeHtml(jp.name)}</td>
+          <td style="padding: 7px 6px; font-size: 12px; text-align: right; font-weight: 800; color: #15803d;">${fmtCurrency(jp.balance)}</td>
         `;
       } else {
-        rowsHtml += `<td colspan="3" style="padding: 6px 4px;"></td>`;
+        rowsHtml += `<td colspan="3" style="padding: 7px 4px;"></td>`;
       }
 
       rowsHtml += `</tr>`;
@@ -2344,57 +2344,57 @@ async function generateChathaPDF() {
         
         <!-- Header -->
         <div style="background: linear-gradient(135deg, #0f172a, #1e3a8a); color: #ffffff; padding: 14px 18px; border-radius: 6px; margin-bottom: 14px; text-align: center;">
-          <h1 style="margin: 0; font-size: 20px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #ffffff;">📋 CHATHA / چٹھا</h1>
-          <p style="margin: 4px 0 0 0; font-size: 11.5px; color: #93c5fd;">All Parties Ledger Summary · ${jamaParties.length + banamParties.length} Active Parties · ${dateStr}</p>
+          <h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #ffffff;">📋 CHATHA / چٹھا</h1>
+          <p style="margin: 4px 0 0 0; font-size: 12px; color: #93c5fd; font-weight: 600;">All Parties Ledger Summary · ${jamaParties.length + banamParties.length} Active Parties · ${dateStr}</p>
         </div>
 
         <!-- Two-Column Table -->
         <table style="width: 100%; table-layout: fixed; border-collapse: collapse; border: 1px solid #cbd5e1; border-radius: 4px; overflow: hidden;">
           <colgroup>
             <!-- Left: Banam -->
-            <col style="width: 26px;">
-            <col style="width: 200px;">
-            <col style="width: 94px;">
+            <col style="width: 28px;">
+            <col style="width: 195px;">
+            <col style="width: 115px;">
             <!-- Divider -->
             <col style="width: 2px;">
             <!-- Right: Jama -->
-            <col style="width: 26px;">
-            <col style="width: 200px;">
-            <col style="width: 94px;">
+            <col style="width: 28px;">
+            <col style="width: 195px;">
+            <col style="width: 115px;">
           </colgroup>
           <thead>
-            <tr style="background: #0f172a; color: #ffffff; font-size: 10.5px;">
-              <th colspan="3" style="padding: 8px 6px; text-align: center; border-right: 2px solid #fbbf24;">🔴 BANAM / بنام (Debit) — ${banamParties.length} Parties</th>
+            <tr style="background: #0f172a; color: #ffffff; font-size: 12px;">
+              <th colspan="3" style="padding: 9px 6px; text-align: center; border-right: 2px solid #fbbf24; font-weight: 800;">🔴 BANAM / بنام (Debit) — ${banamParties.length} Parties</th>
               <th style="padding: 0; width: 2px; background: #fbbf24;"></th>
-              <th colspan="3" style="padding: 8px 6px; text-align: center; border-left: 2px solid #fbbf24;">🟢 JAMA / جمع (Credit) — ${jamaParties.length} Parties</th>
+              <th colspan="3" style="padding: 9px 6px; text-align: center; border-left: 2px solid #fbbf24; font-weight: 800;">🟢 JAMA / جمع (Credit) — ${jamaParties.length} Parties</th>
             </tr>
-            <tr style="background: #1e293b; color: #94a3b8; font-size: 9.5px;">
-              <th style="padding: 6px 4px; text-align: center;">#</th>
-              <th style="padding: 6px 6px; text-align: left;">Party Name</th>
-              <th style="padding: 6px 6px; text-align: right;">Amount</th>
+            <tr style="background: #1e293b; color: #cbd5e1; font-size: 11px;">
+              <th style="padding: 7px 4px; text-align: center;">#</th>
+              <th style="padding: 7px 6px; text-align: left;">Party Name</th>
+              <th style="padding: 7px 6px; text-align: right;">Amount</th>
               <th style="padding: 0; width: 2px; background: #334155;"></th>
-              <th style="padding: 6px 4px; text-align: center;">#</th>
-              <th style="padding: 6px 6px; text-align: left;">Party Name</th>
-              <th style="padding: 6px 6px; text-align: right;">Amount</th>
+              <th style="padding: 7px 4px; text-align: center;">#</th>
+              <th style="padding: 7px 6px; text-align: left;">Party Name</th>
+              <th style="padding: 7px 6px; text-align: right;">Amount</th>
             </tr>
           </thead>
           <tbody>
             ${rowsHtml}
           </tbody>
           <tfoot>
-            <tr style="background: #f1f5f9; border-top: 2px solid #0f172a; font-weight: 800; font-size: 10.5px;">
-              <td colspan="2" style="padding: 8px 6px; text-align: left;">Total Banam (${banamParties.length})</td>
-              <td style="padding: 8px 6px; text-align: right; color: #b91c1c; font-size: 11px;">${fmtCurrency(totalBanam)}</td>
+            <tr style="background: #f1f5f9; border-top: 2px solid #0f172a; font-weight: 800; font-size: 12px;">
+              <td colspan="2" style="padding: 9px 6px; text-align: left;">Total Banam (${banamParties.length})</td>
+              <td style="padding: 9px 6px; text-align: right; color: #b91c1c; font-size: 12.5px; font-weight: 800;">${fmtCurrency(totalBanam)}</td>
               <td style="padding: 0; width: 2px; background: #0f172a;"></td>
-              <td colspan="2" style="padding: 8px 6px; text-align: left;">Total Jama (${jamaParties.length})</td>
-              <td style="padding: 8px 6px; text-align: right; color: #15803d; font-size: 11px;">${fmtCurrency(totalJama)}</td>
+              <td colspan="2" style="padding: 9px 6px; text-align: left;">Total Jama (${jamaParties.length})</td>
+              <td style="padding: 9px 6px; text-align: right; color: #15803d; font-size: 12.5px; font-weight: 800;">${fmtCurrency(totalJama)}</td>
             </tr>
-            <tr style="background: #e2e8f0; font-weight: 800; font-size: 10px;">
-              <td colspan="3" style="padding: 6px 6px; text-align: center; color: ${totalJama === totalBanam ? '#15803d' : totalJama > totalBanam ? '#15803d' : '#b91c1c'};">
+            <tr style="background: #e2e8f0; font-weight: 800; font-size: 11px;">
+              <td colspan="3" style="padding: 7px 6px; text-align: center; color: ${totalJama === totalBanam ? '#15803d' : totalJama > totalBanam ? '#15803d' : '#b91c1c'};">
                 Net: ${fmtCurrency(Math.abs(totalJama - totalBanam))} (${totalJama === totalBanam ? 'Balanced / برابر' : totalJama > totalBanam ? 'Jama Surplus' : 'Banam Surplus'})
               </td>
               <td style="padding: 0; width: 2px; background: #0f172a;"></td>
-              <td colspan="3" style="padding: 6px 6px; text-align: center; color: #64748b;">
+              <td colspan="3" style="padding: 7px 6px; text-align: center; color: #64748b;">
                 Total Parties: ${jamaParties.length + banamParties.length}
               </td>
             </tr>
@@ -2402,7 +2402,7 @@ async function generateChathaPDF() {
         </table>
 
         <!-- Footer -->
-        <div style="margin-top: 14px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 6px; font-size: 9px; color: #94a3b8;">
+        <div style="margin-top: 14px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 6px; font-size: 10px; color: #94a3b8;">
           Chatha / چٹھا · Generated via Textile Costing & Cashbook Application · ${dateStr}
         </div>
       </div>
