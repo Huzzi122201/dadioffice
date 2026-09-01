@@ -2280,15 +2280,16 @@ async function generateChathaPDF() {
     }
 
     const isCashInHand = (p) => p.khataNo === 95 || (p.nameNorm && p.nameNorm === 'cash in hand') || (p.name && p.name.trim().toLowerCase() === 'cash in hand');
+    const sortAlpha = (a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
 
-    // Place Cash In Hand on the Banam (Debit) side with its balance value as-is
+    // Place Cash In Hand on the Banam (Debit) side with its balance value as-is, and sort alphabetically
     const jamaParties = parties
       .filter(p => !isCashInHand(p) && p.balance > 0)
-      .sort((a, b) => b.balance - a.balance);
+      .sort(sortAlpha);
 
     const banamParties = parties
       .filter(p => isCashInHand(p) ? (p.balance !== 0) : (p.balance < 0))
-      .sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
+      .sort(sortAlpha);
 
     const totalJama = jamaParties.reduce((s, p) => s + Math.abs(p.balance), 0);
     const totalBanam = banamParties.reduce((s, p) => s + Math.abs(p.balance), 0);
