@@ -3788,7 +3788,6 @@ async function fetchContractRateForSeller(partyName, overwrite = false) {
         if (overwrite || currentRate === 0) {
           if ($('entryRate')) $('entryRate').value = match.rate;
           updateCalculatedAmount();
-          toast(`⚡ Rate ₹ ${match.rate.toFixed(2)} loaded from Contract #${match.contractNo}`, 'info');
         }
         if ($('entryContractBadge')) $('entryContractBadge').style.display = 'inline-block';
         if ($('entryContractHint')) {
