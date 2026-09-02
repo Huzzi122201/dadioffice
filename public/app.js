@@ -3662,7 +3662,7 @@ if ($('entryTypeSell')) $('entryTypeSell').addEventListener('change', handleTrad
 async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null, editData = null, side = 'jama') {
   $('entryForm').reset();
   $('editEntryId').value = '';
-  $('entryDate').value = toInputDate(new Date());
+  $('entryDate').value = new Date().toISOString().slice(0, 10);
   $('entryPartyName').value = preSelectPartyName || '';
   $('entryDescription').value = '';
   $('entryBags').value = '';
@@ -3766,7 +3766,7 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
   // Fill edit data
   if (editData) {
     $('editEntryId').value = editData._id;
-    $('entryDate').value = toInputDate(editData.date);
+    $('entryDate').value = editData.date ? new Date(editData.date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
     $('entryRokerNo').value = editData.rokerNo || '';
     $('entryPartyName').value = editData.partyName || '';
     $('entryDescription').value = editData.description || '';
