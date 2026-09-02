@@ -483,8 +483,12 @@
               <input class="form-input" type="number" id="entryMeters" min="0" step="any" placeholder="Meters (e.g. 500)" />
             </div>
             <div class="form-group">
-              <label class="form-label" for="entryRate">Rate (₹)</label>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <label class="form-label" for="entryRate" style="margin: 0;">Rate (₹)</label>
+                <span id="entryContractBadge" style="display: none; font-size: 0.7rem; color: #10b981; font-weight: 700; background: rgba(16,185,129,0.12); padding: 1px 6px; border-radius: 4px;">⚡ From Contract</span>
+              </div>
               <input class="form-input" type="number" id="entryRate" min="0" step="any" placeholder="Rate (e.g. 2500)" />
+              <small id="entryContractHint" style="display: none; font-size: 0.72rem; color: #10b981; font-weight: 600; margin-top: 2px;"></small>
             </div>
           </div>
         </div>

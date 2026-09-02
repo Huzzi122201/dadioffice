@@ -3720,8 +3720,15 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
   // Populate party datalist
   populatePartyDatalist();
 
+  // Reset contract rate indicators
+  if ($('entryContractBadge')) $('entryContractBadge').style.display = 'none';
+  if ($('entryContractHint')) $('entryContractHint').style.display = 'none';
+
   if (preSelectPartyName) {
     $('entryPartyName').value = preSelectPartyName;
+    if (!editData) {
+      fetchContractRateForSeller(preSelectPartyName, false);
+    }
   }
 
   // Fill edit data
@@ -3759,6 +3766,59 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
       }
     }
   }, 50);
+}
+
+// ── Auto-fetch Contract Rate for Seller Party ──
+let fetchContractRateTimeout = null;
+async function fetchContractRateForSeller(partyName, overwrite = false) {
+  if (!partyName || !partyName.trim()) {
+    if ($('entryContractBadge')) $('entryContractBadge').style.display = 'none';
+    if ($('entryContractHint')) $('entryContractHint').style.display = 'none';
+    return;
+  }
+
+  const pNorm = partyName.trim().toLowerCase();
+  try {
+    const contracts = await apiGet(`${CONTRACTS_API}?q=${encodeURIComponent(partyName.trim())}`);
+    if (contracts && contracts.length > 0) {
+      // Find contract where sellerName matches this partyName
+      const match = contracts.find(c => (c.sellerName || '').trim().toLowerCase() === pNorm) || contracts.find(c => (c.sellerName || '').trim().toLowerCase().includes(pNorm));
+      if (match && match.rate > 0) {
+        const currentRate = parseFloat($('entryRate')?.value) || 0;
+        if (overwrite || currentRate === 0) {
+          if ($('entryRate')) $('entryRate').value = match.rate;
+          updateCalculatedAmount();
+          toast(`⚡ Rate ₹ ${match.rate.toFixed(2)} loaded from Contract #${match.contractNo}`, 'info');
+        }
+        if ($('entryContractBadge')) $('entryContractBadge').style.display = 'inline-block';
+        if ($('entryContractHint')) {
+          $('entryContractHint').style.display = 'block';
+          $('entryContractHint').textContent = `Contract #${match.contractNo}: Rate ₹ ${match.rate.toFixed(2)}${match.quality ? ' (' + match.quality + ')' : ''}`;
+        }
+        return;
+      }
+    }
+  } catch (err) {
+    // silent fallback
+  }
+
+  if ($('entryContractBadge')) $('entryContractBadge').style.display = 'none';
+  if ($('entryContractHint')) $('entryContractHint').style.display = 'none';
+}
+
+if ($('entryPartyName')) {
+  $('entryPartyName').addEventListener('input', () => {
+    clearTimeout(fetchContractRateTimeout);
+    fetchContractRateTimeout = setTimeout(() => {
+      fetchContractRateForSeller($('entryPartyName').value, true);
+    }, 300);
+  });
+  $('entryPartyName').addEventListener('change', () => {
+    fetchContractRateForSeller($('entryPartyName').value, true);
+  });
+  $('entryPartyName').addEventListener('blur', () => {
+    fetchContractRateForSeller($('entryPartyName').value, true);
+  });
 }
 
 // Real-time automatic multiplication (Bags or Meters x Rate)
