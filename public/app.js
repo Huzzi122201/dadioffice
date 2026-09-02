@@ -2517,10 +2517,6 @@ async function loadContractsDashboard(search = '') {
     contractsList = contracts || [];
 
     const totalContracts = contractsList.length;
-    const totalQty = contractsList.reduce((sum, c) => sum + (c.quantity || 0), 0);
-    const hazarCount = contractsList.filter(c => c.deliveryType === 'hazar').length;
-    const amdanCount = contractsList.filter(c => c.deliveryType === 'amdan').length;
-
     $('cbCount').textContent = `(${totalContracts} Contracts)`;
 
     if (totalContracts === 0) {
@@ -2540,26 +2536,6 @@ async function loadContractsDashboard(search = '') {
       `;
       return;
     }
-
-    // Summary Metric Cards
-    const summaryHtml = `
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 14px;">
-        <div style="background: var(--bg-surface-secondary, rgba(255,255,255,0.03)); border: 1px solid var(--border-color, #334155); border-radius: 8px; padding: 10px 12px;">
-          <div style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Total Contracts</div>
-          <div style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary); margin-top: 2px;">${totalContracts}</div>
-        </div>
-        <div style="background: var(--bg-surface-secondary, rgba(255,255,255,0.03)); border: 1px solid var(--border-color, #334155); border-radius: 8px; padding: 10px 12px;">
-          <div style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Total Quantity</div>
-          <div style="font-size: 1.25rem; font-weight: 800; color: #60a5fa; margin-top: 2px;">${totalQty.toLocaleString()} <span style="font-size: 0.75rem; font-weight: 600;">Mtrs</span></div>
-        </div>
-        <div style="background: var(--bg-surface-secondary, rgba(255,255,255,0.03)); border: 1px solid var(--border-color, #334155); border-radius: 8px; padding: 10px 12px;">
-          <div style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Delivery Split</div>
-          <div style="font-size: 0.875rem; font-weight: 800; color: var(--text-primary); margin-top: 6px;">
-            <span style="color: #60a5fa;">⚡ ${hazarCount} Hazar</span> · <span style="color: #fbbf24;">📅 ${amdanCount} Amdan</span>
-          </div>
-        </div>
-      </div>
-    `;
 
     // Contract List Cards
     const listHtml = `
@@ -2610,7 +2586,7 @@ async function loadContractsDashboard(search = '') {
       </div>
     `;
 
-    $('cbMainList').innerHTML = summaryHtml + listHtml;
+    $('cbMainList').innerHTML = listHtml;
   } catch (err) {
     toast('Failed to load contracts: ' + err.message, 'error');
   }
