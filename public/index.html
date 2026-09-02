@@ -776,43 +776,33 @@
 
         <!-- Costing & Rate Section -->
         <div style="background: var(--bg-surface-secondary, rgba(255,255,255,0.03)); border: 1px solid var(--border-color, #334155); border-radius: 8px; padding: 12px; margin-bottom: 12px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <div style="font-size: 0.8125rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
-              💰 Costing & Rate Calculation (ریٹ تفصیل)
-            </div>
-            <button type="button" id="btnAutoCalcContractRate" style="background: #7c3aed; color: #fff; border: none; border-radius: 4px; font-size: 0.75rem; font-weight: 700; padding: 3px 8px; cursor: pointer;">⚡ Auto Calculate Rate</button>
+          <div style="font-size: 0.8125rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px;">
+            💰 Costing & Fabric Rate (ریٹ تفصیل)
           </div>
 
           <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px;">
             <div class="form-group">
               <label class="form-label" for="contractWarpRate" style="font-size: 0.75rem;">Warp Rate (تانا ریٹ)</label>
-              <input type="number" step="any" class="form-input" id="contractWarpRate" placeholder="e.g. 4500" style="padding: 6px 8px;" />
+              <input type="number" step="any" class="form-input contract-rate-calc" id="contractWarpRate" placeholder="e.g. 4500" style="padding: 6px 8px;" />
             </div>
             <div class="form-group">
               <label class="form-label" for="contractWeftRate" style="font-size: 0.75rem;">Weft Rate (بانا ریٹ)</label>
-              <input type="number" step="any" class="form-input" id="contractWeftRate" placeholder="e.g. 4500" style="padding: 6px 8px;" />
+              <input type="number" step="any" class="form-input contract-rate-calc" id="contractWeftRate" placeholder="e.g. 4500" style="padding: 6px 8px;" />
             </div>
             <div class="form-group">
               <label class="form-label" for="contractConversion" style="font-size: 0.75rem;">Conversion (کنورژن)</label>
-              <input type="number" step="any" class="form-input" id="contractConversion" placeholder="e.g. 0.50" style="padding: 6px 8px;" />
+              <input type="number" step="any" class="form-input contract-rate-calc" id="contractConversion" placeholder="e.g. 0.50" style="padding: 6px 8px;" />
             </div>
           </div>
 
-          <div class="form-row">
-            <div class="form-group" style="flex: 1;">
-              <label class="form-label" for="contractRate" style="font-size: 0.875rem; font-weight: 800; color: var(--accent-primary);">
-                🏷️ Final Fabric Rate (ریٹ / فی میٹر یا گز) *
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <label class="form-label" for="contractRate" style="font-size: 0.875rem; font-weight: 800; color: var(--accent-primary); margin: 0;">
+                🏷️ Final Fabric Rate (فی میٹر یا گز ریٹ) *
               </label>
-              <input type="number" step="any" class="form-input" id="contractRate" required placeholder="Enter or calculate rate..." style="font-size: 1.05rem; font-weight: 700; color: #10b981;" />
+              <span style="font-size: 0.72rem; color: #10b981; font-weight: 600;">⚡ Auto-calculates live as you type</span>
             </div>
-            <div class="form-group" style="flex: 1;">
-              <label class="form-label" for="contractStatus">Contract Status (حیثیت)</label>
-              <select class="form-select" id="contractStatus">
-                <option value="active">Active (جاری)</option>
-                <option value="completed">Completed (مکمل)</option>
-                <option value="cancelled">Cancelled (منسوخ)</option>
-              </select>
-            </div>
+            <input type="number" step="any" class="form-input" id="contractRate" required placeholder="Enter or auto-calculated rate..." style="font-size: 1.1rem; font-weight: 800; color: #10b981;" />
           </div>
         </div>
 

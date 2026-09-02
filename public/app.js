@@ -2633,7 +2633,6 @@ function openNewContractModal() {
   $('contractDate').value = today;
   $('contractTypeHazar').checked = true;
   $('contractDeliveryDate').value = today;
-  $('contractStatus').value = 'active';
 
   populatePartyDatalist();
   $('contractModal').classList.remove('hidden');
@@ -2674,7 +2673,6 @@ async function openEditContractModal(id) {
     $('contractWeftRate').value = c.weftRate || '';
     $('contractConversion').value = c.conversion || '';
     $('contractRate').value = c.rate || '';
-    $('contractStatus').value = c.status || 'active';
     $('contractNote').value = c.note || '';
 
     populatePartyDatalist();
@@ -2717,40 +2715,50 @@ if ($('btnAutoQuality')) {
   });
 }
 
-// Auto calculate fabric rate using standard formula
-if ($('btnAutoCalcContractRate')) {
-  $('btnAutoCalcContractRate').addEventListener('click', () => {
-    calculateContractRateLive();
-  });
-}
+// Auto calculate fabric rate live whenever warp rate, weft rate, conversion or specs change
+function autoCalculateContractRate() {
+  const warpCount = parseFloat($('contractWarpCount')?.value) || 0;
+  const weftCount = parseFloat($('contractWeftCount')?.value) || 0;
+  const reed = parseFloat($('contractReed')?.value) || 0;
+  const pick = parseFloat($('contractPick')?.value) || 0;
+  const width = parseFloat($('contractWidth')?.value) || 0;
+  const warpRate = parseFloat($('contractWarpRate')?.value) || 0;
+  const weftRate = parseFloat($('contractWeftRate')?.value) || 0;
+  const conversionRate = parseFloat($('contractConversion')?.value) || 0;
 
-function calculateContractRateLive() {
-  const warpCount = parseFloat($('contractWarpCount').value) || 0;
-  const weftCount = parseFloat($('contractWeftCount').value) || 0;
-  const reed = parseFloat($('contractReed').value) || 0;
-  const pick = parseFloat($('contractPick').value) || 0;
-  const width = parseFloat($('contractWidth').value) || 0;
-  const warpRate = parseFloat($('contractWarpRate').value) || 0;
-  const weftRate = parseFloat($('contractWeftRate').value) || 0;
-  const conversionRate = parseFloat($('contractConversion').value) || 0;
+  if (warpCount > 0 && weftCount > 0 && reed > 0 && pick > 0 && width > 0 && (warpRate > 0 || weftRate > 0 || conversionRate > 0)) {
+    const warpWeightMeter = (reed * width / 20 / warpCount) * 1.0936;
+    const warpCostMeter = (warpWeightMeter * warpRate) / 40;
 
-  if (warpCount <= 0 || weftCount <= 0 || reed <= 0 || pick <= 0 || width <= 0) {
-    toast('Please enter Warp Count, Weft Count, Reed, Pick, and Width specs to calculate.', 'warning');
-    return;
+    const weftWeightMeter = (pick * width / 20 / weftCount) * 1.0936;
+    const weftCostMeter = (weftWeightMeter * weftRate) / 40;
+
+    const manfCostMeter = conversionRate * pick;
+    const totalCostMeter = warpCostMeter + weftCostMeter + manfCostMeter;
+
+    if ($('contractRate')) {
+      $('contractRate').value = totalCostMeter.toFixed(2);
+    }
   }
-
-  const warpWeightMeter = (reed * width / 20 / warpCount) * 1.0936;
-  const warpCostMeter = (warpWeightMeter * warpRate) / 40;
-
-  const weftWeightMeter = (pick * width / 20 / weftCount) * 1.0936;
-  const weftCostMeter = (weftWeightMeter * weftRate) / 40;
-
-  const manfCostMeter = conversionRate * pick;
-  const totalCostMeter = warpCostMeter + weftCostMeter + manfCostMeter;
-
-  $('contractRate').value = totalCostMeter.toFixed(2);
-  toast(`Calculated Fabric Rate: ₹ ${totalCostMeter.toFixed(2)} / Meter`, 'success');
 }
+
+// Bind live auto-calculation listeners
+[
+  'contractWarpCount',
+  'contractWeftCount',
+  'contractReed',
+  'contractPick',
+  'contractWidth',
+  'contractWarpRate',
+  'contractWeftRate',
+  'contractConversion'
+].forEach(id => {
+  const el = $(id);
+  if (el) {
+    el.addEventListener('input', autoCalculateContractRate);
+    el.addEventListener('change', autoCalculateContractRate);
+  }
+});
 
 // Listen to contract date change to sync Hazar delivery date
 if ($('contractDate')) {
@@ -2790,7 +2798,6 @@ async function saveContractForm() {
     const conversion = parseFloat($('contractConversion').value) || 0;
     const rate = parseFloat($('contractRate').value) || 0;
     const gudamMuqam = $('contractGudam').value.trim();
-    const status = $('contractStatus').value;
     const note = $('contractNote').value.trim();
 
     if (!purchaserName || !sellerName) {
@@ -2823,7 +2830,7 @@ async function saveContractForm() {
       conversion,
       rate,
       gudamMuqam,
-      status,
+      status: 'active',
       note
     };
 
