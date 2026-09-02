@@ -1403,13 +1403,16 @@ function getEntryRate(e) {
   return 0;
 }
 
-// ── Subnav Switcher (Rokers vs Khata vs Parties vs PurchaseSell) ─────────
+const CONTRACTS_API = '/api/contracts';
+
+// ── Subnav Switcher (Rokers vs Khata vs Parties vs PurchaseSell vs Contracts) ─────────
 function setCashbookSubtab(subtab) {
   currentCashbookSubtab = subtab;
   $('subnavRokers').classList.toggle('active', subtab === 'rokers');
   $('subnavKhata').classList.toggle('active', subtab === 'khata');
   if ($('subnavParties')) $('subnavParties').classList.toggle('active', subtab === 'parties');
   if ($('subnavPurchaseSell')) $('subnavPurchaseSell').classList.toggle('active', subtab === 'purchaseSell');
+  if ($('subnavContracts')) $('subnavContracts').classList.toggle('active', subtab === 'contracts');
 
   // Clear search field whenever switching subtabs
   if ($('cbSearchInput')) {
@@ -1422,6 +1425,8 @@ function setCashbookSubtab(subtab) {
     $('cbSearchInput').placeholder = 'Search parties in khata...';
   } else if (subtab === 'purchaseSell') {
     $('cbSearchInput').placeholder = 'Search purchases...';
+  } else if (subtab === 'contracts') {
+    $('cbSearchInput').placeholder = 'Search contracts by purchaser, seller, quality, broker...';
   } else {
     $('cbSearchInput').placeholder = 'Search party accounts...';
   }
@@ -1436,14 +1441,36 @@ if ($('subnavParties')) {
 if ($('subnavPurchaseSell')) {
   $('subnavPurchaseSell').addEventListener('click', () => setCashbookSubtab('purchaseSell'));
 }
+if ($('subnavContracts')) {
+  $('subnavContracts').addEventListener('click', () => setCashbookSubtab('contracts'));
+}
+if ($('btnNewContract')) {
+  $('btnNewContract').addEventListener('click', () => openNewContractModal());
+}
 
 // ═══════════════════════════════════════════════════════════
-//  CASHBOOK DASHBOARD (Rokers, Khata Ledger, All Parties)
+//  CASHBOOK DASHBOARD (Rokers, Khata Ledger, All Parties, Contracts)
 // ═══════════════════════════════════════════════════════════
 
 async function loadCashbookDashboard() {
   try {
     const search = $('cbSearchInput') ? $('cbSearchInput').value.trim() : '';
+
+    if (currentCashbookSubtab === 'contracts') {
+      if ($('btnNewContract')) $('btnNewContract').style.display = '';
+      if ($('btnDownloadChatha')) $('btnDownloadChatha').style.display = 'none';
+      if ($('btnShareChatha')) $('btnShareChatha').style.display = 'none';
+      if ($('btnNewJamaEntry')) $('btnNewJamaEntry').style.display = 'none';
+      if ($('btnNewBanamEntry')) $('btnNewBanamEntry').style.display = 'none';
+      if ($('btnNewParty')) $('btnNewParty').style.display = 'none';
+
+      await loadContractsDashboard(search);
+      return;
+    }
+
+    if ($('btnNewContract')) $('btnNewContract').style.display = 'none';
+    if ($('btnDownloadChatha')) $('btnDownloadChatha').style.display = '';
+    if ($('btnShareChatha')) $('btnShareChatha').style.display = '';
 
     if (currentCashbookSubtab === 'rokers') {
       if ($('btnNewJamaEntry')) $('btnNewJamaEntry').style.display = '';
@@ -2475,6 +2502,657 @@ async function generateChathaPDF(action = 'download') {
     toast('PDF generation failed: ' + err.message, 'error');
   }
 }
+
+// ═══════════════════════════════════════════════════════════
+//  CONTRACTS MANAGEMENT (معاہدے / Fabric Contracts)
+// ═══════════════════════════════════════════════════════════
+
+let contractsList = [];
+let currentContractDetail = null;
+
+async function loadContractsDashboard(search = '') {
+  try {
+    const url = `${CONTRACTS_API}${search ? '?q=' + encodeURIComponent(search) : ''}`;
+    const contracts = await apiGet(url);
+    contractsList = contracts || [];
+
+    const totalContracts = contractsList.length;
+    const totalQty = contractsList.reduce((sum, c) => sum + (c.quantity || 0), 0);
+    const totalValue = contractsList.reduce((sum, c) => sum + ((c.quantity || 0) * (c.rate || 0)), 0);
+    const hazarCount = contractsList.filter(c => c.deliveryType === 'hazar').length;
+    const amdanCount = contractsList.filter(c => c.deliveryType === 'amdan').length;
+
+    $('cbCount').textContent = `(${totalContracts} Contracts)`;
+
+    if (totalContracts === 0) {
+      $('cbMainList').innerHTML = `
+        <div class="empty-state" style="padding: 2.5rem 1rem; text-align: center;">
+          <div class="empty-icon" style="font-size: 2.5rem; margin-bottom: 0.75rem;">📝</div>
+          <p style="font-size: 1rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem;">
+            ${search ? 'No contracts match your search.' : 'No fabric contracts created yet.'}
+          </p>
+          <p style="font-size: 0.8125rem; color: var(--text-secondary); max-width: 400px; margin: 0 auto 1.25rem;">
+            Create textile sales and purchase contracts with custom yarn counts, reed, pick, delivery terms (Hazar / Amdan), and live rate calculations.
+          </p>
+          <button class="btn btn-primary" onclick="openNewContractModal()" style="background: #0284c7; color: #fff; font-weight: 700; padding: 8px 18px;">
+            📝 ＋ Create First Contract
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    // Summary Metric Cards
+    const summaryHtml = `
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 14px;">
+        <div style="background: var(--bg-surface-secondary, rgba(255,255,255,0.03)); border: 1px solid var(--border-color, #334155); border-radius: 8px; padding: 10px 12px;">
+          <div style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Total Contracts</div>
+          <div style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary); margin-top: 2px;">${totalContracts}</div>
+        </div>
+        <div style="background: var(--bg-surface-secondary, rgba(255,255,255,0.03)); border: 1px solid var(--border-color, #334155); border-radius: 8px; padding: 10px 12px;">
+          <div style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Total Quantity</div>
+          <div style="font-size: 1.25rem; font-weight: 800; color: #60a5fa; margin-top: 2px;">${totalQty.toLocaleString()} <span style="font-size: 0.75rem; font-weight: 600;">Mtrs</span></div>
+        </div>
+        <div style="background: var(--bg-surface-secondary, rgba(255,255,255,0.03)); border: 1px solid var(--border-color, #334155); border-radius: 8px; padding: 10px 12px;">
+          <div style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Delivery Split</div>
+          <div style="font-size: 0.875rem; font-weight: 800; color: var(--text-primary); margin-top: 6px;">
+            <span style="color: #60a5fa;">⚡ ${hazarCount} Hazar</span> · <span style="color: #fbbf24;">📅 ${amdanCount} Amdan</span>
+          </div>
+        </div>
+        <div style="background: var(--bg-surface-secondary, rgba(255,255,255,0.03)); border: 1px solid var(--border-color, #334155); border-radius: 8px; padding: 10px 12px;">
+          <div style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Est. Total Value</div>
+          <div style="font-size: 1.25rem; font-weight: 800; color: #10b981; margin-top: 2px;">${fmtCurrency(totalValue)}</div>
+        </div>
+      </div>
+    `;
+
+    // Contract List Cards
+    const listHtml = `
+      <div class="cb-contracts-list" style="display: flex; flex-direction: column; gap: 10px;">
+        ${contractsList.map(c => {
+          const totalAmt = (c.quantity || 0) * (c.rate || 0);
+          const isHazar = c.deliveryType === 'hazar';
+          const deliveryBadge = isHazar
+            ? `<span style="background: rgba(37,99,235,0.15); color: #60a5fa; border: 1px solid rgba(37,99,235,0.3); font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; font-weight: 700;">⚡ Hazar (${formatDate(c.date)})</span>`
+            : `<span style="background: rgba(217,119,6,0.15); color: #fbbf24; border: 1px solid rgba(217,119,6,0.3); font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; font-weight: 700;">📅 Amdan (${formatDate(c.deliveryDate || c.date)})</span>`;
+
+          const specsText = (c.warpCount || c.weftCount || c.reed || c.pick)
+            ? `${c.warpCount}x${c.weftCount} / ${c.reed}x${c.pick} / ${c.width}"`
+            : (c.quality || '—');
+
+          return `
+            <div class="cb-party-card" style="cursor: pointer; transition: all 0.2s ease; border-left: 4px solid ${isHazar ? '#2563eb' : '#d97706'};" onclick="openContractDetailModal('${c._id}')">
+              <div class="cb-party-card-left" style="flex: 2;">
+                <div class="cb-party-info">
+                  <div class="cb-party-name-row" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span style="background: var(--accent-primary); color: #fff; font-size: 0.75rem; font-weight: 800; padding: 2px 6px; border-radius: 4px;">#${c.contractNo}</span>
+                    <span class="cb-party-name" style="font-size: 0.95rem;">
+                      <span style="color: #60a5fa;">${escapeHtml(c.purchaserName)}</span>
+                      <span style="color: var(--text-muted); font-size: 0.8rem; font-weight: 400; margin: 0 4px;">purchased from</span>
+                      <span style="color: #4ade80;">${escapeHtml(c.sellerName)}</span>
+                    </span>
+                    ${deliveryBadge}
+                  </div>
+                  <div class="cb-party-meta" style="margin-top: 4px; display: flex; gap: 10px; flex-wrap: wrap; font-size: 0.8125rem;">
+                    <span>🧵 <strong>${escapeHtml(c.quality || specsText)}</strong></span>
+                    <span>📦 <strong>${(c.quantity || 0).toLocaleString()}</strong> ${escapeHtml(c.quantityUnit || 'Meters')}</span>
+                    ${c.broker ? `<span>👤 Broker: <strong>${escapeHtml(c.broker)}</strong></span>` : ''}
+                    ${c.gudamMuqam ? `<span>📍 <strong>${escapeHtml(c.gudamMuqam)}</strong></span>` : ''}
+                  </div>
+                </div>
+              </div>
+              <div class="cb-party-card-right" style="flex: 1; text-align: right; display: flex; flex-direction: column; justify-content: center; align-items: flex-end;">
+                <div>
+                  <div style="font-size: 1.1rem; font-weight: 800; color: #10b981;">₹ ${c.rate ? c.rate.toFixed(2) : '0.00'} <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);">/ ${escapeHtml(c.quantityUnit || 'Meter')}</span></div>
+                  <div style="font-size: 0.8125rem; color: var(--text-secondary); font-weight: 600; margin-top: 2px;">Total: <strong>${fmtCurrency(totalAmt)}</strong></div>
+                </div>
+                <div style="margin-top: 6px; display: flex; gap: 6px;" onclick="event.stopPropagation();">
+                  <button class="btn-action edit" onclick="openEditContractModal('${c._id}')" title="Edit Contract">✏️</button>
+                  <button class="btn-action delete" onclick="deleteContract('${c._id}', ${c.contractNo})" title="Delete Contract">🗑️</button>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+
+    $('cbMainList').innerHTML = summaryHtml + listHtml;
+  } catch (err) {
+    toast('Failed to load contracts: ' + err.message, 'error');
+  }
+}
+
+// ── Contract Modal Interactions ──
+function openNewContractModal() {
+  $('contractForm').reset();
+  $('contractModalId').value = '';
+  $('contractModalTitle').textContent = '📝 New Contract (معاہدہ اندراج)';
+
+  const today = new Date().toISOString().slice(0, 10);
+  $('contractDate').value = today;
+  $('contractTypeHazar').checked = true;
+  $('contractDeliveryDate').value = today;
+  $('contractStatus').value = 'active';
+
+  populatePartyDatalist();
+  $('contractModal').classList.remove('hidden');
+}
+
+async function openEditContractModal(id) {
+  try {
+    const c = await apiGet(`${CONTRACTS_API}/${id}`);
+    if (!c) return;
+
+    $('contractModalId').value = c._id;
+    $('contractModalTitle').textContent = `✏️ Edit Contract #${c.contractNo}`;
+
+    $('contractDate').value = c.date ? new Date(c.date).toISOString().slice(0, 10) : '';
+    $('contractBroker').value = c.broker || '';
+    $('contractPurchaser').value = c.purchaserName || '';
+    $('contractSeller').value = c.sellerName || '';
+
+    $('contractWarpCount').value = c.warpCount || '';
+    $('contractWeftCount').value = c.weftCount || '';
+    $('contractReed').value = c.reed || '';
+    $('contractPick').value = c.pick || '';
+    $('contractWidth').value = c.width || '';
+
+    $('contractQuality').value = c.quality || '';
+    $('contractQuantity').value = c.quantity || '';
+    $('contractQuantityUnit').value = c.quantityUnit || 'Meters';
+
+    if (c.deliveryType === 'amdan') {
+      $('contractTypeAmdan').checked = true;
+    } else {
+      $('contractTypeHazar').checked = true;
+    }
+    $('contractDeliveryDate').value = c.deliveryDate ? new Date(c.deliveryDate).toISOString().slice(0, 10) : '';
+
+    $('contractGudam').value = c.gudamMuqam || '';
+    $('contractWarpRate').value = c.warpRate || '';
+    $('contractWeftRate').value = c.weftRate || '';
+    $('contractConversion').value = c.conversion || '';
+    $('contractRate').value = c.rate || '';
+    $('contractStatus').value = c.status || 'active';
+    $('contractNote').value = c.note || '';
+
+    populatePartyDatalist();
+    $('contractModal').classList.remove('hidden');
+  } catch (err) {
+    toast('Failed to load contract: ' + err.message, 'error');
+  }
+}
+
+function closeContractModal() {
+  $('contractModal').classList.add('hidden');
+}
+
+function onContractDeliveryTypeChange() {
+  const isHazar = $('contractTypeHazar').checked;
+  if (isHazar) {
+    const cDate = $('contractDate').value || new Date().toISOString().slice(0, 10);
+    $('contractDeliveryDate').value = cDate;
+  }
+}
+
+// Auto-fill quality name from specs
+if ($('btnAutoQuality')) {
+  $('btnAutoQuality').addEventListener('click', () => {
+    const warp = $('contractWarpCount').value.trim();
+    const weft = $('contractWeftCount').value.trim();
+    const reed = $('contractReed').value.trim();
+    const pick = $('contractPick').value.trim();
+    const width = $('contractWidth').value.trim();
+
+    if (warp && weft && reed && pick && width) {
+      $('contractQuality').value = `${warp}x${weft} / ${reed}x${pick} / ${width}" Cotton`;
+      toast('Quality auto-generated from specs!', 'info');
+    } else if (warp && weft && reed && pick) {
+      $('contractQuality').value = `${warp}x${weft} / ${reed}x${pick}`;
+      toast('Quality auto-generated from specs!', 'info');
+    } else {
+      toast('Please enter Warp, Weft, Reed, and Pick specs first.', 'warning');
+    }
+  });
+}
+
+// Auto calculate fabric rate using standard formula
+if ($('btnAutoCalcContractRate')) {
+  $('btnAutoCalcContractRate').addEventListener('click', () => {
+    calculateContractRateLive();
+  });
+}
+
+function calculateContractRateLive() {
+  const warpCount = parseFloat($('contractWarpCount').value) || 0;
+  const weftCount = parseFloat($('contractWeftCount').value) || 0;
+  const reed = parseFloat($('contractReed').value) || 0;
+  const pick = parseFloat($('contractPick').value) || 0;
+  const width = parseFloat($('contractWidth').value) || 0;
+  const warpRate = parseFloat($('contractWarpRate').value) || 0;
+  const weftRate = parseFloat($('contractWeftRate').value) || 0;
+  const conversionRate = parseFloat($('contractConversion').value) || 0;
+
+  if (warpCount <= 0 || weftCount <= 0 || reed <= 0 || pick <= 0 || width <= 0) {
+    toast('Please enter Warp Count, Weft Count, Reed, Pick, and Width specs to calculate.', 'warning');
+    return;
+  }
+
+  const warpWeightMeter = (reed * width / 20 / warpCount) * 1.0936;
+  const warpCostMeter = (warpWeightMeter * warpRate) / 40;
+
+  const weftWeightMeter = (pick * width / 20 / weftCount) * 1.0936;
+  const weftCostMeter = (weftWeightMeter * weftRate) / 40;
+
+  const manfCostMeter = conversionRate * pick;
+  const totalCostMeter = warpCostMeter + weftCostMeter + manfCostMeter;
+
+  $('contractRate').value = totalCostMeter.toFixed(2);
+  toast(`Calculated Fabric Rate: ₹ ${totalCostMeter.toFixed(2)} / Meter`, 'success');
+}
+
+// Listen to contract date change to sync Hazar delivery date
+if ($('contractDate')) {
+  $('contractDate').addEventListener('change', () => {
+    if ($('contractTypeHazar') && $('contractTypeHazar').checked) {
+      $('contractDeliveryDate').value = $('contractDate').value;
+    }
+  });
+}
+
+async function saveContractForm() {
+  try {
+    const id = $('contractModalId').value;
+    const date = $('contractDate').value;
+    const purchaserName = $('contractPurchaser').value.trim();
+    const sellerName = $('contractSeller').value.trim();
+    const broker = $('contractBroker').value.trim();
+
+    const warpCount = parseFloat($('contractWarpCount').value) || 0;
+    const weftCount = parseFloat($('contractWeftCount').value) || 0;
+    const reed = parseFloat($('contractReed').value) || 0;
+    const pick = parseFloat($('contractPick').value) || 0;
+    const width = parseFloat($('contractWidth').value) || 0;
+
+    const quality = $('contractQuality').value.trim();
+    const quantity = parseFloat($('contractQuantity').value) || 0;
+    const quantityUnit = $('contractQuantityUnit').value;
+
+    const deliveryType = $('contractTypeAmdan').checked ? 'amdan' : 'hazar';
+    let deliveryDate = $('contractDeliveryDate').value;
+    if (deliveryType === 'hazar') {
+      deliveryDate = date;
+    }
+
+    const warpRate = parseFloat($('contractWarpRate').value) || 0;
+    const weftRate = parseFloat($('contractWeftRate').value) || 0;
+    const conversion = parseFloat($('contractConversion').value) || 0;
+    const rate = parseFloat($('contractRate').value) || 0;
+    const gudamMuqam = $('contractGudam').value.trim();
+    const status = $('contractStatus').value;
+    const note = $('contractNote').value.trim();
+
+    if (!purchaserName || !sellerName) {
+      toast('Purchaser Name and Seller Name are required.', 'error');
+      return;
+    }
+
+    if (!rate || rate <= 0) {
+      toast('Please enter or calculate the final fabric rate.', 'error');
+      return;
+    }
+
+    const payload = {
+      date,
+      purchaserName,
+      sellerName,
+      broker,
+      warpCount,
+      weftCount,
+      reed,
+      pick,
+      width,
+      quality,
+      quantity,
+      quantityUnit,
+      deliveryType,
+      deliveryDate,
+      warpRate,
+      weftRate,
+      conversion,
+      rate,
+      gudamMuqam,
+      status,
+      note
+    };
+
+    if (id) {
+      await apiPut(`${CONTRACTS_API}/${id}`, payload);
+      toast('Contract updated successfully!', 'success');
+    } else {
+      await apiPost(CONTRACTS_API, payload);
+      toast('Contract created successfully!', 'success');
+    }
+
+    closeContractModal();
+    loadContractsDashboard($('cbSearchInput') ? $('cbSearchInput').value.trim() : '');
+  } catch (err) {
+    toast('Failed to save contract: ' + err.message, 'error');
+  }
+}
+
+// ── Contract Detail View & PDF ──
+async function openContractDetailModal(id) {
+  try {
+    const c = await apiGet(`${CONTRACTS_API}/${id}`);
+    if (!c) return;
+
+    currentContractDetail = c;
+    const totalAmt = (c.quantity || 0) * (c.rate || 0);
+    const isHazar = c.deliveryType === 'hazar';
+
+    $('contractDetailModalTitle').textContent = `📜 Contract #${c.contractNo} Details`;
+
+    const specsText = (c.warpCount || c.weftCount || c.reed || c.pick)
+      ? `${c.warpCount}x${c.weftCount} / ${c.reed}x${c.pick} / ${c.width}"`
+      : '—';
+
+    $('contractDetailModalBody').innerHTML = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: var(--text-primary);">
+        
+        <!-- Header Info Card -->
+        <div style="background: linear-gradient(135deg, #0f172a, #1e3a8a); color: #fff; padding: 14px; border-radius: 8px; margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 1.15rem; font-weight: 800; letter-spacing: 0.5px;">CONTRACT #${c.contractNo} (معاہدہ)</span>
+            <span style="background: ${isHazar ? '#2563eb' : '#d97706'}; color: #fff; font-size: 0.75rem; font-weight: 800; padding: 3px 8px; border-radius: 4px; text-transform: uppercase;">
+              ${isHazar ? '⚡ Hazar (حاضر)' : '📅 Amdan (آمدن)'}
+            </span>
+          </div>
+          <div style="font-size: 0.8125rem; color: #93c5fd; display: flex; gap: 14px; flex-wrap: wrap;">
+            <span>📅 Date: <strong>${formatDate(c.date)}</strong></span>
+            <span>🚚 Delivery Date: <strong>${formatDate(c.deliveryDate || c.date)}</strong></span>
+            ${c.broker ? `<span>👤 Broker: <strong>${escapeHtml(c.broker)}</strong></span>` : ''}
+          </div>
+        </div>
+
+        <!-- Parties Box -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+          <div style="background: rgba(37,99,235,0.08); border: 1px solid rgba(37,99,235,0.25); border-radius: 6px; padding: 10px 12px;">
+            <div style="font-size: 0.75rem; color: #60a5fa; font-weight: 700; text-transform: uppercase;">🛒 Purchaser / Buyer (خریدار)</div>
+            <div style="font-size: 1rem; font-weight: 800; color: var(--text-primary); margin-top: 2px;">${escapeHtml(c.purchaserName)}</div>
+          </div>
+          <div style="background: rgba(22,163,74,0.08); border: 1px solid rgba(22,163,74,0.25); border-radius: 6px; padding: 10px 12px;">
+            <div style="font-size: 0.75rem; color: #4ade80; font-weight: 700; text-transform: uppercase;">🏭 Seller / Supplier (بیچنے والا)</div>
+            <div style="font-size: 1rem; font-weight: 800; color: var(--text-primary); margin-top: 2px;">${escapeHtml(c.sellerName)}</div>
+          </div>
+        </div>
+
+        <!-- Specs & Commercials Table -->
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 0.875rem;">
+          <tr style="border-bottom: 1px solid var(--border-color, #334155);"><td style="padding: 6px 4px; color: var(--text-secondary); width: 40%;">Quality / Description</td><td style="padding: 6px 4px; font-weight: 700; text-align: right;">${escapeHtml(c.quality || '—')}</td></tr>
+          <tr style="border-bottom: 1px solid var(--border-color, #334155);"><td style="padding: 6px 4px; color: var(--text-secondary);">Construction (Specs)</td><td style="padding: 6px 4px; font-weight: 700; text-align: right;">${escapeHtml(specsText)}</td></tr>
+          <tr style="border-bottom: 1px solid var(--border-color, #334155);"><td style="padding: 6px 4px; color: var(--text-secondary);">Quantity</td><td style="padding: 6px 4px; font-weight: 800; text-align: right; color: #60a5fa;">${(c.quantity || 0).toLocaleString()} ${escapeHtml(c.quantityUnit || 'Meters')}</td></tr>
+          <tr style="border-bottom: 1px solid var(--border-color, #334155);"><td style="padding: 6px 4px; color: var(--text-secondary);">Fabric Rate</td><td style="padding: 6px 4px; font-weight: 800; text-align: right; color: #10b981;">₹ ${c.rate ? c.rate.toFixed(2) : '0.00'} / ${escapeHtml(c.quantityUnit || 'Meter')}</td></tr>
+          <tr style="border-bottom: 1px solid var(--border-color, #334155); background: rgba(16,185,129,0.08);"><td style="padding: 8px 4px; font-weight: 800; color: var(--text-primary);">Estimated Total Amount</td><td style="padding: 8px 4px; font-weight: 800; text-align: right; color: #10b981; font-size: 1.05rem;">${fmtCurrency(totalAmt)}</td></tr>
+          ${c.gudamMuqam ? `<tr style="border-bottom: 1px solid var(--border-color, #334155);"><td style="padding: 6px 4px; color: var(--text-secondary);">Gudam / Muqam (گودام / مقام)</td><td style="padding: 6px 4px; font-weight: 700; text-align: right;">${escapeHtml(c.gudamMuqam)}</td></tr>` : ''}
+        </table>
+
+        <!-- Costing Details (If Available) -->
+        ${(c.warpRate || c.weftRate || c.conversion) ? `
+          <div style="background: var(--bg-surface-secondary, rgba(255,255,255,0.03)); border: 1px solid var(--border-color, #334155); border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; font-size: 0.8125rem;">
+            <div style="font-weight: 700; color: var(--text-secondary); margin-bottom: 4px; text-transform: uppercase;">Costing Factors</div>
+            <div style="display: flex; gap: 14px; flex-wrap: wrap;">
+              <span>Warp Rate: <strong>₹ ${c.warpRate || 0}</strong></span>
+              <span>Weft Rate: <strong>₹ ${c.weftRate || 0}</strong></span>
+              <span>Conversion: <strong>₹ ${c.conversion || 0}</strong></span>
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Notes / Remarks -->
+        ${c.note ? `
+          <div style="background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.25); border-radius: 6px; padding: 8px 12px; font-size: 0.8125rem; color: var(--text-primary);">
+            <strong style="color: #fbbf24;">Note / Terms (نوٹ):</strong> ${escapeHtml(c.note)}
+          </div>
+        ` : ''}
+      </div>
+    `;
+
+    // Action button listeners
+    $('btnShareContractPDF').onclick = () => generateContractPDF(c, 'share');
+    $('btnDownloadContractPDF').onclick = () => generateContractPDF(c, 'download');
+    $('btnEditContract').onclick = () => {
+      closeContractDetailModal();
+      openEditContractModal(c._id);
+    };
+    $('btnDeleteContract').onclick = () => deleteContract(c._id, c.contractNo);
+
+    $('contractDetailModal').classList.remove('hidden');
+  } catch (err) {
+    toast('Failed to load contract details: ' + err.message, 'error');
+  }
+}
+
+function closeContractDetailModal() {
+  $('contractDetailModal').classList.add('hidden');
+}
+
+async function deleteContract(id, contractNo) {
+  if (!confirm(`Are you sure you want to delete Contract #${contractNo}? This cannot be undone.`)) {
+    return;
+  }
+  try {
+    await apiDelete(`${CONTRACTS_API}/${id}`);
+    toast(`Contract #${contractNo} deleted successfully!`, 'success');
+    closeContractDetailModal();
+    loadContractsDashboard($('cbSearchInput') ? $('cbSearchInput').value.trim() : '');
+  } catch (err) {
+    toast('Failed to delete contract: ' + err.message, 'error');
+  }
+}
+
+// ── Generate Contract PDF (Printable & Shareable Slip) ──
+async function generateContractPDF(c, action = 'download') {
+  try {
+    toast(action === 'share' ? 'Preparing Contract PDF to share...' : 'Downloading Contract PDF...', 'info');
+
+    const totalAmt = (c.quantity || 0) * (c.rate || 0);
+    const isHazar = c.deliveryType === 'hazar';
+    const dateStr = formatDate(c.date);
+    const deliveryDateStr = formatDate(c.deliveryDate || c.date);
+
+    const container = document.createElement('div');
+    container.style.cssText = 'position: absolute; left: 0; top: 0; width: 720px; z-index: -99999; opacity: 0; pointer-events: none;';
+
+    const specsText = (c.warpCount || c.weftCount || c.reed || c.pick)
+      ? `${c.warpCount}x${c.weftCount} / ${c.reed}x${c.pick} / ${c.width}"`
+      : '—';
+
+    container.innerHTML = `
+      <div id="contractPdfRoot" style="padding: 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #0f172a; background: #ffffff; width: 720px; max-width: 720px; box-sizing: border-box; margin: 0 auto;">
+        
+        <!-- Header -->
+        <div style="border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end;">
+          <div>
+            <h1 style="margin: 0; font-size: 24px; font-weight: 900; color: #0f172a; letter-spacing: 1px; text-transform: uppercase;">
+              📝 FABRIC CONTRACT / معاہدہ نامہ
+            </h1>
+            <p style="margin: 4px 0 0 0; font-size: 12px; color: #64748b; font-weight: 600;">Textile Costing & Cashbook System</p>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 16px; font-weight: 900; color: #2563eb;">CONTRACT #${c.contractNo}</div>
+            <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Date: <strong>${dateStr}</strong></div>
+          </div>
+        </div>
+
+        <!-- Parties Box -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
+          <div style="border: 1.5px solid #2563eb; border-radius: 6px; padding: 12px; background: #f8fafc;">
+            <div style="font-size: 11px; font-weight: 800; color: #2563eb; text-transform: uppercase; margin-bottom: 4px;">
+              🛒 PURCHASER / خریدار (بنام)
+            </div>
+            <div style="font-size: 16px; font-weight: 800; color: #0f172a;">${escapeHtml(c.purchaserName)}</div>
+          </div>
+          <div style="border: 1.5px solid #16a34a; border-radius: 6px; padding: 12px; background: #f8fafc;">
+            <div style="font-size: 11px; font-weight: 800; color: #16a34a; text-transform: uppercase; margin-bottom: 4px;">
+              🏭 SELLER / بیچنے والا (جمع)
+            </div>
+            <div style="font-size: 16px; font-weight: 800; color: #0f172a;">${escapeHtml(c.sellerName)}</div>
+          </div>
+        </div>
+
+        <!-- Delivery & Broker Meta -->
+        <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 12px;">
+          <div>
+            <span style="color: #64748b; font-weight: 600;">Delivery Mode:</span><br>
+            <strong style="color: ${isHazar ? '#2563eb' : '#d97706'}; font-size: 13px;">${isHazar ? '⚡ Hazar (حاضر - Ready)' : '📅 Amdan (آمدن - Delivery)'}</strong>
+          </div>
+          <div>
+            <span style="color: #64748b; font-weight: 600;">Delivery Date:</span><br>
+            <strong style="font-size: 13px;">${deliveryDateStr}</strong>
+          </div>
+          <div>
+            <span style="color: #64748b; font-weight: 600;">Broker / ایجنٹ:</span><br>
+            <strong style="font-size: 13px;">${escapeHtml(c.broker || 'Direct')}</strong>
+          </div>
+        </div>
+
+        <!-- Fabric Specifications Table -->
+        <table style="width: 100%; table-layout: fixed; border-collapse: collapse; border: 1.5px solid #0f172a; margin-bottom: 16px; font-size: 12px;">
+          <thead>
+            <tr style="background: #0f172a; color: #ffffff;">
+              <th style="padding: 8px 10px; text-align: left; width: 45%;">Fabric Quality & Description</th>
+              <th style="padding: 8px 10px; text-align: center; width: 20%;">Construction</th>
+              <th style="padding: 8px 10px; text-align: center; width: 15%;">Quantity</th>
+              <th style="padding: 8px 10px; text-align: right; width: 20%;">Rate / Unit</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding: 12px 10px; font-size: 13px; font-weight: 800; color: #0f172a; border-right: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1;">
+                ${escapeHtml(c.quality || 'Standard Cotton Fabric')}
+                ${c.gudamMuqam ? `<div style="font-size: 11px; font-weight: 600; color: #64748b; margin-top: 4px;">📍 Warehouse: ${escapeHtml(c.gudamMuqam)}</div>` : ''}
+              </td>
+              <td style="padding: 12px 10px; text-align: center; font-size: 12px; font-weight: 700; border-right: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1;">
+                ${escapeHtml(specsText)}
+              </td>
+              <td style="padding: 12px 10px; text-align: center; font-size: 13px; font-weight: 800; color: #2563eb; border-right: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1;">
+                ${(c.quantity || 0).toLocaleString()} ${escapeHtml(c.quantityUnit || 'Mtrs')}
+              </td>
+              <td style="padding: 12px 10px; text-align: right; font-size: 14px; font-weight: 900; color: #16a34a; border-bottom: 1px solid #cbd5e1;">
+                ₹ ${c.rate ? c.rate.toFixed(2) : '0.00'}
+              </td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr style="background: #f8fafc; font-weight: 800;">
+              <td colspan="3" style="padding: 10px 10px; text-align: right; font-size: 13px; border-right: 1px solid #cbd5e1;">Total Estimated Value:</td>
+              <td style="padding: 10px 10px; text-align: right; font-size: 15px; font-weight: 900; color: #0f172a;">${fmtCurrency(totalAmt)}</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <!-- Notes / Special Terms -->
+        <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin-bottom: 28px; background: #fafafa; font-size: 11.5px;">
+          <div style="font-weight: 800; color: #0f172a; margin-bottom: 4px; text-transform: uppercase;">Terms & Conditions / شرائط و نوٹ:</div>
+          <div>${escapeHtml(c.note || 'Delivery subject to standard mill quality inspection and agreed payment terms.')}</div>
+        </div>
+
+        <!-- Signatures Row -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: center; margin-top: 30px; font-size: 12px;">
+          <div>
+            <div style="border-bottom: 1.5px dashed #64748b; height: 35px; margin-bottom: 6px;"></div>
+            <strong style="color: #0f172a;">Purchaser Signature</strong><br>
+            <span style="font-size: 10px; color: #64748b;">(دستخط خریدار)</span>
+          </div>
+          <div>
+            <div style="border-bottom: 1.5px dashed #64748b; height: 35px; margin-bottom: 6px;"></div>
+            <strong style="color: #0f172a;">Broker Signature</strong><br>
+            <span style="font-size: 10px; color: #64748b;">(دستخط بروکر)</span>
+          </div>
+          <div>
+            <div style="border-bottom: 1.5px dashed #64748b; height: 35px; margin-bottom: 6px;"></div>
+            <strong style="color: #0f172a;">Seller Signature</strong><br>
+            <span style="font-size: 10px; color: #64748b;">(دستخط بیچنے والا)</span>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="margin-top: 24px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 8px; font-size: 10px; color: #94a3b8;">
+          Contract #${c.contractNo} · Generated via Textile Costing & Cashbook Application · ${new Date().toLocaleDateString()}
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(container);
+
+    const fileName = `Contract_${c.contractNo}_${(c.purchaserName || 'Party').replace(/\s+/g, '_')}.pdf`;
+    const opt = {
+      margin: [6, 6, 6, 6],
+      filename: fileName,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        scrollX: 0,
+        scrollY: 0
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    if (typeof html2pdf !== 'undefined') {
+      const targetElement = container.querySelector('#contractPdfRoot') || container.firstElementChild;
+      const pdfWorker = html2pdf().set(opt).from(targetElement);
+      const pdfBlob = await pdfWorker.output('blob');
+      if (container.parentNode) document.body.removeChild(container);
+
+      if (action === 'share') {
+        const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+          try {
+            await navigator.share({
+              files: [pdfFile],
+              title: `Contract #${c.contractNo} - ${c.purchaserName}`,
+              text: `Fabric Contract #${c.contractNo}: ${c.purchaserName} from ${c.sellerName} (${specsText})`,
+            });
+            toast('Shared Contract PDF successfully!', 'success');
+            return;
+          } catch (shareErr) {
+            if (shareErr.name === 'AbortError') return;
+          }
+        }
+      }
+
+      // Direct download
+      const downloadUrl = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+      toast('Downloaded Contract PDF successfully!', 'success');
+    } else {
+      if (container.parentNode) document.body.removeChild(container);
+      window.print();
+    }
+  } catch (err) {
+    toast('PDF generation failed: ' + err.message, 'error');
+  }
+}
+
+// Window Globals for Contracts
+window.openNewContractModal = openNewContractModal;
+window.openEditContractModal = openEditContractModal;
+window.closeContractModal = closeContractModal;
+window.onContractDeliveryTypeChange = onContractDeliveryTypeChange;
+window.saveContractForm = saveContractForm;
+window.openContractDetailModal = openContractDetailModal;
+window.closeContractDetailModal = closeContractDetailModal;
+window.deleteContract = deleteContract;
 
 // ═══════════════════════════════════════════════════════════
 //  KHATA VIEW (Party History with Running Balance)

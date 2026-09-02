@@ -363,6 +363,7 @@
       <div class="dashboard-header">
         <h2 class="dashboard-title">📒 Cashbook <span class="dashboard-count" id="cbCount">(0)</span></h2>
         <div class="cb-header-btns">
+          <button class="btn btn-primary" id="btnNewContract" style="background: #0284c7; color: #fff; border-color: #0284c7;">📝 ＋ New Contract</button>
           <button class="btn btn-primary" id="btnDownloadChatha" style="background: #7c3aed; color: #fff; border-color: #7c3aed;">📥 Download Chatha</button>
           <button class="btn btn-primary" id="btnShareChatha" style="background: #2563eb; color: #fff; border-color: #2563eb;">📄 Share Chatha</button>
           <button class="btn btn-success" id="btnNewJamaEntry" style="background: #15803d; color: #fff; border-color: #15803d;">🟢 ＋ Add Jama (جمع)</button>
@@ -371,12 +372,13 @@
         </div>
       </div>
 
-      <!-- Subnav Tabs: Rokers vs Khata vs All Parties vs Purchase/Sell -->
+      <!-- Subnav Tabs: Rokers vs Khata vs All Parties vs Purchase/Sell vs Contracts -->
       <div class="cb-subnav">
         <button class="cb-subnav-btn active" id="subnavRokers" data-subtab="rokers">📜 Rokers</button>
         <button class="cb-subnav-btn" id="subnavKhata" data-subtab="khata">📒 Khata</button>
         <button class="cb-subnav-btn" id="subnavParties" data-subtab="parties">👥 All Parties</button>
         <button class="cb-subnav-btn" id="subnavPurchaseSell" data-subtab="purchaseSell">📦 Purchase / Sell</button>
+        <button class="cb-subnav-btn" id="subnavContracts" data-subtab="contracts">📝 Contracts</button>
       </div>
 
       <div class="search-section">
@@ -650,6 +652,204 @@
       </div>
       <div class="modal-actions">
         <button class="btn btn-primary" id="btnCloseEndRokerModal" style="background: var(--accent-primary);">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Contract Modal (Create / Edit) ═══ -->
+  <div class="modal-overlay hidden" id="contractModal">
+    <div class="modal" style="max-width: 640px; max-height: 90vh; overflow-y: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color, #334155); padding-bottom: 0.75rem;">
+        <h3 class="modal-title" id="contractModalTitle" style="margin: 0; color: var(--accent-primary); font-size: 1.15rem;">
+          📝 New Contract (معاہدہ اندراج)
+        </h3>
+        <button type="button" class="btn-close" onclick="closeContractModal()" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: var(--text-secondary); padding: 4px;">✕</button>
+      </div>
+
+      <form id="contractForm" onsubmit="event.preventDefault(); saveContractForm();">
+        <input type="hidden" id="contractModalId" />
+
+        <!-- Date & Parties Section -->
+        <div style="background: var(--bg-surface-secondary, rgba(255,255,255,0.03)); border: 1px solid var(--border-color, #334155); border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+          <div class="form-row" style="margin-bottom: 10px;">
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label" for="contractDate">📅 Contract Date (تاریخ) *</label>
+              <input type="date" class="form-input" id="contractDate" required />
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label" for="contractBroker">👤 Broker / Agent (بروکر)</label>
+              <input type="text" class="form-input" id="contractBroker" placeholder="Broker name..." list="cbPartyDatalist" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label" for="contractPurchaser" style="color: #60a5fa;">🛒 Purchaser (خریدار / بنام) *</label>
+              <input type="text" class="form-input" id="contractPurchaser" list="cbPartyDatalist" required placeholder="Purchaser name..." autocomplete="off" />
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label" for="contractSeller" style="color: #4ade80;">🏭 Seller (بیچنے والا / جمع) *</label>
+              <input type="text" class="form-input" id="contractSeller" list="cbPartyDatalist" required placeholder="Seller name..." autocomplete="off" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Fabric Specifications Section -->
+        <div style="background: var(--bg-surface-secondary, rgba(255,255,255,0.03)); border: 1px solid var(--border-color, #334155); border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+          <div style="font-size: 0.8125rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase;">
+            🧵 Fabric Specifications (کپڑے کی تفصیل)
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 10px;">
+            <div class="form-group">
+              <label class="form-label" for="contractWarpCount" style="font-size: 0.75rem;">Warp (تانا)</label>
+              <input type="number" step="any" class="form-input" id="contractWarpCount" placeholder="52" style="padding: 6px 8px;" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="contractWeftCount" style="font-size: 0.75rem;">Weft (بانا)</label>
+              <input type="number" step="any" class="form-input" id="contractWeftCount" placeholder="52" style="padding: 6px 8px;" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="contractReed" style="font-size: 0.75rem;">Reed (تار)</label>
+              <input type="number" step="any" class="form-input" id="contractReed" placeholder="68" style="padding: 6px 8px;" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="contractPick" style="font-size: 0.75rem;">Pick (پک)</label>
+              <input type="number" step="any" class="form-input" id="contractPick" placeholder="68" style="padding: 6px 8px;" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="contractWidth" style="font-size: 0.75rem;">Width (عرض)</label>
+              <input type="number" step="any" class="form-input" id="contractWidth" placeholder="68" style="padding: 6px 8px;" />
+            </div>
+          </div>
+
+          <div class="form-row" style="margin-bottom: 10px;">
+            <div class="form-group" style="flex: 2;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <label class="form-label" for="contractQuality" style="margin: 0;">Quality (کوالٹی نام)</label>
+                <button type="button" id="btnAutoQuality" style="background: none; border: none; color: var(--accent-primary); font-size: 0.75rem; cursor: pointer; text-decoration: underline; padding: 0;">⚡ Fill from Specs</button>
+              </div>
+              <input type="text" class="form-input" id="contractQuality" placeholder="e.g. 52x52 / 68x68 / 68&quot; Cotton" />
+            </div>
+            <div class="form-group" style="flex: 1.2;">
+              <label class="form-label" for="contractQuantity">Quantity (مقدار)</label>
+              <input type="number" step="any" class="form-input" id="contractQuantity" placeholder="e.g. 10000" />
+            </div>
+            <div class="form-group" style="flex: 0.8;">
+              <label class="form-label" for="contractQuantityUnit">Unit</label>
+              <select class="form-select" id="contractQuantityUnit">
+                <option value="Meters">Meters (میٹر)</option>
+                <option value="Than">Than (تھان)</option>
+                <option value="Yards">Yards (گز)</option>
+                <option value="Bags">Bags (بورے)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Delivery Type: Hazar vs Amdan Section -->
+        <div style="background: var(--bg-surface-secondary, rgba(255,255,255,0.03)); border: 1px solid var(--border-color, #334155); border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+          <div style="font-size: 0.8125rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase;">
+            🚚 Delivery Term (حاضر / آمدن)
+          </div>
+          <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.875rem; font-weight: 600; color: var(--text-primary);">
+              <input type="radio" name="contractDeliveryType" id="contractTypeHazar" value="hazar" checked onchange="onContractDeliveryTypeChange()" />
+              <span style="background: rgba(37, 99, 235, 0.15); color: #60a5fa; padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(37, 99, 235, 0.3);">⚡ Hazar (حاضر - Ready Stock)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.875rem; font-weight: 600; color: var(--text-primary);">
+              <input type="radio" name="contractDeliveryType" id="contractTypeAmdan" value="amdan" onchange="onContractDeliveryTypeChange()" />
+              <span style="background: rgba(217, 119, 6, 0.15); color: #fbbf24; padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(217, 119, 6, 0.3);">📅 Amdan (آمدن - Future Delivery)</span>
+            </label>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group" style="flex: 1;" id="contractDeliveryDateGroup">
+              <label class="form-label" for="contractDeliveryDate">Delivery Date (آمدن تاریخ)</label>
+              <input type="date" class="form-input" id="contractDeliveryDate" />
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label" for="contractGudam">📍 Gudam / Muqam (گودام / مقام)</label>
+              <input type="text" class="form-input" id="contractGudam" placeholder="Warehouse location / delivery place..." />
+            </div>
+          </div>
+        </div>
+
+        <!-- Costing & Rate Section -->
+        <div style="background: var(--bg-surface-secondary, rgba(255,255,255,0.03)); border: 1px solid var(--border-color, #334155); border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="font-size: 0.8125rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">
+              💰 Costing & Rate Calculation (ریٹ تفصیل)
+            </div>
+            <button type="button" id="btnAutoCalcContractRate" style="background: #7c3aed; color: #fff; border: none; border-radius: 4px; font-size: 0.75rem; font-weight: 700; padding: 3px 8px; cursor: pointer;">⚡ Auto Calculate Rate</button>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px;">
+            <div class="form-group">
+              <label class="form-label" for="contractWarpRate" style="font-size: 0.75rem;">Warp Rate (تانا ریٹ)</label>
+              <input type="number" step="any" class="form-input" id="contractWarpRate" placeholder="e.g. 4500" style="padding: 6px 8px;" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="contractWeftRate" style="font-size: 0.75rem;">Weft Rate (بانا ریٹ)</label>
+              <input type="number" step="any" class="form-input" id="contractWeftRate" placeholder="e.g. 4500" style="padding: 6px 8px;" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="contractConversion" style="font-size: 0.75rem;">Conversion (کنورژن)</label>
+              <input type="number" step="any" class="form-input" id="contractConversion" placeholder="e.g. 0.50" style="padding: 6px 8px;" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label" for="contractRate" style="font-size: 0.875rem; font-weight: 800; color: var(--accent-primary);">
+                🏷️ Final Fabric Rate (ریٹ / فی میٹر یا گز) *
+              </label>
+              <input type="number" step="any" class="form-input" id="contractRate" required placeholder="Enter or calculate rate..." style="font-size: 1.05rem; font-weight: 700; color: #10b981;" />
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label" for="contractStatus">Contract Status (حیثیت)</label>
+              <select class="form-select" id="contractStatus">
+                <option value="active">Active (جاری)</option>
+                <option value="completed">Completed (مکمل)</option>
+                <option value="cancelled">Cancelled (منسوخ)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Note / Terms Field -->
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+          <label class="form-label" for="contractNote">📝 Note / Terms & Conditions (نوٹ / شرائط)</label>
+          <textarea class="form-input" id="contractNote" rows="2" placeholder="Payment terms, delivery conditions, remarks..."></textarea>
+        </div>
+
+        <div class="modal-actions" style="display: flex; gap: 10px;">
+          <button type="button" class="btn btn-secondary" onclick="closeContractModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btnSaveContractForm" style="flex: 1; background: #0284c7; color: #fff; font-weight: 700;">💾 Save Contract</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══ Contract Detail Modal (View / Share / Print) ═══ -->
+  <div class="modal-overlay hidden" id="contractDetailModal">
+    <div class="modal" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color, #334155); padding-bottom: 0.75rem;">
+        <h3 class="modal-title" id="contractDetailModalTitle" style="margin: 0; color: var(--accent-primary); font-size: 1.15rem;">
+          📜 Contract Details
+        </h3>
+        <button type="button" class="btn-close" onclick="closeContractDetailModal()" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: var(--text-secondary); padding: 4px;">✕</button>
+      </div>
+
+      <div id="contractDetailModalBody">
+        <!-- populated by JS -->
+      </div>
+
+      <div class="modal-actions" style="display: flex; gap: 8px; margin-top: 1.25rem; flex-wrap: wrap;">
+        <button type="button" class="btn btn-primary" id="btnShareContractPDF" style="background: #2563eb; color: #fff; flex: 1;">📄 Share PDF</button>
+        <button type="button" class="btn btn-primary" id="btnDownloadContractPDF" style="background: #7c3aed; color: #fff; flex: 1;">📥 Download PDF</button>
+        <button type="button" class="btn btn-warning" id="btnEditContract" style="background: #d97706; color: #fff;">✏️ Edit</button>
+        <button type="button" class="btn btn-danger" id="btnDeleteContract">🗑️ Delete</button>
+        <button type="button" class="btn btn-secondary" onclick="closeContractDetailModal()">Close</button>
       </div>
     </div>
   </div>
