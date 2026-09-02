@@ -2518,7 +2518,6 @@ async function loadContractsDashboard(search = '') {
 
     const totalContracts = contractsList.length;
     const totalQty = contractsList.reduce((sum, c) => sum + (c.quantity || 0), 0);
-    const totalValue = contractsList.reduce((sum, c) => sum + ((c.quantity || 0) * (c.rate || 0)), 0);
     const hazarCount = contractsList.filter(c => c.deliveryType === 'hazar').length;
     const amdanCount = contractsList.filter(c => c.deliveryType === 'amdan').length;
 
@@ -2544,7 +2543,7 @@ async function loadContractsDashboard(search = '') {
 
     // Summary Metric Cards
     const summaryHtml = `
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 14px;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 14px;">
         <div style="background: var(--bg-surface-secondary, rgba(255,255,255,0.03)); border: 1px solid var(--border-color, #334155); border-radius: 8px; padding: 10px 12px;">
           <div style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Total Contracts</div>
           <div style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary); margin-top: 2px;">${totalContracts}</div>
@@ -2559,10 +2558,6 @@ async function loadContractsDashboard(search = '') {
             <span style="color: #60a5fa;">⚡ ${hazarCount} Hazar</span> · <span style="color: #fbbf24;">📅 ${amdanCount} Amdan</span>
           </div>
         </div>
-        <div style="background: var(--bg-surface-secondary, rgba(255,255,255,0.03)); border: 1px solid var(--border-color, #334155); border-radius: 8px; padding: 10px 12px;">
-          <div style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Est. Total Value</div>
-          <div style="font-size: 1.25rem; font-weight: 800; color: #10b981; margin-top: 2px;">${fmtCurrency(totalValue)}</div>
-        </div>
       </div>
     `;
 
@@ -2570,7 +2565,6 @@ async function loadContractsDashboard(search = '') {
     const listHtml = `
       <div class="cb-contracts-list" style="display: flex; flex-direction: column; gap: 10px;">
         ${contractsList.map(c => {
-          const totalAmt = (c.quantity || 0) * (c.rate || 0);
           const isHazar = c.deliveryType === 'hazar';
           const deliveryBadge = isHazar
             ? `<span style="background: rgba(37,99,235,0.15); color: #60a5fa; border: 1px solid rgba(37,99,235,0.3); font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; font-weight: 700;">⚡ Hazar (${formatDate(c.date)})</span>`
@@ -2603,8 +2597,7 @@ async function loadContractsDashboard(search = '') {
               </div>
               <div class="cb-party-card-right" style="flex: 1; text-align: right; display: flex; flex-direction: column; justify-content: center; align-items: flex-end;">
                 <div>
-                  <div style="font-size: 1.1rem; font-weight: 800; color: #10b981;">₹ ${c.rate ? c.rate.toFixed(2) : '0.00'} <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);">/ ${escapeHtml(c.quantityUnit || 'Meter')}</span></div>
-                  <div style="font-size: 0.8125rem; color: var(--text-secondary); font-weight: 600; margin-top: 2px;">Total: <strong>${fmtCurrency(totalAmt)}</strong></div>
+                  <div style="font-size: 1.15rem; font-weight: 800; color: #10b981;">₹ ${c.rate ? c.rate.toFixed(2) : '0.00'} <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);">/ ${escapeHtml(c.quantityUnit || 'Meter')}</span></div>
                 </div>
                 <div style="margin-top: 6px; display: flex; gap: 6px;" onclick="event.stopPropagation();">
                   <button class="btn-action edit" onclick="openEditContractModal('${c._id}')" title="Edit Contract">✏️</button>
@@ -2901,7 +2894,6 @@ async function openContractDetailModal(id) {
           <tr style="border-bottom: 1px solid var(--border-color, #334155);"><td style="padding: 6px 4px; color: var(--text-secondary);">Construction (Specs)</td><td style="padding: 6px 4px; font-weight: 700; text-align: right;">${escapeHtml(specsText)}</td></tr>
           <tr style="border-bottom: 1px solid var(--border-color, #334155);"><td style="padding: 6px 4px; color: var(--text-secondary);">Quantity</td><td style="padding: 6px 4px; font-weight: 800; text-align: right; color: #60a5fa;">${(c.quantity || 0).toLocaleString()} ${escapeHtml(c.quantityUnit || 'Meters')}</td></tr>
           <tr style="border-bottom: 1px solid var(--border-color, #334155);"><td style="padding: 6px 4px; color: var(--text-secondary);">Fabric Rate</td><td style="padding: 6px 4px; font-weight: 800; text-align: right; color: #10b981;">₹ ${c.rate ? c.rate.toFixed(2) : '0.00'} / ${escapeHtml(c.quantityUnit || 'Meter')}</td></tr>
-          <tr style="border-bottom: 1px solid var(--border-color, #334155); background: rgba(16,185,129,0.08);"><td style="padding: 8px 4px; font-weight: 800; color: var(--text-primary);">Estimated Total Amount</td><td style="padding: 8px 4px; font-weight: 800; text-align: right; color: #10b981; font-size: 1.05rem;">${fmtCurrency(totalAmt)}</td></tr>
           ${c.gudamMuqam ? `<tr style="border-bottom: 1px solid var(--border-color, #334155);"><td style="padding: 6px 4px; color: var(--text-secondary);">Gudam / Muqam (گودام / مقام)</td><td style="padding: 6px 4px; font-weight: 700; text-align: right;">${escapeHtml(c.gudamMuqam)}</td></tr>` : ''}
         </table>
 
@@ -2964,7 +2956,6 @@ async function generateContractPDF(c, action = 'download') {
   try {
     toast(action === 'share' ? 'Preparing Contract PDF to share...' : 'Downloading Contract PDF...', 'info');
 
-    const totalAmt = (c.quantity || 0) * (c.rate || 0);
     const isHazar = c.deliveryType === 'hazar';
     const dateStr = formatDate(c.date);
     const deliveryDateStr = formatDate(c.deliveryDate || c.date);
@@ -3037,27 +3028,21 @@ async function generateContractPDF(c, action = 'download') {
           </thead>
           <tbody>
             <tr>
-              <td style="padding: 12px 10px; font-size: 13px; font-weight: 800; color: #0f172a; border-right: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1;">
+              <td style="padding: 12px 10px; font-size: 13px; font-weight: 800; color: #0f172a; border-right: 1px solid #cbd5e1;">
                 ${escapeHtml(c.quality || 'Standard Cotton Fabric')}
                 ${c.gudamMuqam ? `<div style="font-size: 11px; font-weight: 600; color: #64748b; margin-top: 4px;">📍 Warehouse: ${escapeHtml(c.gudamMuqam)}</div>` : ''}
               </td>
-              <td style="padding: 12px 10px; text-align: center; font-size: 12px; font-weight: 700; border-right: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1;">
+              <td style="padding: 12px 10px; text-align: center; font-size: 12px; font-weight: 700; border-right: 1px solid #cbd5e1;">
                 ${escapeHtml(specsText)}
               </td>
-              <td style="padding: 12px 10px; text-align: center; font-size: 13px; font-weight: 800; color: #2563eb; border-right: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1;">
+              <td style="padding: 12px 10px; text-align: center; font-size: 13px; font-weight: 800; color: #2563eb; border-right: 1px solid #cbd5e1;">
                 ${(c.quantity || 0).toLocaleString()} ${escapeHtml(c.quantityUnit || 'Mtrs')}
               </td>
-              <td style="padding: 12px 10px; text-align: right; font-size: 14px; font-weight: 900; color: #16a34a; border-bottom: 1px solid #cbd5e1;">
+              <td style="padding: 12px 10px; text-align: right; font-size: 14px; font-weight: 900; color: #16a34a;">
                 ₹ ${c.rate ? c.rate.toFixed(2) : '0.00'}
               </td>
             </tr>
           </tbody>
-          <tfoot>
-            <tr style="background: #f8fafc; font-weight: 800;">
-              <td colspan="3" style="padding: 10px 10px; text-align: right; font-size: 13px; border-right: 1px solid #cbd5e1;">Total Estimated Value:</td>
-              <td style="padding: 10px 10px; text-align: right; font-size: 15px; font-weight: 900; color: #0f172a;">${fmtCurrency(totalAmt)}</td>
-            </tr>
-          </tfoot>
         </table>
 
         <!-- Notes / Special Terms -->
