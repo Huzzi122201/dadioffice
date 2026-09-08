@@ -1047,6 +1047,7 @@ async function populatePartyNamesDatalist() {
     if (Array.isArray(gazanaParties)) gazanaParties.forEach(p => addParty(p.partyName));
 
     const sortedParties = Array.from(partyMap.values()).sort((a, b) => a.localeCompare(b));
+    allKnownPartiesList = sortedParties;
 
     const optionsHtml = sortedParties.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
 
@@ -1061,6 +1062,61 @@ async function populatePartyNamesDatalist() {
   } catch (err) {
     // silent fallback
   }
+}
+
+// ── Mobile & Desktop Live Party Suggestion Controller ───────
+let allKnownPartiesList = [];
+
+function renderGazanaPartySuggestions(query = '') {
+  const container = $('formGazanaPartySuggestions');
+  if (!container) return;
+
+  const q = (query || '').trim().toLowerCase();
+  let matches = allKnownPartiesList;
+  if (q) {
+    matches = allKnownPartiesList.filter(name => name.toLowerCase().includes(q));
+  }
+
+  if (matches.length === 0) {
+    container.style.display = 'none';
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = matches.slice(0, 30).map(name => `
+    <div class="party-suggestion-item" onmousedown="event.preventDefault(); selectGazanaPartySuggestion('${escapeHtml(name)}');" onclick="selectGazanaPartySuggestion('${escapeHtml(name)}');">
+      <span style="font-size: 1rem;">👤</span>
+      <span>${escapeHtml(name)}</span>
+    </div>
+  `).join('');
+
+  container.style.display = 'block';
+}
+
+function selectGazanaPartySuggestion(name) {
+  if ($('formGazanaPartyName')) {
+    $('formGazanaPartyName').value = name;
+  }
+  const container = $('formGazanaPartySuggestions');
+  if (container) {
+    container.style.display = 'none';
+    container.innerHTML = '';
+  }
+}
+
+if ($('formGazanaPartyName')) {
+  $('formGazanaPartyName').addEventListener('input', (e) => {
+    renderGazanaPartySuggestions(e.target.value);
+  });
+  $('formGazanaPartyName').addEventListener('focus', (e) => {
+    renderGazanaPartySuggestions(e.target.value);
+  });
+  $('formGazanaPartyName').addEventListener('blur', () => {
+    setTimeout(() => {
+      const container = $('formGazanaPartySuggestions');
+      if (container) container.style.display = 'none';
+    }, 250);
+  });
 }
 
 if ($('yarnPartySelectDropdown')) {
@@ -4859,6 +4915,7 @@ function openPartyGazanaForm(preFillParty = '', editRecord = null) {
   if ($('formGazanaStatus')) $('formGazanaStatus').value = 'active';
 
   if (editRecord) {
+    if ($('partyGazanaFormTitle')) $('partyGazanaFormTitle').textContent = '✏️ ترمیم گزانہ انٹری';
     if ($('gazanaFormEditId')) $('gazanaFormEditId').value = editRecord._id;
     if ($('formGazanaDate')) $('formGazanaDate').value = editRecord.date ? new Date(editRecord.date).toISOString().slice(0, 10) : today;
     if ($('formGazanaPartyName')) $('formGazanaPartyName').value = editRecord.partyName || '';
@@ -4870,8 +4927,11 @@ function openPartyGazanaForm(preFillParty = '', editRecord = null) {
     if ($('formGazanaAdvance')) $('formGazanaAdvance').value = editRecord.advance || 0;
     if ($('formGazanaStatus')) $('formGazanaStatus').value = editRecord.status || 'active';
     if ($('formGazanaNote')) $('formGazanaNote').value = editRecord.note || '';
-  } else if (preFillParty) {
-    if ($('formGazanaPartyName')) $('formGazanaPartyName').value = preFillParty;
+  } else {
+    if ($('partyGazanaFormTitle')) $('partyGazanaFormTitle').textContent = '📋 نئی گزانہ انٹری';
+    if (preFillParty && $('formGazanaPartyName')) {
+      $('formGazanaPartyName').value = preFillParty;
+    }
   }
 
   updateGazanaFullFormCalculations();
