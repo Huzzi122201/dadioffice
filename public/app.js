@@ -1024,10 +1024,11 @@ async function populatePartyNamesDatalist() {
     const contractFormPartySelect = $('contractPartySelectDropdown');
     const formGazanaPartySelect = $('formGazanaPartyDropdown');
 
-    const [stock, invoices, cbParties] = await Promise.all([
+    const [stock, invoices, cbParties, gazanaParties] = await Promise.all([
       apiGet(`${YARN_API}/stock`).catch(() => []),
       apiGet(API).catch(() => []),
       apiGet(`${CB_API}/parties`).catch(() => []),
+      apiGet(`${PARTY_ENTRIES_API}/parties`).catch(() => []),
     ]);
 
     const partyMap = new Map();
@@ -1043,6 +1044,7 @@ async function populatePartyNamesDatalist() {
     if (Array.isArray(stock)) stock.forEach(s => addParty(s.partyName));
     if (Array.isArray(invoices)) invoices.forEach(i => addParty(i.partyName));
     if (Array.isArray(cbParties)) cbParties.forEach(p => addParty(p.name));
+    if (Array.isArray(gazanaParties)) gazanaParties.forEach(p => addParty(p.partyName));
 
     const sortedParties = Array.from(partyMap.values()).sort((a, b) => a.localeCompare(b));
 
@@ -1056,19 +1058,9 @@ async function populatePartyNamesDatalist() {
 
     if (yarnFormPartySelect) yarnFormPartySelect.innerHTML = selectOptionsHtml;
     if (contractFormPartySelect) contractFormPartySelect.innerHTML = selectOptionsHtml;
-    if (formGazanaPartySelect) formGazanaPartySelect.innerHTML = selectOptionsHtml;
   } catch (err) {
     // silent fallback
   }
-}
-
-if ($('formGazanaPartyDropdown')) {
-  $('formGazanaPartyDropdown').addEventListener('change', () => {
-    const val = $('formGazanaPartyDropdown').value;
-    if (val && $('formGazanaPartyName')) {
-      $('formGazanaPartyName').value = val;
-    }
-  });
 }
 
 if ($('yarnPartySelectDropdown')) {
@@ -4870,7 +4862,6 @@ function openPartyGazanaForm(preFillParty = '', editRecord = null) {
     if ($('gazanaFormEditId')) $('gazanaFormEditId').value = editRecord._id;
     if ($('formGazanaDate')) $('formGazanaDate').value = editRecord.date ? new Date(editRecord.date).toISOString().slice(0, 10) : today;
     if ($('formGazanaPartyName')) $('formGazanaPartyName').value = editRecord.partyName || '';
-    if ($('formGazanaPartyDropdown')) $('formGazanaPartyDropdown').value = editRecord.partyName || '';
     if ($('formGazanaContractNo')) $('formGazanaContractNo').value = editRecord.contractNo || '';
     if ($('formGazanaVariety')) $('formGazanaVariety').value = editRecord.variety || '';
     if ($('formGazanaKacha')) $('formGazanaKacha').value = editRecord.kachaGazana || '';
@@ -4881,7 +4872,6 @@ function openPartyGazanaForm(preFillParty = '', editRecord = null) {
     if ($('formGazanaNote')) $('formGazanaNote').value = editRecord.note || '';
   } else if (preFillParty) {
     if ($('formGazanaPartyName')) $('formGazanaPartyName').value = preFillParty;
-    if ($('formGazanaPartyDropdown')) $('formGazanaPartyDropdown').value = preFillParty;
   }
 
   updateGazanaFullFormCalculations();
