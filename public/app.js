@@ -1084,7 +1084,7 @@ function renderGazanaPartySuggestions(query = '') {
   }
 
   container.innerHTML = matches.slice(0, 30).map(name => `
-    <div class="party-suggestion-item" onmousedown="event.preventDefault(); selectGazanaPartySuggestion('${escapeHtml(name)}');" onclick="selectGazanaPartySuggestion('${escapeHtml(name)}');">
+    <div class="party-suggestion-item" onmousedown="event.preventDefault(); selectGazanaPartySuggestion('${escapeHtml(name)}');" ontouchstart="event.preventDefault(); selectGazanaPartySuggestion('${escapeHtml(name)}');" onclick="selectGazanaPartySuggestion('${escapeHtml(name)}');">
       <span style="font-size: 1rem;">👤</span>
       <span>${escapeHtml(name)}</span>
     </div>
@@ -1103,6 +1103,7 @@ function selectGazanaPartySuggestion(name) {
     container.innerHTML = '';
   }
 }
+window.selectGazanaPartySuggestion = selectGazanaPartySuggestion;
 
 if ($('formGazanaPartyName')) {
   $('formGazanaPartyName').addEventListener('input', (e) => {
