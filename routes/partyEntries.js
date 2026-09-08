@@ -173,9 +173,32 @@ router.get('/party/:partyName', async (req, res) => {
 // ── GET /api/party-entries/:id ── Single entry detail
 router.get('/:id', async (req, res) => {
   try {
-    const entry = await PartyEntry.findById(req.params.id).lean();
+    const entry = await PartyEntry.findById(req.params.id);
     if (!entry) return res.status(404).json({ error: 'Party entry not found' });
-    res.json(entry);
+
+    // Auto-reconcile if entry is completed but missing its final settlement payment
+    if (entry.status === 'completed') {
+      const adv = Number(entry.advance) || 0;
+      const installmentsTotal = (entry.paymentHistory || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+      const totalRec = Math.round((adv + installmentsTotal) * 100) / 100;
+      const currentRemaining = Math.max(0, Math.round((entry.totalAmount - totalRec) * 100) / 100);
+
+      if (currentRemaining > 0) {
+        if (!Array.isArray(entry.paymentHistory)) {
+          entry.paymentHistory = [];
+        }
+        entry.paymentHistory.push({
+          amount: currentRemaining,
+          date: new Date(),
+          note: 'مکمل ادائیگی (Final Settlement)',
+          receivedBy: 'Office'
+        });
+        entry.remaining = 0;
+        await entry.save();
+      }
+    }
+
+    res.json(entry.toObject ? entry.toObject() : entry);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch entry', details: err.message });
   }
@@ -362,10 +385,30 @@ router.patch('/:id/status', async (req, res) => {
     const entry = await PartyEntry.findById(req.params.id);
     if (!entry) return res.status(404).json({ error: 'Party entry not found' });
 
-    if (status && ['active', 'completed'].includes(status)) {
-      entry.status = status;
-    } else {
-      entry.status = entry.status === 'active' ? 'completed' : 'active';
+    const targetStatus = (status && ['active', 'completed'].includes(status))
+      ? status
+      : (entry.status === 'active' ? 'completed' : 'active');
+
+    entry.status = targetStatus;
+
+    if (targetStatus === 'completed') {
+      const adv = Number(entry.advance) || 0;
+      const installmentsTotal = (entry.paymentHistory || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+      const totalRec = Math.round((adv + installmentsTotal) * 100) / 100;
+      const currentRemaining = Math.max(0, Math.round((entry.totalAmount - totalRec) * 100) / 100);
+
+      if (currentRemaining > 0) {
+        if (!Array.isArray(entry.paymentHistory)) {
+          entry.paymentHistory = [];
+        }
+        entry.paymentHistory.push({
+          amount: currentRemaining,
+          date: new Date(),
+          note: 'مکمل ادائیگی (Final Settlement)',
+          receivedBy: 'Office'
+        });
+      }
+      entry.remaining = 0;
     }
 
     const updated = await entry.save();

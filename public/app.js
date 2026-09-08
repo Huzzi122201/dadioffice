@@ -5166,6 +5166,8 @@ async function openPaymentHistoryModal(entryId) {
     const history = Array.isArray(entry.paymentHistory) ? entry.paymentHistory : [];
     const installmentsTotal = history.reduce((sum, p) => sum + (p.amount || 0), 0);
     const totalRec = Math.round(((entry.advance || 0) + installmentsTotal) * 100) / 100;
+    const isCompleted = entry.status === 'completed' || entry.remaining <= 0;
+    const displayRemaining = isCompleted ? 0 : Math.max(0, entry.remaining || 0);
 
     let historyHtml = `
       <div style="background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px; padding: 10px; margin-bottom: 12px; font-size: 0.8125rem;">
@@ -5191,16 +5193,16 @@ async function openPaymentHistoryModal(entryId) {
           <span style="color: #0284c7;">Total Received:</span>
           <span style="color: #0284c7;">${fmtCurrency(totalRec)}</span>
         </div>
-        <div style="display: flex; justify-content: space-between; color: #b91c1c; font-weight: 800; margin-top: 2px;">
+        <div style="display: flex; justify-content: space-between; color: ${displayRemaining > 0 ? '#b91c1c' : '#16a34a'}; font-weight: 800; margin-top: 2px;">
           <span>Remaining Balance:</span>
-          <span>${fmtCurrency(entry.remaining)}</span>
+          <span>${fmtCurrency(displayRemaining)}</span>
         </div>
       </div>
 
       <div style="font-weight: 700; font-size: 0.875rem; color: var(--text-primary); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
         <span>📜 Payment Log (${history.length + (entry.advance > 0 ? 1 : 0)} records)</span>
-        ${entry.remaining > 0 ? `
-          <button class="btn btn-sm btn-primary" onclick="closePaymentHistoryModal(); openQuickPaymentModal('${entry._id}', '${escapeHtml(entry.partyName)}', ${entry.remaining});" style="font-size: 0.72rem; padding: 3px 8px;">
+        ${(!isCompleted && displayRemaining > 0) ? `
+          <button class="btn btn-sm btn-primary" onclick="closePaymentHistoryModal(); openQuickPaymentModal('${entry._id}', '${escapeHtml(entry.partyName)}', ${displayRemaining});" style="font-size: 0.72rem; padding: 3px 8px;">
             ＋ Add Payment
           </button>
         ` : ''}
