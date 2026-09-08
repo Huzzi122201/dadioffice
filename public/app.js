@@ -4978,8 +4978,6 @@ function updateGazanaFullFormCalculations() {
   if ($('formGazanaStatus')) {
     if (remaining <= 0 && total > 0) {
       $('formGazanaStatus').value = 'completed';
-    } else if (remaining > 0 && $('formGazanaStatus').value === 'completed') {
-      $('formGazanaStatus').value = 'active';
     }
   }
 }

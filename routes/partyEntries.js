@@ -292,19 +292,33 @@ router.put('/:id', async (req, res) => {
     if (contractNo !== undefined) entry.contractNo = (contractNo || '').toString().trim();
     if (note !== undefined) entry.note = (note || '').trim();
 
-    const total = Math.round(entry.safiGazana * 1.18 * entry.rate * 100) / 100;
-    const installmentsTotal = (entry.paymentHistory || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-    const totalRec = Math.round((entry.advance + installmentsTotal) * 100) / 100;
-    const rem = Math.max(0, Math.round((total - totalRec) * 100) / 100);
+    const safi = entry.safiGazana || 0;
+    const rt = entry.rate || 0;
+    const adv = entry.advance || 0;
+    const total = Math.round(safi * 1.18 * rt * 100) / 100;
     entry.totalAmount = total;
-    entry.remaining = rem;
 
-    if (status) {
-      entry.status = status;
-    } else if (rem <= 0 && total > 0) {
-      entry.status = 'completed';
-    } else if (rem > 0 && entry.status === 'completed') {
+    if (status === 'active') {
       entry.status = 'active';
+      if (Array.isArray(entry.paymentHistory)) {
+        entry.paymentHistory = entry.paymentHistory.filter(
+          p => p.note !== 'مکمل ادائیگی (Final Settlement)'
+        );
+      }
+      const installmentsTotal = entry.paymentHistory.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+      const totalRec = Math.round((adv + installmentsTotal) * 100) / 100;
+      entry.remaining = Math.max(0, Math.round((total - totalRec) * 100) / 100);
+    } else if (status === 'completed') {
+      entry.status = 'completed';
+      entry.remaining = 0;
+    } else {
+      const installmentsTotal = (entry.paymentHistory || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+      const totalRec = Math.round((adv + installmentsTotal) * 100) / 100;
+      const rem = Math.max(0, Math.round((total - totalRec) * 100) / 100);
+      entry.remaining = rem;
+      if (rem <= 0 && total > 0) {
+        entry.status = 'completed';
+      }
     }
 
     const updated = await entry.save();
@@ -409,6 +423,17 @@ router.patch('/:id/status', async (req, res) => {
         });
       }
       entry.remaining = 0;
+    } else if (targetStatus === 'active') {
+      if (Array.isArray(entry.paymentHistory)) {
+        entry.paymentHistory = entry.paymentHistory.filter(
+          p => p.note !== 'مکمل ادائیگی (Final Settlement)'
+        );
+      }
+      const adv = Number(entry.advance) || 0;
+      const installmentsTotal = (entry.paymentHistory || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+      const totalRec = Math.round((adv + installmentsTotal) * 100) / 100;
+      entry.remaining = Math.max(0, Math.round((entry.totalAmount - totalRec) * 100) / 100);
+      entry.status = 'active';
     }
 
     const updated = await entry.save();

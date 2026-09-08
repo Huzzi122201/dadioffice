@@ -141,10 +141,15 @@ partyEntrySchema.pre('save', function (next) {
     }
     this.remaining = 0;
   } else {
-    this.remaining = Math.max(0, Math.round((this.totalAmount - totalRec) * 100) / 100);
-    if (this.remaining <= 0 && this.totalAmount > 0) {
-      this.status = 'completed';
+    // If status is active, remove auto final settlement payment record to restore original balance
+    if (Array.isArray(this.paymentHistory)) {
+      this.paymentHistory = this.paymentHistory.filter(
+        p => p.note !== 'مکمل ادائیگی (Final Settlement)'
+      );
     }
+    const cleanInstallmentsTotal = (this.paymentHistory || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const cleanTotalRec = Math.round((adv + cleanInstallmentsTotal) * 100) / 100;
+    this.remaining = Math.max(0, Math.round((this.totalAmount - cleanTotalRec) * 100) / 100);
   }
 
   next();
