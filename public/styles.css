@@ -3345,7 +3345,7 @@ body {
 #partyGazanaFullForm .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1rem;
+  gap: 1.15rem;
   width: 100%;
 }
 
@@ -3354,6 +3354,67 @@ body {
 #partyGazanaFullForm textarea {
   width: 100%;
   box-sizing: border-box;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0.55rem 0.85rem;
+  border-radius: var(--radius-sm, 6px);
+}
+
+/* Gazana Entry Prominent Headings & Typography */
+#viewPartyGazanaForm .form-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #1e3a8a;
+  letter-spacing: 0.2px;
+}
+
+#partyGazanaFullForm .section-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #1e40af;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 2px solid rgba(30, 64, 175, 0.12);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#partyGazanaFullForm .form-label {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+  margin-bottom: 0.35rem;
+  line-height: 1.35;
+}
+
+#partyGazanaFullForm .form-section {
+  background: #ffffff;
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: var(--radius-md, 8px);
+  padding: 1.15rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+#partyGazanaFullForm .btn-lg {
+  font-size: 1.05rem;
+  font-weight: 800;
+  padding: 0.65rem 1.6rem;
+  border-radius: var(--radius-sm, 6px);
+}
+
+@media (max-width: 640px) {
+  #viewPartyGazanaForm .form-title {
+    font-size: 1.2rem;
+  }
+  
+  #partyGazanaFullForm .section-title {
+    font-size: 1.05rem;
+  }
+
+  #partyGazanaFullForm .form-label {
+    font-size: 0.88rem;
+  }
 }
 
 
