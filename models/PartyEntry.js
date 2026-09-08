@@ -127,6 +127,18 @@ partyEntrySchema.pre('save', function (next) {
   this.totalAmount = Math.round(safi * 1.18 * rt * 100) / 100;
 
   if (this.status === 'completed') {
+    const currentRemaining = Math.max(0, Math.round((this.totalAmount - totalRec) * 100) / 100);
+    if (currentRemaining > 0) {
+      if (!Array.isArray(this.paymentHistory)) {
+        this.paymentHistory = [];
+      }
+      this.paymentHistory.push({
+        amount: currentRemaining,
+        date: new Date(),
+        note: 'مکمل ادائیگی (Final Settlement)',
+        receivedBy: 'Office'
+      });
+    }
     this.remaining = 0;
   } else {
     this.remaining = Math.max(0, Math.round((this.totalAmount - totalRec) * 100) / 100);
