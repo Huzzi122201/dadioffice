@@ -4982,7 +4982,7 @@ function updateGazanaFullFormCalculations() {
   }
 }
 
-// Bind live listeners for full form
+// Bind live listeners for full form calculations
 ['formGazanaSafi', 'formGazanaRate', 'formGazanaAdvance', 'formGazanaKacha'].forEach(id => {
   const el = $(id);
   if (el) {
@@ -4990,6 +4990,62 @@ function updateGazanaFullFormCalculations() {
     el.addEventListener('change', updateGazanaFullFormCalculations);
   }
 });
+
+// Auto-format Gazana Variety Input (e.g. 76x64=104, 74x63=98)
+const varietyInput = $('formGazanaVariety');
+if (varietyInput) {
+  let isDeletingVariety = false;
+
+  varietyInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Backspace' || e.key === 'Delete') {
+      isDeletingVariety = true;
+      const val = varietyInput.value;
+      if (val.endsWith('x') || val.endsWith('=')) {
+        e.preventDefault();
+        varietyInput.value = val.slice(0, -2);
+      }
+    } else {
+      isDeletingVariety = false;
+    }
+  });
+
+  varietyInput.addEventListener('input', (e) => {
+    const isDelete = isDeletingVariety || (e.inputType && e.inputType.startsWith('delete'));
+    let val = varietyInput.value;
+    const rawDigits = val.replace(/\D/g, '');
+
+    if (isDelete) {
+      if (!rawDigits) {
+        varietyInput.value = '';
+        return;
+      }
+      if (val.endsWith('x') || val.endsWith('=')) {
+        val = val.slice(0, -1);
+      }
+      varietyInput.value = val;
+      return;
+    }
+
+    if (!rawDigits) return;
+
+    let formatted = '';
+    if (rawDigits.length <= 2) {
+      formatted = rawDigits;
+      if (rawDigits.length === 2) {
+        formatted += 'x';
+      }
+    } else if (rawDigits.length <= 4) {
+      formatted = rawDigits.slice(0, 2) + 'x' + rawDigits.slice(2);
+      if (rawDigits.length === 4) {
+        formatted += '=';
+      }
+    } else {
+      formatted = rawDigits.slice(0, 2) + 'x' + rawDigits.slice(2, 4) + '=' + rawDigits.slice(4);
+    }
+
+    varietyInput.value = formatted;
+  });
+}
 
 // Form Back & Cancel Listeners
 function returnFromGazanaForm() {
