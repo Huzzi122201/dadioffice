@@ -1,0 +1,391 @@
+const express = require('express');
+const router = express.Router();
+const PartyEntry = require('../models/PartyEntry');
+
+// ── GET /api/party-entries ── List all entries with optional filters
+router.get('/', async (req, res) => {
+  try {
+    const { q, status, partyName, startDate, endDate } = req.query;
+    let query = {};
+
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+
+    if (partyName && partyName.trim()) {
+      query.partyNameNorm = partyName.trim().toLowerCase();
+    }
+
+    if (q && q.trim()) {
+      const regex = new RegExp(q.trim(), 'i');
+      query.$or = [
+        { partyName: regex },
+        { variety: regex },
+        { contractNo: regex },
+        { note: regex }
+      ];
+    }
+
+    if (startDate || endDate) {
+      query.date = {};
+      if (startDate) query.date.$gte = new Date(startDate);
+      if (endDate) {
+        const eDate = new Date(endDate);
+        eDate.setHours(23, 59, 59, 999);
+        query.date.$lte = eDate;
+      }
+    }
+
+    const entries = await PartyEntry.find(query).sort({ date: -1, createdAt: -1 }).lean();
+
+    // Summary calculation for this filtered set
+    let totalSafiGazana = 0;
+    let totalKachaGazana = 0;
+    let totalAmount = 0;
+    let totalAdvance = 0;
+    let totalRemaining = 0;
+    let activeCount = 0;
+    let completedCount = 0;
+
+    entries.forEach(e => {
+      totalSafiGazana += e.safiGazana || 0;
+      totalKachaGazana += e.kachaGazana || 0;
+      totalAmount += e.totalAmount || 0;
+      totalAdvance += e.advance || 0;
+      totalRemaining += e.remaining || 0;
+      if (e.status === 'completed') {
+        completedCount++;
+      } else {
+        activeCount++;
+      }
+    });
+
+    res.json({
+      entries,
+      summary: {
+        totalEntries: entries.length,
+        totalSafiGazana: Math.round(totalSafiGazana * 100) / 100,
+        totalKachaGazana: Math.round(totalKachaGazana * 100) / 100,
+        totalAmount: Math.round(totalAmount * 100) / 100,
+        totalAdvance: Math.round(totalAdvance * 100) / 100,
+        totalRemaining: Math.round(totalRemaining * 100) / 100,
+        activeCount,
+        completedCount
+      }
+    });
+  } catch (err) {
+    console.error('Error fetching party entries:', err);
+    res.status(500).json({ error: 'Failed to fetch party entries', details: err.message });
+  }
+});
+
+// ── GET /api/party-entries/parties ── Group by party with totals
+router.get('/parties', async (req, res) => {
+  try {
+    const { q } = req.query;
+    let matchStage = {};
+    if (q && q.trim()) {
+      matchStage.partyName = new RegExp(q.trim(), 'i');
+    }
+
+    const aggregation = await PartyEntry.aggregate([
+      { $match: matchStage },
+      {
+        $group: {
+          _id: '$partyNameNorm',
+          partyName: { $first: '$partyName' },
+          totalEntries: { $sum: 1 },
+          totalSafiGazana: { $sum: '$safiGazana' },
+          totalKachaGazana: { $sum: '$kachaGazana' },
+          totalAmount: { $sum: '$totalAmount' },
+          totalAdvance: { $sum: '$advance' },
+          totalRemaining: { $sum: '$remaining' },
+          activeCount: {
+            $sum: { $cond: [{ $eq: ['$status', 'active'] }, 1, 0] }
+          },
+          completedCount: {
+            $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] }
+          },
+          lastDate: { $max: '$date' },
+          lastVariety: { $last: '$variety' }
+        }
+      },
+      { $sort: { partyName: 1 } }
+    ]);
+
+    res.json(aggregation);
+  } catch (err) {
+    console.error('Error fetching party summaries:', err);
+    res.status(500).json({ error: 'Failed to fetch party summaries', details: err.message });
+  }
+});
+
+// ── GET /api/party-entries/party/:partyName ── Details and entries for a single party
+router.get('/party/:partyName', async (req, res) => {
+  try {
+    const norm = req.params.partyName.trim().toLowerCase();
+    const entries = await PartyEntry.find({ partyNameNorm: norm }).sort({ date: -1, createdAt: -1 }).lean();
+
+    let totalSafiGazana = 0;
+    let totalKachaGazana = 0;
+    let totalAmount = 0;
+    let totalAdvance = 0;
+    let totalRemaining = 0;
+    let activeCount = 0;
+    let completedCount = 0;
+    let partyDisplayName = req.params.partyName;
+
+    entries.forEach(e => {
+      partyDisplayName = e.partyName || partyDisplayName;
+      totalSafiGazana += e.safiGazana || 0;
+      totalKachaGazana += e.kachaGazana || 0;
+      totalAmount += e.totalAmount || 0;
+      totalAdvance += e.advance || 0;
+      totalRemaining += e.remaining || 0;
+      if (e.status === 'completed') {
+        completedCount++;
+      } else {
+        activeCount++;
+      }
+    });
+
+    res.json({
+      partyName: partyDisplayName,
+      partyNameNorm: norm,
+      entries,
+      summary: {
+        totalEntries: entries.length,
+        totalSafiGazana: Math.round(totalSafiGazana * 100) / 100,
+        totalKachaGazana: Math.round(totalKachaGazana * 100) / 100,
+        totalAmount: Math.round(totalAmount * 100) / 100,
+        totalAdvance: Math.round(totalAdvance * 100) / 100,
+        totalRemaining: Math.round(totalRemaining * 100) / 100,
+        activeCount,
+        completedCount
+      }
+    });
+  } catch (err) {
+    console.error('Error fetching party ledger:', err);
+    res.status(500).json({ error: 'Failed to fetch party ledger', details: err.message });
+  }
+});
+
+// ── GET /api/party-entries/:id ── Single entry detail
+router.get('/:id', async (req, res) => {
+  try {
+    const entry = await PartyEntry.findById(req.params.id).lean();
+    if (!entry) return res.status(404).json({ error: 'Party entry not found' });
+    res.json(entry);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch entry', details: err.message });
+  }
+});
+
+// ── POST /api/party-entries ── Create new party entry
+router.post('/', async (req, res) => {
+  try {
+    const {
+      date,
+      partyName,
+      variety,
+      kachaGazana,
+      safiGazana,
+      rate,
+      advance,
+      contractNo,
+      note,
+      status
+    } = req.body;
+
+    if (!partyName || !partyName.trim()) {
+      return res.status(400).json({ error: 'Banaam Party Name is required.' });
+    }
+
+    const safi = Number(safiGazana) || 0;
+    const rt = Number(rate) || 0;
+    const adv = Number(advance) || 0;
+    const total = Math.round(safi * 1.18 * rt * 100) / 100;
+    const rem = Math.round((total - adv) * 100) / 100;
+
+    let finalStatus = status || 'active';
+    if (rem <= 0 && total > 0) {
+      finalStatus = 'completed';
+    }
+
+    const newEntry = new PartyEntry({
+      date: date ? new Date(date) : new Date(),
+      partyName: partyName.trim(),
+      partyNameNorm: partyName.trim().toLowerCase(),
+      variety: (variety || '').trim(),
+      kachaGazana: Number(kachaGazana) || 0,
+      safiGazana: safi,
+      rate: rt,
+      totalAmount: total,
+      advance: adv,
+      remaining: rem,
+      contractNo: (contractNo || '').toString().trim(),
+      note: (note || '').trim(),
+      status: finalStatus,
+      paymentHistory: []
+    });
+
+    const saved = await newEntry.save();
+    res.status(201).json(saved);
+  } catch (err) {
+    console.error('Error creating party entry:', err);
+    res.status(500).json({ error: 'Failed to create party entry', details: err.message });
+  }
+});
+
+// ── PUT /api/party-entries/:id ── Update entry
+router.put('/:id', async (req, res) => {
+  try {
+    const {
+      date,
+      partyName,
+      variety,
+      kachaGazana,
+      safiGazana,
+      rate,
+      advance,
+      contractNo,
+      note,
+      status
+    } = req.body;
+
+    const entry = await PartyEntry.findById(req.params.id);
+    if (!entry) return res.status(404).json({ error: 'Party entry not found' });
+
+    if (date) entry.date = new Date(date);
+    if (partyName) {
+      entry.partyName = partyName.trim();
+      entry.partyNameNorm = partyName.trim().toLowerCase();
+    }
+    if (variety !== undefined) entry.variety = (variety || '').trim();
+    if (kachaGazana !== undefined) entry.kachaGazana = Number(kachaGazana) || 0;
+    if (safiGazana !== undefined) entry.safiGazana = Number(safiGazana) || 0;
+    if (rate !== undefined) entry.rate = Number(rate) || 0;
+    if (advance !== undefined) entry.advance = Number(advance) || 0;
+    if (contractNo !== undefined) entry.contractNo = (contractNo || '').toString().trim();
+    if (note !== undefined) entry.note = (note || '').trim();
+
+    const total = Math.round(entry.safiGazana * 1.18 * entry.rate * 100) / 100;
+    const installmentsTotal = (entry.paymentHistory || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const totalRec = Math.round((entry.advance + installmentsTotal) * 100) / 100;
+    const rem = Math.max(0, Math.round((total - totalRec) * 100) / 100);
+    entry.totalAmount = total;
+    entry.remaining = rem;
+
+    if (status) {
+      entry.status = status;
+    } else if (rem <= 0 && total > 0) {
+      entry.status = 'completed';
+    } else if (rem > 0 && entry.status === 'completed') {
+      entry.status = 'active';
+    }
+
+    const updated = await entry.save();
+    res.json(updated);
+  } catch (err) {
+    console.error('Error updating party entry:', err);
+    res.status(500).json({ error: 'Failed to update party entry', details: err.message });
+  }
+});
+
+// ── POST /api/party-entries/:id/payment ── Record additional installment payment
+router.post('/:id/payment', async (req, res) => {
+  try {
+    const { amount, date, note, receivedBy } = req.body;
+    const payAmt = Number(amount);
+
+    if (!payAmt || payAmt <= 0) {
+      return res.status(400).json({ error: 'Valid payment amount is required.' });
+    }
+
+    const entry = await PartyEntry.findById(req.params.id);
+    if (!entry) return res.status(404).json({ error: 'Party entry not found' });
+
+    // Append to payment history without changing original advance
+    entry.paymentHistory.push({
+      date: date ? new Date(date) : new Date(),
+      amount: payAmt,
+      note: (note || '').trim(),
+      receivedBy: (receivedBy || '').trim()
+    });
+
+    const installmentsTotal = entry.paymentHistory.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const totalRec = Math.round((entry.advance + installmentsTotal) * 100) / 100;
+    entry.remaining = Math.max(0, Math.round((entry.totalAmount - totalRec) * 100) / 100);
+
+    if (entry.remaining <= 0) {
+      entry.status = 'completed';
+    }
+
+    const updated = await entry.save();
+    res.json(updated);
+  } catch (err) {
+    console.error('Error recording payment:', err);
+    res.status(500).json({ error: 'Failed to record payment', details: err.message });
+  }
+});
+
+// ── DELETE /api/party-entries/:id/payment/:paymentId ── Delete installment payment
+router.delete('/:id/payment/:paymentId', async (req, res) => {
+  try {
+    const entry = await PartyEntry.findById(req.params.id);
+    if (!entry) return res.status(404).json({ error: 'Party entry not found' });
+
+    entry.paymentHistory = entry.paymentHistory.filter(
+      p => p._id.toString() !== req.params.paymentId
+    );
+
+    const installmentsTotal = entry.paymentHistory.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const totalRec = Math.round((entry.advance + installmentsTotal) * 100) / 100;
+    entry.remaining = Math.max(0, Math.round((entry.totalAmount - totalRec) * 100) / 100);
+
+    if (entry.remaining > 0 && entry.status === 'completed') {
+      entry.status = 'active';
+    }
+
+    const updated = await entry.save();
+    res.json(updated);
+  } catch (err) {
+    console.error('Error deleting payment:', err);
+    res.status(500).json({ error: 'Failed to delete payment', details: err.message });
+  }
+});
+
+// ── PATCH /api/party-entries/:id/status ── Toggle or set status
+router.patch('/:id/status', async (req, res) => {
+  try {
+    const { status } = req.body;
+    const entry = await PartyEntry.findById(req.params.id);
+    if (!entry) return res.status(404).json({ error: 'Party entry not found' });
+
+    if (status && ['active', 'completed'].includes(status)) {
+      entry.status = status;
+    } else {
+      entry.status = entry.status === 'active' ? 'completed' : 'active';
+    }
+
+    const updated = await entry.save();
+    res.json(updated);
+  } catch (err) {
+    console.error('Error updating status:', err);
+    res.status(500).json({ error: 'Failed to update status', details: err.message });
+  }
+});
+
+// ── DELETE /api/party-entries/:id ── Delete entry
+router.delete('/:id', async (req, res) => {
+  try {
+    const deleted = await PartyEntry.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'Party entry not found' });
+    res.json({ message: 'Party entry deleted successfully', entry: deleted });
+  } catch (err) {
+    console.error('Error deleting party entry:', err);
+    res.status(500).json({ error: 'Failed to delete party entry', details: err.message });
+  }
+});
+
+module.exports = router;

@@ -13,6 +13,7 @@ const invoiceRoutes = require('./routes/invoices');
 const yarnRoutes = require('./routes/yarn');
 const cashbookRoutes = require('./routes/cashbook');
 const contractRoutes = require('./routes/contracts');
+const partyEntryRoutes = require('./routes/partyEntries');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -60,6 +61,7 @@ app.use('/api/invoices', invoiceRoutes);
 app.use('/api/yarn', yarnRoutes);
 app.use('/api/cashbook', cashbookRoutes);
 app.use('/api/contracts', contractRoutes);
+app.use('/api/party-entries', partyEntryRoutes);
 
 // ── SPA Fallback ───────────────────────────────────────────
 app.get('*', (req, res) => {

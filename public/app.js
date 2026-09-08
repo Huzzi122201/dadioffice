@@ -10,6 +10,9 @@ if ('serviceWorker' in navigator) {
 // ── Constants ──────────────────────────────────────────────
 const API = '/api/invoices';
 const YARN_API = '/api/yarn';
+const CB_API = '/api/cashbook';
+const CONTRACTS_API = '/api/contracts';
+const PARTY_ENTRIES_API = '/api/party-entries';
 
 // ── DOM References ─────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
@@ -17,11 +20,13 @@ const $ = (id) => document.getElementById(id);
 const viewDashboard = $('viewDashboard');
 const viewForm = $('viewForm');
 const viewDetail = $('viewDetail');
+const viewPartyGazanaDetail = $('viewPartyGazanaDetail');
+const viewPartyGazanaForm = $('viewPartyGazanaForm');
 const viewCashbookDashboard = $('viewCashbookDashboard');
 const viewRokerDetail = $('viewRokerDetail');
 const viewKhata = $('viewKhata');
 const viewEntryForm = $('viewEntryForm');
-const views = [viewDashboard, viewForm, viewDetail, viewYarnDashboard, viewYarnForm, viewYarnHistory, viewCashbookDashboard, viewRokerDetail, viewKhata, viewEntryForm].filter(Boolean);
+const views = [viewDashboard, viewForm, viewDetail, viewPartyGazanaDetail, viewPartyGazanaForm, viewYarnDashboard, viewYarnForm, viewYarnHistory, viewCashbookDashboard, viewRokerDetail, viewKhata, viewEntryForm].filter(Boolean);
 
 const invoiceList = $('invoiceList');
 const invoiceCount = $('invoiceCount');
@@ -53,7 +58,14 @@ let currentInvoiceId = null;
 let confirmCallback = null;
 let searchTimeout = null;
 let yarnSearchTimeout = null;
-let currentTab = 'costing'; // 'costing' or 'yarn'
+let gazanaSearchTimeout = null;
+let currentTab = 'costing'; // 'costing', 'yarn', or 'cashbook'
+let currentCostingSubtab = 'invoices'; // 'invoices' or 'gazana'
+let gazanaViewMode = 'all'; // 'all' (recent entries) or 'parties' (grouped by party)
+let gazanaStatusFilter = 'active'; // 'all', 'active', 'completed'
+let partyGazanaDetailFilter = 'active'; // 'active', 'completed', 'all'
+let currentGazanaPartyName = '';
+let currentGazanaPartyData = null;
 let currentHistoryPartyName = '';
 let currentHistoryPartyNorm = '';
 
@@ -204,10 +216,26 @@ $('confirmOk').addEventListener('click', () => {
 });
 
 // ── API Helpers ────────────────────────────────────────────
+async function parseApiResponse(res) {
+  const text = await res.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch (err) {
+    if (text.trim().startsWith('<')) {
+      throw new Error('Server returned HTML instead of API data. Please restart your Node.js server (node server.js) in the terminal to load the new routes.');
+    }
+    throw new Error('Invalid server response: ' + text.slice(0, 80));
+  }
+  if (!res.ok) {
+    throw new Error(data.error || data.message || `Request failed (${res.status})`);
+  }
+  return data;
+}
+
 async function apiGet(url) {
   const res = await fetch(url);
-  if (!res.ok) throw new Error((await res.json()).error || 'Request failed');
-  return res.json();
+  return parseApiResponse(res);
 }
 
 async function apiPost(url, data) {
@@ -216,8 +244,7 @@ async function apiPost(url, data) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error((await res.json()).error || 'Request failed');
-  return res.json();
+  return parseApiResponse(res);
 }
 
 async function apiPut(url, data) {
@@ -226,14 +253,12 @@ async function apiPut(url, data) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error((await res.json()).error || 'Request failed');
-  return res.json();
+  return parseApiResponse(res);
 }
 
 async function apiDelete(url) {
   const res = await fetch(url, { method: 'DELETE' });
-  if (!res.ok) throw new Error((await res.json()).error || 'Request failed');
-  return res.json();
+  return parseApiResponse(res);
 }
 
 // ── Format Date (Date/Month/Year -> DD/MM/YYYY) ────────────
@@ -994,12 +1019,15 @@ function toTitleCase(str) {
 async function populatePartyNamesDatalist() {
   try {
     const datalist = $('partyNamesDatalist');
+    const cbDatalist = $('cbPartyDatalist');
     const yarnFormPartySelect = $('yarnPartySelectDropdown');
     const contractFormPartySelect = $('contractPartySelectDropdown');
+    const formGazanaPartySelect = $('formGazanaPartyDropdown');
 
-    const [stock, invoices] = await Promise.all([
+    const [stock, invoices, cbParties] = await Promise.all([
       apiGet(`${YARN_API}/stock`).catch(() => []),
       apiGet(API).catch(() => []),
+      apiGet(`${CB_API}/parties`).catch(() => []),
     ]);
 
     const partyMap = new Map();
@@ -1014,25 +1042,33 @@ async function populatePartyNamesDatalist() {
 
     if (Array.isArray(stock)) stock.forEach(s => addParty(s.partyName));
     if (Array.isArray(invoices)) invoices.forEach(i => addParty(i.partyName));
+    if (Array.isArray(cbParties)) cbParties.forEach(p => addParty(p.name));
 
-    const sortedParties = Array.from(partyMap.values()).sort();
+    const sortedParties = Array.from(partyMap.values()).sort((a, b) => a.localeCompare(b));
 
-    if (datalist) {
-      datalist.innerHTML = sortedParties.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
-    }
+    const optionsHtml = sortedParties.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
 
-    if (yarnFormPartySelect) {
-      yarnFormPartySelect.innerHTML = '<option value="">-- Choose Existing Party --</option>' +
-        sortedParties.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
-    }
+    if (datalist) datalist.innerHTML = optionsHtml;
+    if (cbDatalist) cbDatalist.innerHTML = optionsHtml;
 
-    if (contractFormPartySelect) {
-      contractFormPartySelect.innerHTML = '<option value="">-- Choose Existing Party --</option>' +
-        sortedParties.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
-    }
+    const selectOptionsHtml = '<option value="">-- Choose Party from Cashbook --</option>' +
+      sortedParties.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
+
+    if (yarnFormPartySelect) yarnFormPartySelect.innerHTML = selectOptionsHtml;
+    if (contractFormPartySelect) contractFormPartySelect.innerHTML = selectOptionsHtml;
+    if (formGazanaPartySelect) formGazanaPartySelect.innerHTML = selectOptionsHtml;
   } catch (err) {
     // silent fallback
   }
+}
+
+if ($('formGazanaPartyDropdown')) {
+  $('formGazanaPartyDropdown').addEventListener('change', () => {
+    const val = $('formGazanaPartyDropdown').value;
+    if (val && $('formGazanaPartyName')) {
+      $('formGazanaPartyName').value = val;
+    }
+  });
 }
 
 if ($('yarnPartySelectDropdown')) {
@@ -1354,7 +1390,6 @@ window.deleteYarnRecord = deleteYarnRecord;
 //  CASHBOOK / KHATA SYSTEM
 // ═══════════════════════════════════════════════════════════
 
-const CB_API = '/api/cashbook';
 let cbSearchTimeout = null;
 let currentCashbookSubtab = 'rokers'; // 'rokers' | 'khata'
 let currentRokerNo = null;
@@ -1402,8 +1437,6 @@ function getEntryRate(e) {
   }
   return 0;
 }
-
-const CONTRACTS_API = '/api/contracts';
 
 // ── Subnav Switcher (Rokers vs Khata vs Parties vs PurchaseSell vs Contracts) ─────────
 function setCashbookSubtab(subtab) {
@@ -4348,8 +4381,1195 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ═══════════════════════════════════════════════════════════
+//  PARTY GAZANA ENTRIES & LEDGER SYSTEM (Costing Tab Sub-Module)
+// ═══════════════════════════════════════════════════════════
+
+let gazanaDashboardData = null;
+let currentPartyGazanaEntries = [];
+
+function switchCostingSubtab(subtab) {
+  currentCostingSubtab = subtab;
+  const btnInvoices = $('subtabCostingInvoices');
+  const btnGazana = $('subtabCostingGazana');
+  const secInvoices = $('costingInvoicesSection');
+  const secGazana = $('costingGazanaSection');
+
+  if (btnInvoices) btnInvoices.classList.toggle('active', subtab === 'invoices');
+  if (btnGazana) btnGazana.classList.toggle('active', subtab === 'gazana');
+
+  if (subtab === 'invoices') {
+    if (secInvoices) secInvoices.style.display = 'block';
+    if (secGazana) secGazana.style.display = 'none';
+    loadInvoices(searchInput ? searchInput.value.trim() : '');
+  } else {
+    if (secInvoices) secInvoices.style.display = 'none';
+    if (secGazana) secGazana.style.display = 'block';
+    loadGazanaDashboard($('gazanaSearchInput') ? $('gazanaSearchInput').value.trim() : '');
+  }
+}
+
+if ($('subtabCostingInvoices')) {
+  $('subtabCostingInvoices').addEventListener('click', () => switchCostingSubtab('invoices'));
+}
+if ($('subtabCostingGazana')) {
+  $('subtabCostingGazana').addEventListener('click', () => switchCostingSubtab('gazana'));
+}
+
+// ── Switch Gazana View Mode (Recent Entries vs By Party) ───
+function setGazanaViewMode(mode) {
+  gazanaViewMode = mode;
+  if ($('tabGazanaEntries')) $('tabGazanaEntries').classList.toggle('active', mode === 'all');
+  if ($('tabGazanaParties')) $('tabGazanaParties').classList.toggle('active', mode === 'parties');
+  loadGazanaDashboard($('gazanaSearchInput') ? $('gazanaSearchInput').value.trim() : '');
+}
+
+// ── Load Party Gazana Dashboard ────────────────────────────
+async function loadGazanaDashboard(search = '') {
+  try {
+    const status = $('gazanaStatusFilter') ? $('gazanaStatusFilter').value : 'active';
+    const viewMode = gazanaViewMode || 'all';
+    gazanaStatusFilter = status;
+
+    if ($('tabGazanaEntries')) $('tabGazanaEntries').classList.toggle('active', viewMode === 'all');
+    if ($('tabGazanaParties')) $('tabGazanaParties').classList.toggle('active', viewMode === 'parties');
+
+    const queryParams = new URLSearchParams();
+    if (search) queryParams.set('q', search);
+    if (status && status !== 'all') queryParams.set('status', status);
+
+    const [entriesRes, partiesRes] = await Promise.all([
+      apiGet(`${PARTY_ENTRIES_API}?${queryParams.toString()}`).catch(() => ({ entries: [], summary: {} })),
+      apiGet(`${PARTY_ENTRIES_API}/parties${search ? '?q=' + encodeURIComponent(search) : ''}`).catch(() => [])
+    ]);
+
+    gazanaDashboardData = entriesRes;
+    const entries = entriesRes.entries || [];
+    const summary = entriesRes.summary || {};
+
+    if ($('gazanaEntriesCount')) {
+      $('gazanaEntriesCount').textContent = `(${entries.length} Entries)`;
+    }
+
+    // Render Content (Grouped by Party vs All Entries List)
+    const container = $('gazanaMainContent');
+    if (!container) return;
+
+    if (viewMode === 'parties') {
+      const parties = partiesRes || [];
+      if (parties.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state" style="padding: 2.5rem 1rem; text-align: center;">
+            <div class="empty-icon" style="font-size: 2.5rem; margin-bottom: 0.75rem;">📋</div>
+            <p style="font-size: 1rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem;">
+              ${search ? 'No party gazana entries match your search.' : 'No party gazana entries created yet.'}
+            </p>
+            <p style="font-size: 0.8125rem; color: var(--text-secondary); max-width: 440px; margin: 0 auto 1.25rem;">
+              Store entries against parties with Kacha &amp; Safi Gazana, GST Rate, Advance, Remaining balances, and status tracking.
+            </p>
+            <button class="btn btn-primary" onclick="openNewPartyEntryModal()" style="background: linear-gradient(135deg, #1e40af, #0284c7); color: #fff; font-weight: 700; padding: 8px 18px;">
+              ＋ Create First Entry
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="gazana-party-grid">
+          ${parties.map(p => {
+            const hasActive = p.activeCount > 0;
+            return `
+              <div class="gazana-party-card" onclick="openPartyGazanaDetail('${escapeHtml(p.partyName)}')">
+                <div class="gazana-party-card-left">
+                  <div class="gazana-party-avatar">👤</div>
+                  <div class="gazana-party-info">
+                    <div class="gazana-party-name">${escapeHtml(p.partyName)}</div>
+                    <div class="gazana-party-meta">
+                      <span>${p.totalEntries} ${p.totalEntries === 1 ? 'order' : 'orders'}</span>
+                      <span>·</span>
+                      <span class="status-pill ${hasActive ? 'active' : 'completed'}" style="font-size: 0.7rem; padding: 1px 7px;">
+                        ${hasActive ? `🟢 ${p.activeCount} active` : '✅ All completed'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="gazana-party-card-right">
+                  <button class="btn btn-ghost btn-icon" title="Add entry for this party" onclick="event.stopPropagation(); openNewPartyEntryModal('${escapeHtml(p.partyName)}');" style="color: var(--accent-primary); font-size: 1.15rem; padding: 4px 8px; border-radius: var(--radius-sm);">
+                    ＋
+                  </button>
+                  <span style="font-size: 0.9rem; font-weight: 700; color: var(--accent-primary); margin-left: 4px;">➔</span>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    } else {
+      // All Entries Table View
+      if (entries.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">📋</div>
+            <p>No gazana entries found.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="gazana-table-container">
+          <table class="gazana-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Banaam Party</th>
+                <th>Variety / Quality</th>
+                <th style="text-align:right">Kacha Gazana</th>
+                <th style="text-align:right">Safi Gazana</th>
+                <th style="text-align:right">Rate (₹)</th>
+                <th style="text-align:right">Total (₹)</th>
+                <th style="text-align:right">Advance (₹)</th>
+                <th style="text-align:right">Received (₹)</th>
+                <th style="text-align:right">Remaining (₹)</th>
+                <th>Contract #</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${entries.map(e => {
+                const isCompleted = e.status === 'completed' || e.remaining <= 0;
+                const displayRemaining = isCompleted ? 0 : Math.max(0, e.remaining || 0);
+                const installmentsSum = (e.paymentHistory || []).reduce((sum, p) => sum + (p.amount || 0), 0);
+                return `
+                  <tr>
+                    <td>${formatDate(e.date)}</td>
+                    <td>
+                      <strong style="color: var(--accent-primary); cursor: pointer;" onclick="openPartyGazanaDetail('${escapeHtml(e.partyName)}')">
+                        ${escapeHtml(e.partyName)} ↗
+                      </strong>
+                    </td>
+                    <td>${escapeHtml(e.variety || '—')}</td>
+                    <td style="text-align:right">${e.kachaGazana > 0 ? e.kachaGazana.toLocaleString() : '—'}</td>
+                    <td style="text-align:right; font-weight: 700; color: #1e40af;">${(e.safiGazana || 0).toLocaleString()}</td>
+                    <td style="text-align:right">${fmtRate(e.rate)}</td>
+                    <td style="text-align:right; font-weight: 700; color: #0284c7;">${fmtCurrency(e.totalAmount)}</td>
+                    <td style="text-align:right; color: #16a34a; font-weight: 600;">${e.advance > 0 ? fmtCurrency(e.advance) : '—'}</td>
+                    <td style="text-align:right;">
+                      ${installmentsSum > 0 ? `
+                        <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.76rem; font-weight: 700; color: #0284c7; background: rgba(2,132,199,0.08); border-radius: 4px;" onclick="openPaymentHistoryModal('${e._id}')" title="Click to view installment breakdown">
+                          ${fmtCurrency(installmentsSum)} <small>(${e.paymentHistory.length})</small>
+                        </button>
+                      ` : '<span style="color: var(--text-muted);">—</span>'}
+                    </td>
+                    <td style="text-align:right; font-weight: 800; color: ${displayRemaining > 0 ? '#b91c1c' : '#16a34a'};">
+                      ${fmtCurrency(displayRemaining)}
+                    </td>
+                    <td>${e.contractNo ? `<span class="badge" style="background: rgba(30,58,138,0.1); color: var(--accent-primary); font-weight: 700; padding: 1px 5px; border-radius: 4px; font-size: 0.72rem;">#${escapeHtml(e.contractNo)}</span>` : '—'}</td>
+                    <td>
+                      ${!isCompleted ? `
+                        <label class="gazana-radio-wrap" title="Click radio button to mark as completed" onclick="event.stopPropagation();">
+                          <input type="radio" class="gazana-status-radio" name="status_radio_${e._id}" value="completed" onclick="event.stopPropagation();" onchange="markGazanaEntryCompleted('${e._id}')" />
+                          <span class="status-pill active" style="cursor: pointer;" onclick="event.stopPropagation(); toggleEntryStatus('${e._id}', '${e.status}')" title="Click to toggle status">
+                            🟢 Active
+                          </span>
+                        </label>
+                      ` : `
+                        <label class="gazana-radio-wrap completed" title="Completed entry" onclick="event.stopPropagation();">
+                          <input type="radio" class="gazana-status-radio" checked disabled />
+                          <span class="status-pill completed" style="cursor: pointer;" onclick="event.stopPropagation(); toggleEntryStatus('${e._id}', '${e.status}')" title="Click to toggle status">
+                            ✅ Completed
+                          </span>
+                        </label>
+                      `}
+                    </td>
+                    <td>
+                      <div style="display: flex; gap: 5px; align-items: center;">
+                        ${(!isCompleted && displayRemaining > 0) ? `
+                          <button class="btn-add-payment" onclick="openQuickPaymentModal('${e._id}', '${escapeHtml(e.partyName)}', ${displayRemaining})" title="Add Payment Installment">
+                            ＋ Add Payment
+                          </button>
+                        ` : ''}
+                        <button class="gazana-menu-btn" onclick="toggleGazanaActionMenu(event, '${e._id}')" title="More Actions">⋮</button>
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+  } catch (err) {
+    toast('Failed to load gazana entries: ' + err.message, 'error');
+  }
+}
+
+// Search & Filter Listeners for Gazana Dashboard
+if ($('gazanaSearchInput')) {
+  $('gazanaSearchInput').addEventListener('input', () => {
+    clearTimeout(gazanaSearchTimeout);
+    gazanaSearchTimeout = setTimeout(() => {
+      loadGazanaDashboard($('gazanaSearchInput').value.trim());
+    }, 300);
+  });
+}
+
+if ($('gazanaStatusFilter')) {
+  $('gazanaStatusFilter').addEventListener('change', () => {
+    loadGazanaDashboard($('gazanaSearchInput') ? $('gazanaSearchInput').value.trim() : '');
+  });
+}
+
+if ($('gazanaViewMode')) {
+  $('gazanaViewMode').addEventListener('change', () => {
+    loadGazanaDashboard($('gazanaSearchInput') ? $('gazanaSearchInput').value.trim() : '');
+  });
+}
+
+if ($('btnNewPartyEntry')) {
+  $('btnNewPartyEntry').addEventListener('click', () => {
+    openNewPartyEntryModal();
+  });
+}
+
+// ── Switch Party Detail Filter Tab (Active vs Completed vs All)
+function setPartyGazanaDetailFilter(filter) {
+  partyGazanaDetailFilter = filter;
+  if (currentGazanaPartyName) {
+    openPartyGazanaDetail(currentGazanaPartyName);
+  }
+}
+
+// ── Open Single Party Gazana Ledger Detail ──────────────────
+async function openPartyGazanaDetail(partyName) {
+  if (!partyName) return;
+  currentGazanaPartyName = partyName;
+
+  try {
+    const res = await apiGet(`${PARTY_ENTRIES_API}/party/${encodeURIComponent(partyName)}`);
+    currentGazanaPartyData = res;
+    const allEntries = res.entries || [];
+    const summary = res.summary || {};
+
+    const activeEntries = allEntries.filter(e => e.status === 'active' && (e.remaining > 0 || e.totalAmount === 0));
+    const completedEntries = allEntries.filter(e => e.status === 'completed' || e.remaining <= 0);
+
+    let displayedEntries = allEntries;
+    if (partyGazanaDetailFilter === 'active') {
+      displayedEntries = activeEntries;
+    } else if (partyGazanaDetailFilter === 'completed') {
+      displayedEntries = completedEntries;
+    }
+
+    $('partyGazanaDetailTitle').textContent = `📋 ${res.partyName} — Gazana Ledger`;
+
+    if ($('partyGazanaInfoSummary')) {
+      $('partyGazanaInfoSummary').innerHTML = `
+        <div class="cb-khata-info" style="margin-bottom: 1.25rem;">
+          <div class="cb-khata-info-left">
+            <span class="cb-khata-info-icon" style="background: linear-gradient(135deg, #1e40af, #0284c7);">👤</span>
+            <div>
+              <div class="cb-khata-info-name">${escapeHtml(res.partyName)}</div>
+              <div class="cb-khata-info-details">
+                <span>${allEntries.length} Orders (${activeEntries.length} active, ${completedEntries.length} paid)</span>
+                <span> · 📦 <strong>${(summary.totalSafiGazana || 0).toLocaleString()}</strong> Safi Gazana</span>
+                ${summary.totalKachaGazana > 0 ? `<span> · Kacha: ${(summary.totalKachaGazana).toLocaleString()}</span>` : ''}
+              </div>
+            </div>
+          </div>
+          <div class="cb-khata-info-right">
+            <div class="cb-khata-balance-big ${summary.totalRemaining > 0 ? 'negative' : 'positive'}">
+              ${fmtCurrency(summary.totalRemaining || 0)}
+            </div>
+            <div class="cb-khata-balance-label-big">
+              ${summary.totalRemaining > 0 ? 'Remaining Balance (بقایا رقم)' : 'Fully Paid / Settled (مکمل ادا)'}
+            </div>
+          </div>
+        </div>
+
+        <!-- Party Ledger Filter Tabs: Active (Default), Completed, All -->
+        <div class="cb-subnav" style="margin-bottom: 1rem;">
+          <button class="cb-subnav-btn ${partyGazanaDetailFilter === 'active' ? 'active' : ''}" onclick="setPartyGazanaDetailFilter('active')">
+            🟢 Active (${activeEntries.length})
+          </button>
+          <button class="cb-subnav-btn ${partyGazanaDetailFilter === 'completed' ? 'active' : ''}" onclick="setPartyGazanaDetailFilter('completed')">
+            ✅ Completed (${completedEntries.length})
+          </button>
+          <button class="cb-subnav-btn ${partyGazanaDetailFilter === 'all' ? 'active' : ''}" onclick="setPartyGazanaDetailFilter('all')">
+            📋 All (${allEntries.length})
+          </button>
+        </div>
+      `;
+    }
+
+    if ($('partyGazanaEntriesContent')) {
+      if (displayedEntries.length === 0) {
+        $('partyGazanaEntriesContent').innerHTML = `
+          <div class="empty-state" style="padding: 2.5rem 1rem; text-align: center;">
+            <div class="empty-icon">📋</div>
+            <p style="font-size: 1rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem;">
+              No ${partyGazanaDetailFilter === 'active' ? 'active' : partyGazanaDetailFilter === 'completed' ? 'completed' : ''} entries found for ${escapeHtml(res.partyName)}.
+            </p>
+            <button class="btn btn-primary" onclick="openNewPartyEntryModal('${escapeHtml(res.partyName)}')">＋ Add Entry</button>
+          </div>
+        `;
+      } else {
+        let dSafi = 0, dTotal = 0, dAdv = 0, dRem = 0;
+        displayedEntries.forEach(e => {
+          dSafi += e.safiGazana || 0;
+          dTotal += e.totalAmount || 0;
+          dAdv += e.advance || 0;
+          dRem += e.remaining || 0;
+        });
+
+        $('partyGazanaEntriesContent').innerHTML = `
+          <div class="gazana-table-container">
+            <table class="gazana-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Variety / Quality</th>
+                  <th style="text-align:right">Kacha Gazana</th>
+                  <th style="text-align:right">Safi Gazana</th>
+                  <th style="text-align:right">Rate (₹)</th>
+                  <th style="text-align:right">Total Amount (₹)</th>
+                  <th style="text-align:right">Advance (₹)</th>
+                  <th style="text-align:right">Received (₹)</th>
+                  <th style="text-align:right">Remaining (₹)</th>
+                  <th>Contract #</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${displayedEntries.map(e => {
+                  const isCompleted = e.status === 'completed' || e.remaining <= 0;
+                  const displayRemaining = isCompleted ? 0 : Math.max(0, e.remaining || 0);
+                  const installmentsSum = (e.paymentHistory || []).reduce((sum, p) => sum + (p.amount || 0), 0);
+                  return `
+                    <tr>
+                      <td>${formatDate(e.date)}</td>
+                      <td>
+                        <strong>${escapeHtml(e.variety || '—')}</strong>
+                        ${e.note ? `<div style="font-size: 0.72rem; color: var(--text-muted);">${escapeHtml(e.note)}</div>` : ''}
+                      </td>
+                      <td style="text-align:right">${e.kachaGazana > 0 ? e.kachaGazana.toLocaleString() : '—'}</td>
+                      <td style="text-align:right; font-weight: 700; color: #1e40af;">${(e.safiGazana || 0).toLocaleString()}</td>
+                      <td style="text-align:right">${fmtRate(e.rate)}</td>
+                      <td style="text-align:right; font-weight: 700; color: #0284c7;">${fmtCurrency(e.totalAmount)}</td>
+                      <td style="text-align:right; color: #16a34a; font-weight: 600;">
+                        ${e.advance > 0 ? fmtCurrency(e.advance) : '—'}
+                      </td>
+                      <td style="text-align:right;">
+                        ${installmentsSum > 0 ? `
+                          <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.76rem; font-weight: 700; color: #0284c7; background: rgba(2,132,199,0.08); border-radius: 4px;" onclick="openPaymentHistoryModal('${e._id}')" title="Click to view installment breakdown">
+                            ${fmtCurrency(installmentsSum)} <small>(${e.paymentHistory.length})</small>
+                          </button>
+                        ` : '<span style="color: var(--text-muted);">—</span>'}
+                      </td>
+                      <td style="text-align:right; font-weight: 800; color: ${displayRemaining > 0 ? '#b91c1c' : '#16a34a'};">
+                        ${fmtCurrency(displayRemaining)}
+                      </td>
+                      <td>${e.contractNo ? `<span class="badge" style="background: rgba(30,58,138,0.1); color: var(--accent-primary); font-weight: 700; padding: 1px 5px; border-radius: 4px; font-size: 0.72rem;">#${escapeHtml(e.contractNo)}</span>` : '—'}</td>
+                      <td>
+                        ${!isCompleted ? `
+                          <label class="gazana-radio-wrap" title="Click radio button to mark as completed" onclick="event.stopPropagation();">
+                            <input type="radio" class="gazana-status-radio" name="detail_status_radio_${e._id}" value="completed" onclick="event.stopPropagation();" onchange="markGazanaEntryCompleted('${e._id}')" />
+                            <span class="status-pill active" style="cursor: pointer;" onclick="event.stopPropagation(); toggleEntryStatus('${e._id}', '${e.status}')" title="Click to toggle status">
+                              🟢 Active
+                            </span>
+                          </label>
+                        ` : `
+                          <label class="gazana-radio-wrap completed" title="Completed entry" onclick="event.stopPropagation();">
+                            <input type="radio" class="gazana-status-radio" checked disabled />
+                            <span class="status-pill completed" style="cursor: pointer;" onclick="event.stopPropagation(); toggleEntryStatus('${e._id}', '${e.status}')" title="Click to toggle status">
+                              ✅ Completed
+                            </span>
+                          </label>
+                        `}
+                      </td>
+                      <td>
+                        <div style="display: flex; gap: 5px; align-items: center;">
+                          ${(!isCompleted && displayRemaining > 0) ? `
+                            <button class="btn-add-payment" onclick="openQuickPaymentModal('${e._id}', '${escapeHtml(res.partyName)}', ${displayRemaining})" title="Add Payment Installment">
+                              ＋ Add Payment
+                            </button>
+                          ` : ''}
+                          <button class="gazana-menu-btn" onclick="toggleGazanaActionMenu(event, '${e._id}')" title="More Actions">⋮</button>
+                        </div>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+    }
+
+    showView(viewPartyGazanaDetail);
+  } catch (err) {
+    toast('Failed to load party gazana details: ' + err.message, 'error');
+  }
+}
+
+if ($('btnPartyGazanaBack')) {
+  $('btnPartyGazanaBack').addEventListener('click', () => {
+    showView(viewDashboard);
+    switchCostingSubtab('gazana');
+  });
+}
+
+if ($('btnAddEntryForThisParty')) {
+  $('btnAddEntryForThisParty').addEventListener('click', () => {
+    openNewPartyEntryModal(currentGazanaPartyName);
+  });
+}
+
+if ($('btnPartyGazanaSharePDF')) {
+  $('btnPartyGazanaSharePDF').addEventListener('click', () => {
+    if (currentGazanaPartyName) sharePartyGazanaPDF(currentGazanaPartyName, 'share');
+  });
+}
+
+if ($('btnPartyGazanaDownloadPDF')) {
+  $('btnPartyGazanaDownloadPDF').addEventListener('click', () => {
+    if (currentGazanaPartyName) sharePartyGazanaPDF(currentGazanaPartyName, 'download');
+  });
+}
+
+// ── Open Party Gazana Form (Full Page View) ─────────────────
+let gazanaReturnTo = 'dashboard'; // 'dashboard' or 'ledger'
+
+function openPartyGazanaForm(preFillParty = '', editRecord = null) {
+  if ($('partyGazanaFullForm')) $('partyGazanaFullForm').reset();
+  if ($('gazanaFormEditId')) $('gazanaFormEditId').value = '';
+
+  const isEditing = Boolean(editRecord);
+  if ($('partyGazanaFormTitle')) {
+    $('partyGazanaFormTitle').textContent = isEditing
+      ? `✏️ Edit Entry — ${editRecord.partyName}`
+      : 'New Party Gazana Entry (بنام انٹری)';
+  }
+
+  const activeView = views.find(v => v.classList.contains('active'));
+  gazanaReturnTo = (activeView === viewPartyGazanaDetail) ? 'ledger' : 'dashboard';
+
+  populatePartyNamesDatalist();
+
+  const today = new Date().toISOString().slice(0, 10);
+  if ($('formGazanaDate')) $('formGazanaDate').value = today;
+  if ($('formGazanaAdvance')) $('formGazanaAdvance').value = '0';
+  if ($('formGazanaStatus')) $('formGazanaStatus').value = 'active';
+
+  if (editRecord) {
+    if ($('gazanaFormEditId')) $('gazanaFormEditId').value = editRecord._id;
+    if ($('formGazanaDate')) $('formGazanaDate').value = editRecord.date ? new Date(editRecord.date).toISOString().slice(0, 10) : today;
+    if ($('formGazanaPartyName')) $('formGazanaPartyName').value = editRecord.partyName || '';
+    if ($('formGazanaPartyDropdown')) $('formGazanaPartyDropdown').value = editRecord.partyName || '';
+    if ($('formGazanaContractNo')) $('formGazanaContractNo').value = editRecord.contractNo || '';
+    if ($('formGazanaVariety')) $('formGazanaVariety').value = editRecord.variety || '';
+    if ($('formGazanaKacha')) $('formGazanaKacha').value = editRecord.kachaGazana || '';
+    if ($('formGazanaSafi')) $('formGazanaSafi').value = editRecord.safiGazana || '';
+    if ($('formGazanaRate')) $('formGazanaRate').value = editRecord.rate || '';
+    if ($('formGazanaAdvance')) $('formGazanaAdvance').value = editRecord.advance || 0;
+    if ($('formGazanaStatus')) $('formGazanaStatus').value = editRecord.status || 'active';
+    if ($('formGazanaNote')) $('formGazanaNote').value = editRecord.note || '';
+  } else if (preFillParty) {
+    if ($('formGazanaPartyName')) $('formGazanaPartyName').value = preFillParty;
+    if ($('formGazanaPartyDropdown')) $('formGazanaPartyDropdown').value = preFillParty;
+  }
+
+  updateGazanaFullFormCalculations();
+  showView(viewPartyGazanaForm);
+}
+
+async function openEditPartyEntry(id) {
+  try {
+    const e = await apiGet(`${PARTY_ENTRIES_API}/${id}`);
+    if (!e) return;
+    openPartyGazanaForm(e.partyName, e);
+  } catch (err) {
+    toast('Failed to load entry: ' + err.message, 'error');
+  }
+}
+
+// Aliases for compatibility
+function openNewPartyEntryModal(preFillParty = '') {
+  openPartyGazanaForm(preFillParty);
+}
+function openEditPartyEntryModal(id) {
+  openEditPartyEntry(id);
+}
+
+// ── Real-time Calculations on Full Page Form ───────────────
+function updateGazanaFullFormCalculations() {
+  const safi = parseFloat($('formGazanaSafi')?.value) || 0;
+  const rate = parseFloat($('formGazanaRate')?.value) || 0;
+  const advance = parseFloat($('formGazanaAdvance')?.value) || 0;
+
+  const total = Math.round(safi * 1.18 * rate * 100) / 100;
+  const remaining = Math.max(0, Math.round((total - advance) * 100) / 100);
+
+  if ($('formGazanaTotalDisplay')) {
+    $('formGazanaTotalDisplay').textContent = fmtCurrency(total);
+  }
+
+  if ($('formGazanaRemainingDisplay')) {
+    $('formGazanaRemainingDisplay').textContent = fmtCurrency(remaining);
+    $('formGazanaRemainingDisplay').style.color = remaining > 0 ? '#b91c1c' : '#16a34a';
+  }
+
+  if ($('formGazanaStatus')) {
+    if (remaining <= 0 && total > 0) {
+      $('formGazanaStatus').value = 'completed';
+    } else if (remaining > 0 && $('formGazanaStatus').value === 'completed') {
+      $('formGazanaStatus').value = 'active';
+    }
+  }
+}
+
+// Bind live listeners for full form
+['formGazanaSafi', 'formGazanaRate', 'formGazanaAdvance', 'formGazanaKacha'].forEach(id => {
+  const el = $(id);
+  if (el) {
+    el.addEventListener('input', updateGazanaFullFormCalculations);
+    el.addEventListener('change', updateGazanaFullFormCalculations);
+  }
+});
+
+// Form Back & Cancel Listeners
+function returnFromGazanaForm() {
+  if (gazanaReturnTo === 'ledger' && currentGazanaPartyName) {
+    showView(viewPartyGazanaDetail);
+    openPartyGazanaDetail(currentGazanaPartyName);
+  } else {
+    showView(viewDashboard);
+    switchCostingSubtab('gazana');
+  }
+}
+
+if ($('btnGazanaFormBack')) {
+  $('btnGazanaFormBack').addEventListener('click', returnFromGazanaForm);
+}
+if ($('btnGazanaFormCancel')) {
+  $('btnGazanaFormCancel').addEventListener('click', returnFromGazanaForm);
+}
+
+// ── Save Party Gazana Entry from Full Page Form ───────────
+async function savePartyGazanaForm() {
+  try {
+    const id = $('gazanaFormEditId') ? $('gazanaFormEditId').value : '';
+    const date = $('formGazanaDate') ? $('formGazanaDate').value : '';
+    const partyName = $('formGazanaPartyName') ? $('formGazanaPartyName').value.trim() : '';
+    const variety = $('formGazanaVariety') ? $('formGazanaVariety').value.trim() : '';
+    const kachaGazana = parseFloat($('formGazanaKacha')?.value) || 0;
+    const safiGazana = parseFloat($('formGazanaSafi')?.value) || 0;
+    const rate = parseFloat($('formGazanaRate')?.value) || 0;
+    const advance = parseFloat($('formGazanaAdvance')?.value) || 0;
+    const contractNo = $('formGazanaContractNo') ? $('formGazanaContractNo').value.trim() : '';
+    const note = $('formGazanaNote') ? $('formGazanaNote').value.trim() : '';
+    const status = $('formGazanaStatus') ? $('formGazanaStatus').value : 'active';
+
+    if (!partyName) {
+      toast('Banaam Party Name is required.', 'error');
+      return;
+    }
+
+    if (!safiGazana || safiGazana <= 0) {
+      toast('Please enter valid Safi Gazana.', 'error');
+      return;
+    }
+
+    if (!rate || rate <= 0) {
+      toast('Please enter valid Rate.', 'error');
+      return;
+    }
+
+    const payload = {
+      date,
+      partyName,
+      variety,
+      kachaGazana,
+      safiGazana,
+      rate,
+      advance,
+      contractNo,
+      note,
+      status
+    };
+
+    if (id) {
+      await apiPut(`${PARTY_ENTRIES_API}/${id}`, payload);
+      toast('Entry updated successfully!', 'success');
+    } else {
+      await apiPost(PARTY_ENTRIES_API, payload);
+      toast('Party Gazana entry created successfully!', 'success');
+    }
+
+    // Return to appropriate view
+    if (gazanaReturnTo === 'ledger' && currentGazanaPartyName) {
+      showView(viewPartyGazanaDetail);
+      openPartyGazanaDetail(currentGazanaPartyName);
+    } else {
+      showView(viewDashboard);
+      switchCostingSubtab('gazana');
+      loadGazanaDashboard($('gazanaSearchInput') ? $('gazanaSearchInput').value.trim() : '');
+    }
+  } catch (err) {
+    toast('Failed to save entry: ' + err.message, 'error');
+  }
+}
+
+// ── Quick Add Payment Modal ────────────────────────────────
+async function openQuickPaymentModal(entryId, partyName, remaining) {
+  $('paymentEntryId').value = entryId;
+  $('paymentDate').value = new Date().toISOString().slice(0, 10);
+  $('paymentAmount').value = remaining > 0 ? remaining : '';
+  $('paymentNote').value = '';
+
+  let entryDetails = null;
+  try {
+    entryDetails = await apiGet(`${PARTY_ENTRIES_API}/${entryId}`);
+  } catch (err) {}
+
+  const totalAmount = entryDetails ? entryDetails.totalAmount : 0;
+  const advance = entryDetails ? (entryDetails.advance || 0) : 0;
+  const history = entryDetails && Array.isArray(entryDetails.paymentHistory) ? entryDetails.paymentHistory : [];
+  const installmentsTotal = history.reduce((sum, p) => sum + (p.amount || 0), 0);
+  const netRemaining = remaining || (entryDetails ? entryDetails.remaining : 0);
+
+  $('partyPaymentModalSummary').innerHTML = `
+    <div style="font-size: 0.82rem; display: flex; flex-direction: column; gap: 4px;">
+      <div style="display: flex; justify-content: space-between;">
+        <span style="color: var(--text-muted);">Party:</span>
+        <strong>👤 ${escapeHtml(partyName || (entryDetails ? entryDetails.partyName : ''))}</strong>
+      </div>
+      ${totalAmount > 0 ? `
+        <div style="display: flex; justify-content: space-between;">
+          <span style="color: var(--text-muted);">Total Order Amount:</span>
+          <strong>${fmtCurrency(totalAmount)}</strong>
+        </div>
+      ` : ''}
+      <div style="display: flex; justify-content: space-between; color: #16a34a;">
+        <span>Initial Booking Advance:</span>
+        <strong>${fmtCurrency(advance)}</strong>
+      </div>
+      ${installmentsTotal > 0 ? `
+        <div style="display: flex; justify-content: space-between; color: #0284c7;">
+          <span>Subsequent Received (${history.length} installment${history.length > 1 ? 's' : ''}):</span>
+          <strong>${fmtCurrency(installmentsTotal)}</strong>
+        </div>
+      ` : ''}
+      <div style="display: flex; justify-content: space-between; border-top: 1px dashed var(--border); padding-top: 5px; margin-top: 2px; color: #b91c1c; font-weight: 800;">
+        <span>Net Outstanding Balance:</span>
+        <span style="font-size: 0.95rem;">${fmtCurrency(netRemaining)}</span>
+      </div>
+    </div>
+  `;
+
+  $('partyPaymentModal').classList.remove('hidden');
+  setTimeout(() => $('paymentAmount').focus(), 50);
+}
+
+function closePartyPaymentModal() {
+  $('partyPaymentModal').classList.add('hidden');
+}
+
+async function submitPartyPayment() {
+  try {
+    const id = $('paymentEntryId').value;
+    const amount = parseFloat($('paymentAmount').value);
+    const date = $('paymentDate').value;
+    const note = $('paymentNote').value.trim();
+
+    if (!amount || amount <= 0) {
+      toast('Please enter a valid payment amount.', 'error');
+      return;
+    }
+
+    await apiPost(`${PARTY_ENTRIES_API}/${id}/payment`, { amount, date, note });
+    toast(`Payment installment of ${fmtCurrency(amount)} recorded successfully!`, 'success');
+    closePartyPaymentModal();
+
+    if (views.find(v => v.classList.contains('active')) === viewPartyGazanaDetail && currentGazanaPartyName) {
+      openPartyGazanaDetail(currentGazanaPartyName);
+    } else {
+      loadGazanaDashboard($('gazanaSearchInput') ? $('gazanaSearchInput').value.trim() : '');
+    }
+  } catch (err) {
+    toast('Failed to record payment: ' + err.message, 'error');
+  }
+}
+
+// ── Payment History Breakdown Modal ────────────────────────
+async function openPaymentHistoryModal(entryId) {
+  try {
+    const entry = await apiGet(`${PARTY_ENTRIES_API}/${entryId}`);
+    if (!entry) return;
+
+    const history = Array.isArray(entry.paymentHistory) ? entry.paymentHistory : [];
+    const installmentsTotal = history.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const totalRec = Math.round(((entry.advance || 0) + installmentsTotal) * 100) / 100;
+
+    let historyHtml = `
+      <div style="background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px; padding: 10px; margin-bottom: 12px; font-size: 0.8125rem;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+          <span style="color: var(--text-muted);">Party:</span>
+          <strong>👤 ${escapeHtml(entry.partyName)}</strong>
+        </div>
+        ${entry.variety ? `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+            <span style="color: var(--text-muted);">Variety / Quality:</span>
+            <span>${escapeHtml(entry.variety)}</span>
+          </div>
+        ` : ''}
+        <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+          <span style="color: var(--text-muted);">Total Order Amount:</span>
+          <strong>${fmtCurrency(entry.totalAmount)}</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 3px; color: #16a34a;">
+          <span>Initial Booking Advance:</span>
+          <strong>${fmtCurrency(entry.advance || 0)}</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-top: 1px dashed var(--border); padding-top: 5px; margin-top: 4px; font-weight: 800;">
+          <span style="color: #0284c7;">Total Received:</span>
+          <span style="color: #0284c7;">${fmtCurrency(totalRec)}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; color: #b91c1c; font-weight: 800; margin-top: 2px;">
+          <span>Remaining Balance:</span>
+          <span>${fmtCurrency(entry.remaining)}</span>
+        </div>
+      </div>
+
+      <div style="font-weight: 700; font-size: 0.875rem; color: var(--text-primary); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+        <span>📜 Payment Log (${history.length + (entry.advance > 0 ? 1 : 0)} records)</span>
+        ${entry.remaining > 0 ? `
+          <button class="btn btn-sm btn-primary" onclick="closePaymentHistoryModal(); openQuickPaymentModal('${entry._id}', '${escapeHtml(entry.partyName)}', ${entry.remaining});" style="font-size: 0.72rem; padding: 3px 8px;">
+            ＋ Add Payment
+          </button>
+        ` : ''}
+      </div>
+
+      <div style="max-height: 240px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
+          <thead>
+            <tr style="background: var(--bg-tertiary); border-bottom: 1px solid var(--border);">
+              <th style="padding: 6px 8px; text-align: left;">Date</th>
+              <th style="padding: 6px 8px; text-align: left;">Type / Note</th>
+              <th style="padding: 6px 8px; text-align: right;">Amount</th>
+              <th style="padding: 6px 8px; text-align: center; width: 32px;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${entry.advance > 0 ? `
+              <tr style="border-bottom: 1px solid var(--border); background: rgba(22, 163, 74, 0.04);">
+                <td style="padding: 6px 8px;">${formatDate(entry.date)}</td>
+                <td style="padding: 6px 8px;">
+                  <strong style="color: #16a34a;">💵 Initial Booking Advance</strong>
+                </td>
+                <td style="padding: 6px 8px; text-align: right; font-weight: 700; color: #16a34a;">
+                  ${fmtCurrency(entry.advance)}
+                </td>
+                <td style="padding: 6px 8px; text-align: center; color: var(--text-muted); font-size: 0.7rem;">—</td>
+              </tr>
+            ` : ''}
+            ${history.map(p => `
+              <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 6px 8px;">${formatDate(p.date)}</td>
+                <td style="padding: 6px 8px;">
+                  <span style="color: #0284c7; font-weight: 600;">📥 Installment</span>
+                  ${p.note ? `<div style="font-size: 0.7rem; color: var(--text-muted);">${escapeHtml(p.note)}</div>` : ''}
+                </td>
+                <td style="padding: 6px 8px; text-align: right; font-weight: 700; color: #0284c7;">
+                  ${fmtCurrency(p.amount)}
+                </td>
+                <td style="padding: 6px 8px; text-align: center;">
+                  <button class="btn-action delete" style="padding: 2px 4px; font-size: 0.75rem;" title="Delete this installment" onclick="deleteInstallmentPayment('${entry._id}', '${p._id}')">
+                    🗑️
+                  </button>
+                </td>
+              </tr>
+            `).join('')}
+            ${history.length === 0 && (!entry.advance || entry.advance <= 0) ? `
+              <tr>
+                <td colspan="4" style="text-align: center; padding: 12px; color: var(--text-muted);">No payments recorded yet.</td>
+              </tr>
+            ` : ''}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    $('partyPaymentHistoryBody').innerHTML = historyHtml;
+    $('partyPaymentHistoryModal').classList.remove('hidden');
+  } catch (err) {
+    toast('Failed to load payment history: ' + err.message, 'error');
+  }
+}
+
+function closePaymentHistoryModal() {
+  $('partyPaymentHistoryModal').classList.add('hidden');
+}
+
+async function deleteInstallmentPayment(entryId, paymentId) {
+  showConfirm('Delete Payment Installment', 'Are you sure you want to delete this payment record? This will adjust the balance.', async () => {
+    try {
+      await apiDelete(`${PARTY_ENTRIES_API}/${entryId}/payment/${paymentId}`);
+      toast('Payment record deleted!', 'success');
+      openPaymentHistoryModal(entryId);
+
+      if (views.find(v => v.classList.contains('active')) === viewPartyGazanaDetail && currentGazanaPartyName) {
+        openPartyGazanaDetail(currentGazanaPartyName);
+      } else {
+        loadGazanaDashboard($('gazanaSearchInput') ? $('gazanaSearchInput').value.trim() : '');
+      }
+    } catch (err) {
+      toast('Failed to delete payment: ' + err.message, 'error');
+    }
+  });
+}
+
+// ── Mark Entry as Completed (Radio Button) ────────────────
+async function markGazanaEntryCompleted(entryId) {
+  try {
+    await apiPatch(`${PARTY_ENTRIES_API}/${entryId}/status`, { status: 'completed' });
+    toast('Entry marked as completed! ✅', 'success');
+
+    if (views.find(v => v.classList.contains('active')) === viewPartyGazanaDetail && currentGazanaPartyName) {
+      openPartyGazanaDetail(currentGazanaPartyName);
+    } else {
+      loadGazanaDashboard($('gazanaSearchInput') ? $('gazanaSearchInput').value.trim() : '');
+    }
+  } catch (err) {
+    toast('Failed to mark entry as completed: ' + err.message, 'error');
+  }
+}
+const markEntryCompleted = markGazanaEntryCompleted;
+
+// ── Toggle Status ──────────────────────────────────────────
+async function toggleEntryStatus(entryId, currentStatus) {
+  try {
+    const newStatus = currentStatus === 'active' ? 'completed' : 'active';
+    await apiPatch(`${PARTY_ENTRIES_API}/${entryId}/status`, { status: newStatus });
+    toast(`Entry marked as ${newStatus}!`, 'info');
+
+    if (views.find(v => v.classList.contains('active')) === viewPartyGazanaDetail && currentGazanaPartyName) {
+      openPartyGazanaDetail(currentGazanaPartyName);
+    } else {
+      loadGazanaDashboard($('gazanaSearchInput') ? $('gazanaSearchInput').value.trim() : '');
+    }
+  } catch (err) {
+    toast('Failed to update status: ' + err.message, 'error');
+  }
+}
+
+// ── Delete Entry ───────────────────────────────────────────
+function deletePartyEntry(id) {
+  showConfirm('Delete Gazana Entry', 'Are you sure you want to delete this gazana entry? This cannot be undone.', async () => {
+    try {
+      await apiDelete(`${PARTY_ENTRIES_API}/${id}`);
+      toast('Gazana entry deleted', 'success');
+
+      if (views.find(v => v.classList.contains('active')) === viewPartyGazanaDetail && currentGazanaPartyName) {
+        openPartyGazanaDetail(currentGazanaPartyName);
+      } else {
+        loadGazanaDashboard($('gazanaSearchInput') ? $('gazanaSearchInput').value.trim() : '');
+      }
+    } catch (err) {
+      toast('Failed to delete: ' + err.message, 'error');
+    }
+  });
+}
+
+// ── Share / Download Party Gazana PDF ──────────────────────
+async function sharePartyGazanaPDF(partyName, action = 'share') {
+  if (!partyName) return;
+  try {
+    toast('Generating Party Gazana PDF...', 'info');
+    const res = await apiGet(`${PARTY_ENTRIES_API}/party/${encodeURIComponent(partyName)}`);
+    if (!res) throw new Error('Party ledger data not found');
+
+    const entries = res.entries || [];
+    const summary = res.summary || {};
+
+    const container = document.createElement('div');
+    container.style.position = 'fixed';
+    container.style.left = '-9999px';
+    container.style.top = '-9999px';
+
+    const rowsHtml = entries.map((e, idx) => `
+      <tr style="border-bottom: 1px solid #e2e8f0; ${idx % 2 === 1 ? 'background: #f8fafc;' : ''}">
+        <td style="padding: 6px 4px; font-size: 9.5px;">${formatDate(e.date)}</td>
+        <td style="padding: 6px 4px; font-size: 9.5px; font-weight: 700; color: #0f172a;">
+          ${escapeHtml(e.variety || '—')}
+          ${e.contractNo ? `<span style="color: #2563eb; font-size: 8.5px; display: block;">#${escapeHtml(e.contractNo)}</span>` : ''}
+        </td>
+        <td style="padding: 6px 4px; font-size: 9.5px; text-align: right;">${e.kachaGazana > 0 ? e.kachaGazana.toLocaleString() : '—'}</td>
+        <td style="padding: 6px 4px; font-size: 9.5px; text-align: right; font-weight: 700; color: #1e40af;">${(e.safiGazana || 0).toLocaleString()}</td>
+        <td style="padding: 6px 4px; font-size: 9.5px; text-align: right;">₹ ${fmtRate(e.rate)}</td>
+        <td style="padding: 6px 4px; font-size: 9.5px; text-align: right; font-weight: 700; color: #0284c7;">${fmtCurrency(e.totalAmount)}</td>
+        <td style="padding: 6px 4px; font-size: 9.5px; text-align: right; color: #15803d; font-weight: 700;">${fmtCurrency(e.advance)}</td>
+        <td style="padding: 6px 4px; font-size: 9.5px; text-align: right; font-weight: 800; color: ${e.remaining > 0 ? '#b91c1c' : '#15803d'};">${fmtCurrency(e.remaining)}</td>
+        <td style="padding: 6px 4px; font-size: 9px; text-align: center;">
+          <span style="background: ${e.remaining <= 0 ? '#dcfce7' : '#dbeafe'}; color: ${e.remaining <= 0 ? '#15803d' : '#1e40af'}; padding: 2px 6px; border-radius: 4px; font-weight: 700;">
+            ${e.remaining <= 0 ? 'PAID' : 'ACTIVE'}
+          </span>
+        </td>
+      </tr>
+    `).join('');
+
+    container.innerHTML = `
+      <div id="gazanaPdfRoot" style="padding: 16px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #0f172a; background: #ffffff; width: 700px; max-width: 700px; box-sizing: border-box;">
+        
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #0f172a, #1e3a8a); color: #ffffff; padding: 14px 18px; border-radius: 6px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h1 style="margin: 0; font-size: 18px; font-weight: 800; letter-spacing: 0.5px; color: #ffffff;">📋 ${escapeHtml(res.partyName)}</h1>
+            <p style="margin: 3px 0 0 0; font-size: 11px; color: #93c5fd;">
+              Gazana Order Statement · ${summary.totalEntries} Orders (${summary.activeCount} Active, ${summary.completedCount} Paid)
+            </p>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 9.5px; color: #cbd5e1; text-transform: uppercase;">Outstanding Balance</div>
+            <div style="font-size: 18px; font-weight: 800; color: ${summary.totalRemaining > 0 ? '#fca5a5' : '#86efac'};">
+              ${fmtCurrency(summary.totalRemaining || 0)}
+            </div>
+          </div>
+        </div>
+
+        <!-- Metric Stat Cards -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px;">
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px; text-align: center;">
+            <div style="font-size: 8.5px; color: #64748b; font-weight: 700; text-transform: uppercase;">Safi Gazana</div>
+            <div style="font-size: 12px; font-weight: 800; color: #1e40af; margin-top: 2px;">${(summary.totalSafiGazana || 0).toLocaleString()}</div>
+          </div>
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px; text-align: center;">
+            <div style="font-size: 8.5px; color: #64748b; font-weight: 700; text-transform: uppercase;">Total Billed</div>
+            <div style="font-size: 12px; font-weight: 800; color: #0284c7; margin-top: 2px;">${fmtCurrency(summary.totalAmount || 0)}</div>
+          </div>
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; padding: 6px; text-align: center;">
+            <div style="font-size: 8.5px; color: #15803d; font-weight: 700; text-transform: uppercase;">Advance Received</div>
+            <div style="font-size: 12px; font-weight: 800; color: #15803d; margin-top: 2px;">${fmtCurrency(summary.totalAdvance || 0)}</div>
+          </div>
+          <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 4px; padding: 6px; text-align: center;">
+            <div style="font-size: 8.5px; color: #b91c1c; font-weight: 700; text-transform: uppercase;">Remaining</div>
+            <div style="font-size: 12px; font-weight: 800; color: #b91c1c; margin-top: 2px;">${fmtCurrency(summary.totalRemaining || 0)}</div>
+          </div>
+        </div>
+
+        <!-- Ledger Table -->
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; border-radius: 4px; overflow: hidden; font-size: 9.5px;">
+          <thead>
+            <tr style="background: #0f172a; color: #ffffff;">
+              <th style="padding: 6px 4px; text-align: left;">Date</th>
+              <th style="padding: 6px 4px; text-align: left;">Variety / Quality</th>
+              <th style="padding: 6px 4px; text-align: right;">Kacha Gazana</th>
+              <th style="padding: 6px 4px; text-align: right;">Safi Gazana</th>
+              <th style="padding: 6px 4px; text-align: right;">Rate</th>
+              <th style="padding: 6px 4px; text-align: right;">Total Amount</th>
+              <th style="padding: 6px 4px; text-align: right; color: #86efac;">Advance</th>
+              <th style="padding: 6px 4px; text-align: right; color: #fca5a5;">Remaining</th>
+              <th style="padding: 6px 4px; text-align: center;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml || '<tr><td colspan="9" style="text-align:center; padding: 12px;">No entries</td></tr>'}
+          </tbody>
+          <tfoot>
+            <tr style="background: #f1f5f9; font-weight: 800; border-top: 1.5px solid #0f172a;">
+              <td colspan="3" style="padding: 6px 4px;">Totals</td>
+              <td style="padding: 6px 4px; text-align: right; color: #1e40af;">${(summary.totalSafiGazana || 0).toLocaleString()}</td>
+              <td style="padding: 6px 4px; text-align: right;">—</td>
+              <td style="padding: 6px 4px; text-align: right; color: #0284c7;">${fmtCurrency(summary.totalAmount || 0)}</td>
+              <td style="padding: 6px 4px; text-align: right; color: #15803d;">${fmtCurrency(summary.totalAdvance || 0)}</td>
+              <td style="padding: 6px 4px; text-align: right; color: ${summary.totalRemaining > 0 ? '#b91c1c' : '#15803d'};">${fmtCurrency(summary.totalRemaining || 0)}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <!-- Footer -->
+        <div style="margin-top: 18px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 6px; font-size: 9px; color: #94a3b8;">
+          Statement for ${escapeHtml(res.partyName)} · Generated on ${new Date().toLocaleDateString()}
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(container);
+    const fileName = `Gazana_Statement_${res.partyName.replace(/\s+/g, '_')}.pdf`;
+    const opt = {
+      margin: [6, 6, 6, 6],
+      filename: fileName,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    if (typeof html2pdf !== 'undefined') {
+      const targetElement = container.querySelector('#gazanaPdfRoot') || container.firstElementChild;
+      const pdfWorker = html2pdf().set(opt).from(targetElement);
+      const pdfBlob = await pdfWorker.output('blob');
+      if (container.parentNode) document.body.removeChild(container);
+
+      if (action === 'share') {
+        const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+          try {
+            await navigator.share({
+              files: [pdfFile],
+              title: `Gazana Statement - ${res.partyName}`,
+              text: `Party Gazana Statement for ${res.partyName}: Remaining Balance ${fmtCurrency(summary.totalRemaining || 0)}`,
+            });
+            toast('Shared Gazana PDF successfully!', 'success');
+            return;
+          } catch (shareErr) {
+            if (shareErr.name === 'AbortError') return;
+          }
+        }
+      }
+
+      // Download fallback
+      const downloadUrl = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+      toast('Downloaded Gazana PDF successfully!', 'success');
+    } else {
+      if (container.parentNode) document.body.removeChild(container);
+      window.print();
+    }
+  } catch (err) {
+    toast('PDF generation failed: ' + err.message, 'error');
+  }
+}
+
+// ── 3-Dots Action Menu Controller (Floating Portal) ─────────
+let activeGazanaMenuId = null;
+
+function toggleGazanaActionMenu(event, entryId) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  const btn = event.currentTarget;
+  const isSame = (activeGazanaMenuId === entryId);
+  
+  closeAllGazanaMenus();
+  if (isSame) return;
+
+  activeGazanaMenuId = entryId;
+  btn.classList.add('active');
+
+  const rect = btn.getBoundingClientRect();
+  const menu = document.createElement('div');
+  menu.id = 'gazanaFloatingMenu';
+  menu.className = 'gazana-floating-menu';
+  menu.innerHTML = `
+    <button class="gazana-menu-item" onclick="closeAllGazanaMenus(); openPaymentHistoryModal('${entryId}')">
+      <span class="menu-icon">📋</span> View Payment Log
+    </button>
+    <button class="gazana-menu-item" onclick="closeAllGazanaMenus(); openEditPartyEntryModal('${entryId}')">
+      <span class="menu-icon">✏️</span> Edit Entry
+    </button>
+    <button class="gazana-menu-item delete" onclick="closeAllGazanaMenus(); deletePartyEntry('${entryId}')">
+      <span class="menu-icon">🗑️</span> Delete Entry
+    </button>
+  `;
+
+  document.body.appendChild(menu);
+
+  const menuWidth = 165;
+  const menuHeight = 115;
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+
+  let top = rect.bottom + window.scrollY + 3;
+  let left = rect.right + window.scrollX - menuWidth;
+
+  // Horizontal boundary check for mobile screens
+  if (left < 10) left = 10;
+  if (left + menuWidth > viewportWidth - 10) {
+    left = Math.max(10, viewportWidth - menuWidth - 10);
+  }
+
+  // Vertical boundary check: Flip upwards if too close to bottom
+  if (rect.bottom + menuHeight > viewportHeight && rect.top > menuHeight) {
+    top = rect.top + window.scrollY - menuHeight - 3;
+  }
+
+  menu.style.top = `${top}px`;
+  menu.style.left = `${left}px`;
+}
+
+function closeAllGazanaMenus() {
+  activeGazanaMenuId = null;
+  const existingMenu = $('gazanaFloatingMenu');
+  if (existingMenu && existingMenu.parentNode) {
+    existingMenu.parentNode.removeChild(existingMenu);
+  }
+  document.querySelectorAll('.gazana-menu-btn.active').forEach(el => el.classList.remove('active'));
+}
+
+// Global click handler to close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#gazanaFloatingMenu') && !e.target.closest('.gazana-menu-btn')) {
+    closeAllGazanaMenus();
+  }
+});
+window.addEventListener('scroll', () => closeAllGazanaMenus(), { passive: true });
+window.addEventListener('resize', () => closeAllGazanaMenus(), { passive: true });
+
+// Window Globals for Party Gazana Entries
+window.switchCostingSubtab = switchCostingSubtab;
+window.setGazanaViewMode = setGazanaViewMode;
+window.setPartyGazanaDetailFilter = setPartyGazanaDetailFilter;
+window.openPartyGazanaDetail = openPartyGazanaDetail;
+window.openPartyGazanaForm = openPartyGazanaForm;
+window.openEditPartyEntry = openEditPartyEntry;
+window.openNewPartyEntryModal = openNewPartyEntryModal;
+window.openEditPartyEntryModal = openEditPartyEntryModal;
+window.updateGazanaFullFormCalculations = updateGazanaFullFormCalculations;
+window.savePartyGazanaForm = savePartyGazanaForm;
+window.openQuickPaymentModal = openQuickPaymentModal;
+window.closePartyPaymentModal = closePartyPaymentModal;
+window.submitPartyPayment = submitPartyPayment;
+window.openPaymentHistoryModal = openPaymentHistoryModal;
+window.closePaymentHistoryModal = closePaymentHistoryModal;
+window.deleteInstallmentPayment = deleteInstallmentPayment;
+window.markGazanaEntryCompleted = markGazanaEntryCompleted;
+window.toggleGazanaActionMenu = toggleGazanaActionMenu;
+window.closeAllGazanaMenus = closeAllGazanaMenus;
+window.toggleEntryStatus = toggleEntryStatus;
+window.deletePartyEntry = deletePartyEntry;
+window.sharePartyGazanaPDF = sharePartyGazanaPDF;
+
+// ── Generic API PATCH helper ──────────────────────────────
+async function apiPatch(url, data) {
+  const res = await fetch(url, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(err.error || err.message || 'Request failed');
+  }
+  return res.json();
+}
+
+// ═══════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════
 
 populatePartyNamesDatalist();
 loadInvoices();
+

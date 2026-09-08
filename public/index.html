@@ -31,55 +31,117 @@
   <!-- ═══ Main Content ═══ -->
   <main class="app-main">
 
-    <!-- ─── Dashboard View ─── -->
+    <!-- ─── Dashboard View (Costing Tab) ─── -->
     <section class="view active" id="viewDashboard">
-      <div class="dashboard-header">
-        <div>
-          <h2 class="dashboard-title">Invoices <span class="dashboard-count" id="invoiceCount"></span></h2>
-        </div>
-        <button class="btn btn-primary" id="btnNewInvoice">
-          ＋ New Invoice
-        </button>
+      <!-- Subnav inside Costing View: Invoices vs Party Gazana Entries -->
+      <div class="cb-subnav" style="margin-bottom: 1.25rem;">
+        <button class="cb-subnav-btn active" id="subtabCostingInvoices" data-costing-subtab="invoices">📊 Invoices &amp; Costing</button>
+        <button class="cb-subnav-btn" id="subtabCostingGazana" data-costing-subtab="gazana">📋 Party Gazana Entries (بنام انٹریز)</button>
       </div>
 
-      <div class="search-section">
-        <div class="search-wrapper">
-          <span class="search-icon">🔍</span>
-          <input
-            type="text"
-            class="search-input"
-            id="searchInput"
-            placeholder="Search by party name..."
-            autocomplete="off"
-          />
+      <!-- Section 1: Invoices View -->
+      <div id="costingInvoicesSection">
+        <div class="dashboard-header">
+          <div>
+            <h2 class="dashboard-title">Invoices <span class="dashboard-count" id="invoiceCount"></span></h2>
+          </div>
+          <button class="btn btn-primary" id="btnNewInvoice">
+            ＋ New Invoice
+          </button>
         </div>
 
-        <div class="filter-controls">
-          <div class="filter-group">
-            <label class="filter-label" for="filterType">Filter By:</label>
-            <select class="filter-select" id="filterType">
-              <option value="party">Party Name (Default)</option>
-              <option value="date">Date</option>
-              <option value="qty">Quantity</option>
-              <option value="fabric">Fabric / Loom</option>
-            </select>
+        <div class="search-section">
+          <div class="search-wrapper">
+            <span class="search-icon">🔍</span>
+            <input
+              type="text"
+              class="search-input"
+              id="searchInput"
+              placeholder="Search by party name..."
+              autocomplete="off"
+            />
           </div>
 
-          <div class="filter-group">
-            <label class="filter-label" for="sortBy">Sort By:</label>
-            <select class="filter-select" id="sortBy">
-              <option value="newest">Date (Newest First)</option>
-              <option value="oldest">Date (Oldest First)</option>
-              <option value="qtyHigh">Quantity (High → Low)</option>
-              <option value="costHigh">Cost / Meter (High → Low)</option>
-              <option value="partyAZ">Party Name (A → Z)</option>
-            </select>
+          <div class="filter-controls">
+            <div class="filter-group">
+              <label class="filter-label" for="filterType">Filter By:</label>
+              <select class="filter-select" id="filterType">
+                <option value="party">Party Name (Default)</option>
+                <option value="date">Date</option>
+                <option value="qty">Quantity</option>
+                <option value="fabric">Fabric / Loom</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label class="filter-label" for="sortBy">Sort By:</label>
+              <select class="filter-select" id="sortBy">
+                <option value="newest">Date (Newest First)</option>
+                <option value="oldest">Date (Oldest First)</option>
+                <option value="qtyHigh">Quantity (High → Low)</option>
+                <option value="costHigh">Cost / Meter (High → Low)</option>
+                <option value="partyAZ">Party Name (A → Z)</option>
+              </select>
+            </div>
           </div>
+        </div>
+
+        <div class="invoice-list" id="invoiceList">
+          <!-- populated by JS -->
         </div>
       </div>
 
-      <div class="invoice-list" id="invoiceList">
-        <!-- populated by JS -->
+      <!-- Section 2: Party Gazana Entries View -->
+      <div id="costingGazanaSection" style="display: none;">
+        <div class="dashboard-header">
+          <div>
+            <h2 class="dashboard-title">📋 Party Gazana Entries <span class="dashboard-count" id="gazanaEntriesCount">(0)</span></h2>
+          </div>
+          <div class="cb-header-btns">
+            <button class="btn btn-primary" id="btnNewPartyEntry" style="background: linear-gradient(135deg, #1e40af, #0284c7); color: #fff; font-weight: 700; box-shadow: 0 4px 14px rgba(30, 64, 175, 0.35);">
+              ＋ New Gazana Entry (نئی انٹری)
+            </button>
+          </div>
+        </div>
+
+        <!-- Gazana Navigation Sub-tabs: Recent Entries vs By Party -->
+        <div class="cb-subnav" style="margin-bottom: 1rem;">
+          <button class="cb-subnav-btn active" id="tabGazanaEntries" onclick="setGazanaViewMode('all')">
+            📝 Recent Entries (انٹریز)
+          </button>
+          <button class="cb-subnav-btn" id="tabGazanaParties" onclick="setGazanaViewMode('parties')">
+            👥 By Party (پارٹیز سمری)
+          </button>
+        </div>
+
+        <!-- Gazana Controls & Filter -->
+        <div class="search-section">
+          <div class="search-wrapper">
+            <span class="search-icon">🔍</span>
+            <input
+              type="text"
+              class="search-input"
+              id="gazanaSearchInput"
+              placeholder="Search by party name, variety/quality, contract #..."
+              autocomplete="off"
+            />
+          </div>
+
+          <div class="filter-controls">
+            <div class="filter-group">
+              <label class="filter-label" for="gazanaStatusFilter">Status:</label>
+              <select class="filter-select" id="gazanaStatusFilter">
+                <option value="all">All Entries (سب انٹریز)</option>
+                <option value="active" selected>🟢 Active / Pending (ایکٹو)</option>
+                <option value="completed">✅ Completed / Paid (مکمل)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div id="gazanaMainContent">
+          <!-- populated by JS -->
+        </div>
       </div>
     </section>
 
@@ -268,6 +330,155 @@
       </div>
     </section>
 
+    <!-- ─── Party Gazana Detail View (Party Ledger) ─── -->
+    <section class="view" id="viewPartyGazanaDetail">
+      <div class="yarn-history-header">
+        <div class="header-left">
+          <button class="btn-back" id="btnPartyGazanaBack">←</button>
+          <h2 class="form-title" id="partyGazanaDetailTitle">Party Gazana Ledger</h2>
+        </div>
+        <div class="cb-header-btns">
+          <button class="btn btn-primary" id="btnPartyGazanaSharePDF" style="background: #2563eb; color: #fff;">📄 Share PDF</button>
+          <button class="btn btn-primary" id="btnPartyGazanaDownloadPDF" style="background: #7c3aed; color: #fff;">📥 Download PDF</button>
+          <button class="btn btn-primary" id="btnAddEntryForThisParty" style="background: #0284c7; color: #fff; font-weight: 700;">＋ Add Entry</button>
+        </div>
+      </div>
+
+      <div id="partyGazanaInfoSummary">
+        <!-- populated by JS -->
+      </div>
+      <div id="partyGazanaEntriesContent">
+        <!-- populated by JS -->
+      </div>
+    </section>
+
+    <!-- ─── Party Gazana Entry Form (Full Page Form View) ─── -->
+    <section class="view" id="viewPartyGazanaForm">
+      <div class="form-header">
+        <button class="btn-back" id="btnGazanaFormBack">←</button>
+        <h2 class="form-title" id="partyGazanaFormTitle">New Party Gazana Entry (بنام انٹری)</h2>
+      </div>
+
+      <form id="partyGazanaFullForm" class="card" autocomplete="off" onsubmit="event.preventDefault(); savePartyGazanaForm();">
+        <input type="hidden" id="gazanaFormEditId" value="" />
+
+        <!-- Date & Party Section -->
+        <div class="form-section">
+          <h3 class="section-title">📅 Date &amp; Party Details (تاریخ و بنام پارٹی)</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="formGazanaDate">Date (تاریخ) *</label>
+              <input class="form-input" type="date" id="formGazanaDate" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="formGazanaContractNo">Contract No (معاہدہ نمبر - اختیاری)</label>
+              <input class="form-input" type="text" id="formGazanaContractNo" placeholder="e.g. 101 or C-1" />
+            </div>
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label class="form-label" for="formGazanaPartyName" style="color: var(--accent-primary); font-weight: 700;">
+                👤 Banaam Party Name (بنام پارٹی / خریدار) *
+              </label>
+              <select class="form-input" id="formGazanaPartyDropdown" style="margin-bottom: 6px;">
+                <option value="">-- Choose Party from Cashbook --</option>
+              </select>
+              <input
+                class="form-input"
+                type="text"
+                id="formGazanaPartyName"
+                list="cbPartyDatalist"
+                required
+                placeholder="Or type/search customer name..."
+                autocomplete="off"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Variety & Gazana Specifications Section -->
+        <div class="form-section">
+          <h3 class="section-title">🧵 Quality &amp; Gazana Specifications (ورائٹی و گزانہ)</h3>
+          <div class="form-grid">
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label class="form-label" for="formGazanaVariety">Quality / Variety (کوالٹی نام)</label>
+              <input class="form-input" type="text" id="formGazanaVariety" placeholder="e.g. 52x52 / 68x68 / 68&quot; Cotton" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="formGazanaKacha">Kacha Gazana (کچا گزانہ)</label>
+              <input class="form-input form-gazana-calc" type="number" step="any" id="formGazanaKacha" placeholder="0" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="formGazanaSafi" style="color: #10b981; font-weight: 700;">Safi Gazana (صافی گزانہ) *</label>
+              <input class="form-input form-gazana-calc" type="number" step="any" id="formGazanaSafi" required placeholder="0" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="formGazanaRate" style="color: #60a5fa; font-weight: 700;">Rate (ریٹ) *</label>
+              <input class="form-input form-gazana-calc" type="number" step="any" id="formGazanaRate" required placeholder="0.00" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Amounts & Advance Calculation Section -->
+        <div class="form-section" style="background: linear-gradient(135deg, rgba(30,58,138,0.03), rgba(2,132,199,0.03)); border: 1.5px solid rgba(2,132,199,0.25); border-radius: var(--radius-md); padding: 1.25rem;">
+          <h3 class="section-title" style="color: var(--accent-primary);">💰 Amount &amp; Advance Calculation (کل رقم و پیشگی)</h3>
+
+          <!-- Total Amount Display Banner -->
+          <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-secondary); border: 1px solid var(--border); padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 1rem;">
+            <div>
+              <span style="font-size: 0.875rem; color: var(--text-secondary); font-weight: 600;">Total Billed Amount (کل رقم):</span>
+            </div>
+            <div>
+              <span id="formGazanaTotalDisplay" style="font-size: 1.5rem; font-weight: 900; color: #0284c7;">₹ 0.00</span>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="formGazanaAdvance" style="color: #15803d; font-weight: 700;">
+                💵 Advance Received (پیشگی / ایڈوانس رقم)
+              </label>
+              <input class="form-input form-gazana-calc" type="number" step="any" id="formGazanaAdvance" value="0" placeholder="0" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="formGazanaStatus">Status (اسٹیٹس)</label>
+              <select class="form-select" id="formGazanaStatus">
+                <option value="active">🟢 Active (زیر التواء / چالو)</option>
+                <option value="completed">✅ Completed (مکمل ادائیگی)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Remaining Balance Display Banner -->
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(220, 38, 38, 0.06); border: 1px solid rgba(220, 38, 38, 0.25); padding: 12px 16px; border-radius: var(--radius-sm); margin-top: 0.75rem;">
+            <div>
+              <span style="font-size: 0.9375rem; font-weight: 700; color: var(--text-primary);">Remaining Balance (بقایا رقم):</span>
+            </div>
+            <div>
+              <span id="formGazanaRemainingDisplay" style="font-size: 1.5rem; font-weight: 900; color: #b91c1c;">₹ 0.00</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Note Section -->
+        <div class="form-section">
+          <h3 class="section-title">📝 Note &amp; Remarks (نوٹ و شرائط)</h3>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="formGazanaNote">Remarks / Payment Conditions</label>
+            <textarea class="form-input" id="formGazanaNote" rows="3" placeholder="Payment terms, delivery instructions, quality notes..."></textarea>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary btn-lg" id="btnSaveGazanaFullForm" style="background: linear-gradient(135deg, #1e40af, #0284c7);">
+            💾 Save Entry
+          </button>
+          <button type="button" class="btn btn-secondary btn-lg" id="btnGazanaFormCancel">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </section>
+
     <!-- ─── Yarn Stock Dashboard ─── -->
     <section class="view" id="viewYarnDashboard">
       <div class="dashboard-header">
@@ -289,6 +500,7 @@
 
     <!-- Global Party Names Datalist for Auto-completion -->
     <datalist id="partyNamesDatalist"></datalist>
+    <datalist id="cbPartyDatalist"></datalist>
 
     <!-- ─── Yarn Issue Form ─── -->
     <section class="view" id="viewYarnForm">
@@ -844,6 +1056,55 @@
         <button type="button" class="btn btn-warning" id="btnEditContract" style="background: #d97706; color: #fff;">✏️ Edit</button>
         <button type="button" class="btn btn-danger" id="btnDeleteContract">🗑️ Delete</button>
         <button type="button" class="btn btn-secondary" onclick="closeContractDetailModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Quick Add Payment / Advance Modal ═══ -->
+  <div class="modal-overlay hidden" id="partyPaymentModal">
+    <div class="modal" style="max-width: 440px;">
+      <h3 class="modal-title" id="partyPaymentModalTitle" style="color: #10b981; font-size: 1.1rem;">
+        💵 Add Payment / Advance (رقم وصولی)
+      </h3>
+      <div id="partyPaymentModalSummary" style="font-size: 0.8125rem; color: var(--text-secondary); margin: 6px 0 12px; padding: 8px; background: var(--bg-surface-secondary, rgba(255,255,255,0.03)); border-radius: 6px;">
+        <!-- populated by JS -->
+      </div>
+      <form id="partyPaymentForm" onsubmit="event.preventDefault(); submitPartyPayment();">
+        <input type="hidden" id="paymentEntryId" />
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label class="form-label" for="paymentDate">Payment Date (تاریخ) *</label>
+          <input type="date" class="form-input" id="paymentDate" required />
+        </div>
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label class="form-label" for="paymentAmount" style="color: #10b981; font-weight: 700;">Payment Amount (وصول شدہ رقم ₹) *</label>
+          <input type="number" step="any" min="0.01" class="form-input" id="paymentAmount" required placeholder="Enter amount..." style="font-size: 1.1rem; font-weight: 800; color: #10b981;" />
+        </div>
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+          <label class="form-label" for="paymentNote">Note / Received By (تفصیل)</label>
+          <input type="text" class="form-input" id="paymentNote" placeholder="e.g. Received via Bank / Cash / Cheque" />
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closePartyPaymentModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" style="background: #15803d; color: #fff; font-weight: 700;">💾 Save Payment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══ Payment & Installment History Modal ═══ -->
+  <div class="modal-overlay hidden" id="partyPaymentHistoryModal">
+    <div class="modal" style="max-width: 480px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+        <h3 class="modal-title" style="color: #0284c7; font-size: 1.1rem; margin: 0;">
+          📋 Payment &amp; Installment Log (ادائیگی تفصیل)
+        </h3>
+        <button type="button" class="btn-close" onclick="closePaymentHistoryModal()" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: var(--text-secondary); padding: 4px;">✕</button>
+      </div>
+      <div id="partyPaymentHistoryBody">
+        <!-- populated by JS -->
+      </div>
+      <div class="modal-actions" style="margin-top: 1rem;">
+        <button type="button" class="btn btn-secondary" onclick="closePaymentHistoryModal()">Close</button>
       </div>
     </div>
   </div>
