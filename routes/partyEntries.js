@@ -190,7 +190,7 @@ router.get('/:id', async (req, res) => {
         entry.paymentHistory.push({
           amount: currentRemaining,
           date: new Date(),
-          note: 'مکمل ادائیگی (Final Settlement)',
+          note: 'Paid Amount',
           receivedBy: 'Office'
         });
         entry.remaining = 0;
@@ -302,7 +302,7 @@ router.put('/:id', async (req, res) => {
       entry.status = 'active';
       if (Array.isArray(entry.paymentHistory)) {
         entry.paymentHistory = entry.paymentHistory.filter(
-          p => p.note !== 'مکمل ادائیگی (Final Settlement)'
+          p => !p.note || (!p.note.includes('Paid Amount') && !p.note.includes('Final Settlement') && !p.note.includes('مکمل ادائیگی'))
         );
       }
       const installmentsTotal = entry.paymentHistory.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
@@ -418,7 +418,7 @@ router.patch('/:id/status', async (req, res) => {
         entry.paymentHistory.push({
           amount: currentRemaining,
           date: new Date(),
-          note: 'مکمل ادائیگی (Final Settlement)',
+          note: 'Paid Amount',
           receivedBy: 'Office'
         });
       }
@@ -426,7 +426,7 @@ router.patch('/:id/status', async (req, res) => {
     } else if (targetStatus === 'active') {
       if (Array.isArray(entry.paymentHistory)) {
         entry.paymentHistory = entry.paymentHistory.filter(
-          p => p.note !== 'مکمل ادائیگی (Final Settlement)'
+          p => !p.note || (!p.note.includes('Paid Amount') && !p.note.includes('Final Settlement') && !p.note.includes('مکمل ادائیگی'))
         );
       }
       const adv = Number(entry.advance) || 0;

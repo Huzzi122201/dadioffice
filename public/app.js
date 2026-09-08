@@ -4607,7 +4607,7 @@ async function loadGazanaDashboard(search = '') {
                     <td style="text-align:right; color: #16a34a; font-weight: 600;">${e.advance > 0 ? fmtCurrency(e.advance) : '—'}</td>
                     <td style="text-align:right;">
                       ${installmentsSum > 0 ? `
-                        <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.76rem; font-weight: 700; color: #0284c7; background: rgba(2,132,199,0.08); border-radius: 4px;" onclick="openPaymentHistoryModal('${e._id}')" title="Click to view installment breakdown">
+                        <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.76rem; font-weight: 700; color: #0284c7; background: rgba(2,132,199,0.08); border-radius: 4px;" onclick="openPaymentHistoryModal('${e._id}')" title="Click to view payment breakdown">
                           ${fmtCurrency(installmentsSum)} <small>(${e.paymentHistory.length})</small>
                         </button>
                       ` : '<span style="color: var(--text-muted);">—</span>'}
@@ -4636,7 +4636,7 @@ async function loadGazanaDashboard(search = '') {
                     <td>
                       <div style="display: flex; gap: 5px; align-items: center;">
                         ${(!isCompleted && displayRemaining > 0) ? `
-                          <button class="btn-add-payment" onclick="openQuickPaymentModal('${e._id}', '${escapeHtml(e.partyName)}', ${displayRemaining})" title="Add Payment Installment">
+                          <button class="btn-add-payment" onclick="openQuickPaymentModal('${e._id}', '${escapeHtml(e.partyName)}', ${displayRemaining})" title="Add Partial Payment">
                             ＋ Add Payment
                           </button>
                         ` : ''}
@@ -4814,7 +4814,7 @@ async function openPartyGazanaDetail(partyName) {
                       </td>
                       <td style="text-align:right;">
                         ${installmentsSum > 0 ? `
-                          <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.76rem; font-weight: 700; color: #0284c7; background: rgba(2,132,199,0.08); border-radius: 4px;" onclick="openPaymentHistoryModal('${e._id}')" title="Click to view installment breakdown">
+                          <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.76rem; font-weight: 700; color: #0284c7; background: rgba(2,132,199,0.08); border-radius: 4px;" onclick="openPaymentHistoryModal('${e._id}')" title="Click to view payment breakdown">
                             ${fmtCurrency(installmentsSum)} <small>(${e.paymentHistory.length})</small>
                           </button>
                         ` : '<span style="color: var(--text-muted);">—</span>'}
@@ -4843,7 +4843,7 @@ async function openPartyGazanaDetail(partyName) {
                       <td>
                         <div style="display: flex; gap: 5px; align-items: center;">
                           ${(!isCompleted && displayRemaining > 0) ? `
-                            <button class="btn-add-payment" onclick="openQuickPaymentModal('${e._id}', '${escapeHtml(res.partyName)}', ${displayRemaining})" title="Add Payment Installment">
+                            <button class="btn-add-payment" onclick="openQuickPaymentModal('${e._id}', '${escapeHtml(res.partyName)}', ${displayRemaining})" title="Add Partial Payment">
                               ＋ Add Payment
                             </button>
                           ` : ''}
@@ -5110,7 +5110,7 @@ async function openQuickPaymentModal(entryId, partyName, remaining) {
       </div>
       ${installmentsTotal > 0 ? `
         <div style="display: flex; justify-content: space-between; color: #0284c7;">
-          <span>Subsequent Received (${history.length} installment${history.length > 1 ? 's' : ''}):</span>
+          <span>Subsequent Received (${history.length} payment${history.length > 1 ? 's' : ''}):</span>
           <strong>${fmtCurrency(installmentsTotal)}</strong>
         </div>
       ` : ''}
@@ -5142,7 +5142,7 @@ async function submitPartyPayment() {
     }
 
     await apiPost(`${PARTY_ENTRIES_API}/${id}/payment`, { amount, date, note });
-    toast(`Payment installment of ${fmtCurrency(amount)} recorded successfully!`, 'success');
+    toast(`Partial payment of ${fmtCurrency(amount)} recorded successfully!`, 'success');
     closePartyPaymentModal();
 
     if (views.find(v => v.classList.contains('active')) === viewPartyGazanaDetail && currentGazanaPartyName) {
@@ -5229,23 +5229,39 @@ async function openPaymentHistoryModal(entryId) {
                 <td style="padding: 6px 8px; text-align: center; color: var(--text-muted); font-size: 0.7rem;">—</td>
               </tr>
             ` : ''}
-            ${history.map(p => `
+            ${history.map(p => {
+              const isAuto = p.note === 'Paid Amount' || 
+                             p.note === 'Paid Amount (مکمل ادائیگی)' || 
+                             p.note === 'مکمل ادائیگی (Final Settlement)' ||
+                             (p.note && p.note.includes('Final Settlement')) ||
+                             (p.note && p.note.includes('Paid Amount')) ||
+                             (p.note && p.note.includes('مکمل ادائیگی'));
+              return `
               <tr style="border-bottom: 1px solid var(--border);">
                 <td style="padding: 6px 8px;">${formatDate(p.date)}</td>
                 <td style="padding: 6px 8px;">
-                  <span style="color: #0284c7; font-weight: 600;">📥 Installment</span>
-                  ${p.note ? `<div style="font-size: 0.7rem; color: var(--text-muted);">${escapeHtml(p.note)}</div>` : ''}
+                  ${isAuto ? `
+                    <strong style="color: #16a34a; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                      ✅ Paid Amount
+                    </strong>
+                    <div style="font-size: 0.72rem; color: #15803d; font-weight: 600;">مکمل ادا شدہ رقم</div>
+                  ` : `
+                    <strong style="color: #0284c7; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                      📥 Partial Payment
+                    </strong>
+                    ${p.note ? `<div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 500;">${escapeHtml(p.note)}</div>` : ''}
+                  `}
                 </td>
-                <td style="padding: 6px 8px; text-align: right; font-weight: 700; color: #0284c7;">
+                <td style="padding: 6px 8px; text-align: right; font-weight: 700; color: ${isAuto ? '#16a34a' : '#0284c7'};">
                   ${fmtCurrency(p.amount)}
                 </td>
                 <td style="padding: 6px 8px; text-align: center;">
-                  <button class="btn-action delete" style="padding: 2px 4px; font-size: 0.75rem;" title="Delete this installment" onclick="deleteInstallmentPayment('${entry._id}', '${p._id}')">
+                  <button class="btn-action delete" style="padding: 2px 4px; font-size: 0.75rem;" title="Delete this payment" onclick="deleteInstallmentPayment('${entry._id}', '${p._id}')">
                     🗑️
                   </button>
                 </td>
               </tr>
-            `).join('')}
+            `;}).join('')}
             ${history.length === 0 && (!entry.advance || entry.advance <= 0) ? `
               <tr>
                 <td colspan="4" style="text-align: center; padding: 12px; color: var(--text-muted);">No payments recorded yet.</td>
@@ -5268,7 +5284,7 @@ function closePaymentHistoryModal() {
 }
 
 async function deleteInstallmentPayment(entryId, paymentId) {
-  showConfirm('Delete Payment Installment', 'Are you sure you want to delete this payment record? This will adjust the balance.', async () => {
+  showConfirm('Delete Payment', 'Are you sure you want to delete this payment record? This will adjust the balance.', async () => {
     try {
       await apiDelete(`${PARTY_ENTRIES_API}/${entryId}/payment/${paymentId}`);
       toast('Payment record deleted!', 'success');

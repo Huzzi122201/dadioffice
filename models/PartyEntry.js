@@ -135,7 +135,7 @@ partyEntrySchema.pre('save', function (next) {
       this.paymentHistory.push({
         amount: currentRemaining,
         date: new Date(),
-        note: 'مکمل ادائیگی (Final Settlement)',
+        note: 'Paid Amount',
         receivedBy: 'Office'
       });
     }
@@ -144,7 +144,7 @@ partyEntrySchema.pre('save', function (next) {
     // If status is active, remove auto final settlement payment record to restore original balance
     if (Array.isArray(this.paymentHistory)) {
       this.paymentHistory = this.paymentHistory.filter(
-        p => p.note !== 'مکمل ادائیگی (Final Settlement)'
+        p => !p.note || (!p.note.includes('Paid Amount') && !p.note.includes('Final Settlement') && !p.note.includes('مکمل ادائیگی'))
       );
     }
     const cleanInstallmentsTotal = (this.paymentHistory || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
