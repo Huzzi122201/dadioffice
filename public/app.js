@@ -4696,7 +4696,7 @@ async function loadGazanaDashboard(search = '') {
                 <th>Quality</th>
                 <th style="text-align:right">Kacha<br>Gazana</th>
                 <th style="text-align:right">Safi<br>Gazana</th>
-                <th style="text-align:right" title="Rate Without GST (÷ 1.18)">Rate<br>WO/Gst</th>
+                <th style="text-align:right" title="GST Rate">GST<br>Rate</th>
                 <th style="text-align:right" title="Rate With GST">Rate<br>W/Gst</th>
                 <th style="text-align:right" title="Total Without GST">Total<br>WO/Gst</th>
                 <th style="text-align:right" title="Total With GST">Total<br>W/Gst</th>
@@ -4923,7 +4923,7 @@ async function openPartyGazanaDetail(partyName) {
                   <th>Quality</th>
                   <th style="text-align:right">Kacha<br>Gazana</th>
                   <th style="text-align:right">Safi<br>Gazana</th>
-                  <th style="text-align:right" title="Rate Without GST (÷ 1.18)">Rate<br>WO/Gst</th>
+                  <th style="text-align:right" title="GST Rate">GST<br>Rate</th>
                   <th style="text-align:right" title="Rate With GST">Rate<br>W/Gst</th>
                   <th style="text-align:right" title="Total Without GST">Total<br>WO/Gst</th>
                   <th style="text-align:right" title="Total With GST">Total<br>W/Gst</th>
@@ -5486,7 +5486,7 @@ async function openPaymentHistoryModal(entryId) {
           </div>
         ` : ''}
         <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-          <span style="color: var(--text-muted);">Rate WO/Gst:</span>
+          <span style="color: var(--text-muted);">GST Rate:</span>
           <span style="color: #0284c7; font-weight: 700;">
             ₹ ${fmtRate(entry.rate || (entry.gstRate ? entry.gstRate / 1.18 : 0))}
           </span>
@@ -5768,7 +5768,7 @@ async function sharePartyGazanaPDF(partyName, action = 'share') {
               <th style="padding: 6px 4px; text-align: left;">Quality</th>
               <th style="padding: 6px 4px; text-align: right;">Kacha Gazana</th>
               <th style="padding: 6px 4px; text-align: right;">Safi Gazana</th>
-              <th style="padding: 6px 4px; text-align: right;">Rate WO/Gst</th>
+              <th style="padding: 6px 4px; text-align: right;">GST Rate</th>
               <th style="padding: 6px 4px; text-align: right;">Rate W/Gst</th>
               <th style="padding: 6px 4px; text-align: right;">Total WO/Gst</th>
               <th style="padding: 6px 4px; text-align: right;">Total W/Gst</th>
