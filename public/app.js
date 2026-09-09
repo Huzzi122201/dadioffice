@@ -4681,17 +4681,17 @@ async function loadGazanaDashboard(search = '') {
             <thead>
               <tr>
                 <th>Date</th>
-                <th>Banaam Party</th>
+                <th>Banaam<br>Party</th>
                 <th>Quality</th>
-                <th style="text-align:right">Kacha Gazana</th>
-                <th style="text-align:right">Safi Gazana</th>
-                <th style="text-align:right" title="Rate Without GST">Rate WO/Gst</th>
-                <th style="text-align:right" title="Rate With GST">Rate W/Gst</th>
-                <th style="text-align:right">Total (₹)</th>
-                <th style="text-align:right">Advance (₹)</th>
-                <th style="text-align:right">Received (₹)</th>
-                <th style="text-align:right">Remaining (₹)</th>
-                <th>Contract #</th>
+                <th style="text-align:right">Kacha<br>Gazana</th>
+                <th style="text-align:right">Safi<br>Gazana</th>
+                <th style="text-align:right" title="Rate Without GST">Rate<br>WO/Gst</th>
+                <th style="text-align:right" title="Rate With GST">Rate<br>W/Gst</th>
+                <th style="text-align:right">Total<br>(₹)</th>
+                <th style="text-align:right">Advance<br>(₹)</th>
+                <th style="text-align:right">Received<br>(₹)</th>
+                <th style="text-align:right">Remaining<br>(₹)</th>
+                <th>Contract<br>#</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -4905,15 +4905,15 @@ async function openPartyGazanaDetail(partyName) {
                 <tr>
                   <th>Date</th>
                   <th>Quality</th>
-                  <th style="text-align:right">Kacha Gazana</th>
-                  <th style="text-align:right">Safi Gazana</th>
-                  <th style="text-align:right" title="Rate Without GST">Rate WO/Gst</th>
-                  <th style="text-align:right" title="Rate With GST">Rate W/Gst</th>
-                  <th style="text-align:right">Total Amount (₹)</th>
-                  <th style="text-align:right">Advance (₹)</th>
-                  <th style="text-align:right">Received (₹)</th>
-                  <th style="text-align:right">Remaining (₹)</th>
-                  <th>Contract #</th>
+                  <th style="text-align:right">Kacha<br>Gazana</th>
+                  <th style="text-align:right">Safi<br>Gazana</th>
+                  <th style="text-align:right" title="Rate Without GST">Rate<br>WO/Gst</th>
+                  <th style="text-align:right" title="Rate With GST">Rate<br>W/Gst</th>
+                  <th style="text-align:right">Total<br>Amount (₹)</th>
+                  <th style="text-align:right">Advance<br>(₹)</th>
+                  <th style="text-align:right">Received<br>(₹)</th>
+                  <th style="text-align:right">Remaining<br>(₹)</th>
+                  <th>Contract<br>#</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>

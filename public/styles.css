@@ -3069,8 +3069,11 @@ body {
   top: 0;
   z-index: 2;
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-  white-space: nowrap !important;
-  word-break: normal !important;
+  white-space: normal !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  line-height: 1.2;
+  vertical-align: middle;
 }
 
 .gazana-table tbody td {
@@ -3241,7 +3244,17 @@ body {
     margin: 0 -0.25rem;
   }
 
-  .gazana-table th,
+  .gazana-table th {
+    padding: 0.25rem 0.35rem;
+    font-size: 0.66rem;
+    white-space: normal !important;
+    word-break: keep-all !important;
+    overflow-wrap: normal !important;
+    line-height: 1.15;
+    vertical-align: middle;
+    text-align: center;
+  }
+
   .gazana-table td {
     padding: 0.28rem 0.35rem;
     font-size: 0.7rem;
