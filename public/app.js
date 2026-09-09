@@ -4685,8 +4685,8 @@ async function loadGazanaDashboard(search = '') {
                 <th>Quality</th>
                 <th style="text-align:right">Kacha Gazana</th>
                 <th style="text-align:right">Safi Gazana</th>
-                <th style="text-align:right" title="Rate Begair GST">Rate Begair GST</th>
-                <th style="text-align:right" title="Rate Bama GST">Rate Bama GST</th>
+                <th style="text-align:right" title="Rate Without GST">Rate WO/Gst</th>
+                <th style="text-align:right" title="Rate With GST">Rate W/Gst</th>
                 <th style="text-align:right">Total (₹)</th>
                 <th style="text-align:right">Advance (₹)</th>
                 <th style="text-align:right">Received (₹)</th>
@@ -4907,8 +4907,8 @@ async function openPartyGazanaDetail(partyName) {
                   <th>Quality</th>
                   <th style="text-align:right">Kacha Gazana</th>
                   <th style="text-align:right">Safi Gazana</th>
-                  <th style="text-align:right" title="Rate Begair GST">Rate Begair GST</th>
-                  <th style="text-align:right" title="Rate Bama GST">Rate Bama GST</th>
+                  <th style="text-align:right" title="Rate Without GST">Rate WO/Gst</th>
+                  <th style="text-align:right" title="Rate With GST">Rate W/Gst</th>
                   <th style="text-align:right">Total Amount (₹)</th>
                   <th style="text-align:right">Advance (₹)</th>
                   <th style="text-align:right">Received (₹)</th>
@@ -5456,14 +5456,14 @@ async function openPaymentHistoryModal(entryId) {
           </div>
         ` : ''}
         <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-          <span style="color: var(--text-muted);">Rate Begair GST:</span>
+          <span style="color: var(--text-muted);">Rate WO/Gst:</span>
           <span>
             ₹ ${fmtRate(entry.rate)} 
             ${(!entry.rateType || entry.rateType === 'kachy') ? '<small style="color: #2563eb; font-weight: 700;">(کچے)</small>' : ''}
           </span>
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-          <span style="color: var(--text-muted);">Rate Bama GST (18%):</span>
+          <span style="color: var(--text-muted);">Rate W/Gst (18%):</span>
           <span style="color: #7c3aed; font-weight: 700;">
             ₹ ${fmtRate(entry.gstRate || Math.round(entry.rate * 1.18 * 100) / 100)} 
             ${entry.rateType === 'pakay' ? '<small style="color: #7c3aed; font-weight: 700;">(پکے)</small>' : ''}
@@ -5737,8 +5737,8 @@ async function sharePartyGazanaPDF(partyName, action = 'share') {
               <th style="padding: 6px 4px; text-align: left;">Quality</th>
               <th style="padding: 6px 4px; text-align: right;">Kacha Gazana</th>
               <th style="padding: 6px 4px; text-align: right;">Safi Gazana</th>
-              <th style="padding: 6px 4px; text-align: right;">Rate Begair GST</th>
-              <th style="padding: 6px 4px; text-align: right;">Rate Bama GST</th>
+              <th style="padding: 6px 4px; text-align: right;">Rate WO/Gst</th>
+              <th style="padding: 6px 4px; text-align: right;">Rate W/Gst</th>
               <th style="padding: 6px 4px; text-align: right;">Total Amount</th>
               <th style="padding: 6px 4px; text-align: right; color: #86efac;">Advance</th>
               <th style="padding: 6px 4px; text-align: right; color: #fca5a5;">Remaining</th>
