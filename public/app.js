@@ -4720,9 +4720,15 @@ async function loadGazanaDashboard(search = '') {
                     <td style="text-align:right; font-weight: 700; color: #1e40af;">${(e.safiGazana || 0).toLocaleString()}</td>
                     <td style="text-align:right">
                       <div style="font-weight: 700; color: #0284c7;">${fmtRate(e.rate || (e.gstRate ? e.gstRate / 1.18 : 0))}</div>
+                      ${e.rateType === 'kachy' ? `
+                        <span style="font-size: 0.65rem; background: rgba(37,99,235,0.1); color: #2563eb; padding: 1px 4px; border-radius: 3px; font-weight: 700;">کچے</span>
+                      ` : ''}
                     </td>
                     <td style="text-align:right">
                       <div style="font-weight: 700; color: #7c3aed;">${fmtRate(e.gstRate || Math.round((e.rate * 1.18) * 100) / 100)}</div>
+                      ${(!e.rateType || e.rateType === 'pakay') ? `
+                        <span style="font-size: 0.65rem; background: rgba(124,58,237,0.1); color: #7c3aed; padding: 1px 4px; border-radius: 3px; font-weight: 700;">پکے</span>
+                      ` : ''}
                     </td>
                     <td style="text-align:right; font-weight: 700; color: #0284c7;">${fmtCurrency(totalWO)}</td>
                     <td style="text-align:right; font-weight: 700; color: #7c3aed;">${fmtCurrency(totalW)}</td>
@@ -4939,9 +4945,15 @@ async function openPartyGazanaDetail(partyName) {
                       <td style="text-align:right; font-weight: 700; color: #1e40af;">${(e.safiGazana || 0).toLocaleString()}</td>
                       <td style="text-align:right">
                         <div style="font-weight: 700; color: #0284c7;">${fmtRate(e.rate || (e.gstRate ? e.gstRate / 1.18 : 0))}</div>
+                        ${e.rateType === 'kachy' ? `
+                          <span style="font-size: 0.65rem; background: rgba(37,99,235,0.1); color: #2563eb; padding: 1px 4px; border-radius: 3px; font-weight: 700;">کچے</span>
+                        ` : ''}
                       </td>
                       <td style="text-align:right">
                         <div style="font-weight: 700; color: #7c3aed;">${fmtRate(e.gstRate || Math.round((e.rate * 1.18) * 100) / 100)}</div>
+                        ${(!e.rateType || e.rateType === 'pakay') ? `
+                          <span style="font-size: 0.65rem; background: rgba(124,58,237,0.1); color: #7c3aed; padding: 1px 4px; border-radius: 3px; font-weight: 700;">پکے</span>
+                        ` : ''}
                       </td>
                       <td style="text-align:right; font-weight: 700; color: #0284c7;">${fmtCurrency(totalWO)}</td>
                       <td style="text-align:right; font-weight: 700; color: #7c3aed;">${fmtCurrency(totalW)}</td>
@@ -5072,16 +5084,16 @@ function openPartyGazanaForm(preFillParty = '', editRecord = null) {
     if ($('formGazanaStatus')) $('formGazanaStatus').value = editRecord.status || 'active';
     if ($('formGazanaNote')) $('formGazanaNote').value = editRecord.note || '';
 
-    const rateType = editRecord.rateType || 'kachy';
+    const rateType = editRecord.rateType || 'pakay';
     if ($('rateTypePakay')) $('rateTypePakay').checked = (rateType === 'pakay');
-    if ($('rateTypeKachy')) $('rateTypeKachy').checked = (rateType !== 'pakay');
+    if ($('rateTypeKachy')) $('rateTypeKachy').checked = (rateType === 'kachy');
   } else {
     if ($('partyGazanaFormTitle')) $('partyGazanaFormTitle').textContent = '📋 نئی گزانہ انٹری';
     if (preFillParty && $('formGazanaPartyName')) {
       $('formGazanaPartyName').value = preFillParty;
     }
-    if ($('rateTypeKachy')) $('rateTypeKachy').checked = true;
-    if ($('rateTypePakay')) $('rateTypePakay').checked = false;
+    if ($('rateTypePakay')) $('rateTypePakay').checked = true;
+    if ($('rateTypeKachy')) $('rateTypeKachy').checked = false;
   }
 
   updateGazanaFullFormCalculations();
@@ -5112,6 +5124,7 @@ function updateGazanaFullFormCalculations() {
   // User enters Rate Without GST (Rate WO/Gst)
   const rateWithoutGst = parseFloat($('formGazanaRate')?.value) || 0;
   const advance = parseFloat($('formGazanaAdvance')?.value) || 0;
+  const isPakay = Boolean($('rateTypePakay')?.checked);
 
   // Rate With GST (18%) = rateWithoutGst * 1.18
   const rateWithGst = rateWithoutGst > 0 ? Math.round(rateWithoutGst * 1.18 * 100) / 100 : 0;
@@ -5123,8 +5136,14 @@ function updateGazanaFullFormCalculations() {
   const totalWithoutGst = Math.round(safi * rateWithoutGst * 100) / 100;
   const totalWithGst = Math.round(safi * rateWithGst * 100) / 100;
 
-  // Deduct advance from total amount with GST
-  const remaining = Math.max(0, Math.round((totalWithGst - advance) * 100) / 100);
+  // Active billable total: With GST if pakay (default), Without GST if kachy
+  const activeTotal = isPakay ? totalWithGst : totalWithoutGst;
+
+  // Deduct advance from active total
+  const remaining = Math.max(0, Math.round((activeTotal - advance) * 100) / 100);
+
+  if ($('rateTypeCardKachy')) $('rateTypeCardKachy').classList.toggle('active', !isPakay);
+  if ($('rateTypeCardPakay')) $('rateTypeCardPakay').classList.toggle('active', isPakay);
 
   if ($('formGazanaTotalWODisplay')) {
     $('formGazanaTotalWODisplay').textContent = fmtCurrency(totalWithoutGst);
@@ -5140,14 +5159,14 @@ function updateGazanaFullFormCalculations() {
   }
 
   if ($('formGazanaStatus')) {
-    if (remaining <= 0 && totalWithGst > 0) {
+    if (remaining <= 0 && activeTotal > 0) {
       $('formGazanaStatus').value = 'completed';
     }
   }
 }
 
 // Bind live listeners for full form calculations
-['formGazanaSafi', 'formGazanaRate', 'formGazanaAdvance', 'formGazanaKacha'].forEach(id => {
+['formGazanaSafi', 'formGazanaRate', 'formGazanaAdvance', 'formGazanaKacha', 'rateTypeKachy', 'rateTypePakay'].forEach(id => {
   const el = $(id);
   if (el) {
     el.addEventListener('input', updateGazanaFullFormCalculations);
@@ -5303,7 +5322,7 @@ async function savePartyGazanaForm() {
       safiGazana,
       rate: rateWithoutGst,
       gstRate: rateWithGst,
-      rateType: 'pakay',
+      rateType: $('rateTypeKachy')?.checked ? 'kachy' : 'pakay',
       advance,
       contractNo,
       note,

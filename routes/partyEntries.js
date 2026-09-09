@@ -242,11 +242,12 @@ router.post('/', async (req, res) => {
     const finalGstRate = Math.round(finalRateWO * 1.18 * 100) / 100;
     const totalWithGst = Math.round(safi * finalGstRate * 100) / 100;
     const totalWithoutGst = Math.round(safi * finalRateWO * 100) / 100;
-    const adv = Number(advance) || 0;
-    const rem = Math.max(0, Math.round((totalWithGst - adv) * 100) / 100);
+    const selectedRateType = rateType === 'kachy' ? 'kachy' : 'pakay';
+    const totalBill = selectedRateType === 'kachy' ? totalWithoutGst : totalWithGst;
+    const rem = Math.max(0, Math.round((totalBill - adv) * 100) / 100);
 
     let finalStatus = status || 'active';
-    if (rem <= 0 && totalWithGst > 0) {
+    if (rem <= 0 && totalBill > 0) {
       finalStatus = 'completed';
     }
 
@@ -258,12 +259,12 @@ router.post('/', async (req, res) => {
       kachaGazana: Number(kachaGazana) || 0,
       safiGazana: safi,
       rate: finalRateWO,
-      rateType: rateType || 'kachy',
+      rateType: selectedRateType,
       gstRate: finalGstRate,
       loomWala: (loomWala || '').trim(),
       purchaser: (purchaser || '').trim(),
       gudaam: (gudaam || '').trim(),
-      totalAmount: totalWithGst,
+      totalAmount: totalBill,
       totalAmountWithoutGst: totalWithoutGst,
       advance: adv,
       remaining: rem,
@@ -331,8 +332,9 @@ router.put('/:id', async (req, res) => {
     if (note !== undefined) entry.note = (note || '').trim();
 
     const safi = entry.safiGazana || 0;
-    entry.totalAmount = Math.round(safi * (entry.gstRate || 0) * 100) / 100;
     entry.totalAmountWithoutGst = Math.round(safi * (entry.rate || 0) * 100) / 100;
+    const isKachy = entry.rateType === 'kachy';
+    entry.totalAmount = isKachy ? entry.totalAmountWithoutGst : Math.round(safi * (entry.gstRate || 0) * 100) / 100;
     const total = entry.totalAmount;
     const adv = entry.advance || 0;
 

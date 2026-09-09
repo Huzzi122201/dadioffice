@@ -422,10 +422,25 @@
               <input class="form-input" type="number" step="any" id="formGazanaGstRate" readonly placeholder="0.00" style="background: var(--bg-tertiary, #f8fafc); font-weight: 800; color: #7c3aed;" />
             </div>
 
-            <!-- Hidden compatibility fields for rateType -->
-            <div style="display: none;">
-              <input type="radio" name="formGazanaRateType" id="rateTypeKachy" value="kachy" checked />
-              <input type="radio" name="formGazanaRateType" id="rateTypePakay" value="pakay" />
+            <!-- Kachy / Pakay Radio Selection Group -->
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label class="form-label" style="font-weight: 800; color: var(--text-primary);">
+                حساب کی قسم *
+              </label>
+              <div class="rate-type-radio-group">
+                <label class="rate-type-radio-card" id="rateTypeCardKachy">
+                  <input type="radio" name="formGazanaRateType" id="rateTypeKachy" value="kachy" />
+                  <div class="radio-card-content">
+                    <div class="radio-card-title">کچے (بغیر GST)</div>
+                  </div>
+                </label>
+                <label class="rate-type-radio-card active" id="rateTypeCardPakay">
+                  <input type="radio" name="formGazanaRateType" id="rateTypePakay" value="pakay" checked />
+                  <div class="radio-card-content">
+                    <div class="radio-card-title">پکے (مع GST 18%)</div>
+                  </div>
+                </label>
+              </div>
             </div>
           </div>
         </div>

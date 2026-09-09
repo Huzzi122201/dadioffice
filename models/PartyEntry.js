@@ -60,7 +60,7 @@ const partyEntrySchema = new mongoose.Schema(
     rateType: {
       type: String,
       enum: ['kachy', 'pakay'],
-      default: 'kachy'
+      default: 'pakay'
     },
     gstRate: {
       type: Number,
@@ -161,7 +161,7 @@ partyEntrySchema.pre('save', function (next) {
 
   const adv = Number(this.advance) || 0;
   if (!this.rateType) {
-    this.rateType = 'kachy';
+    this.rateType = 'pakay';
   }
 
   let installmentsTotal = 0;
@@ -170,9 +170,14 @@ partyEntrySchema.pre('save', function (next) {
   }
 
   const totalRec = Math.round((adv + installmentsTotal) * 100) / 100;
-  // Total with GST and Total without GST
-  this.totalAmount = Math.round(safi * this.gstRate * 100) / 100;
+  // Total without GST
   this.totalAmountWithoutGst = Math.round(safi * this.rate * 100) / 100;
+  // If kachy, bill is without GST; if pakay (default), bill is with GST
+  if (this.rateType === 'kachy') {
+    this.totalAmount = this.totalAmountWithoutGst;
+  } else {
+    this.totalAmount = Math.round(safi * this.gstRate * 100) / 100;
+  }
 
   if (this.status === 'completed') {
     const currentRemaining = Math.max(0, Math.round((this.totalAmount - totalRec) * 100) / 100);
