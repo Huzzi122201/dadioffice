@@ -1024,11 +1024,12 @@ async function populatePartyNamesDatalist() {
     const contractFormPartySelect = $('contractPartySelectDropdown');
     const formGazanaPartySelect = $('formGazanaPartyDropdown');
 
-    const [stock, invoices, cbParties, gazanaParties] = await Promise.all([
+    const [stock, invoices, cbParties, gazanaParties, gazanaEntriesRes] = await Promise.all([
       apiGet(`${YARN_API}/stock`).catch(() => []),
       apiGet(API).catch(() => []),
       apiGet(`${CB_API}/parties`).catch(() => []),
       apiGet(`${PARTY_ENTRIES_API}/parties`).catch(() => []),
+      apiGet(PARTY_ENTRIES_API).catch(() => ({ entries: [] }))
     ]);
 
     const partyMap = new Map();
@@ -1045,6 +1046,13 @@ async function populatePartyNamesDatalist() {
     if (Array.isArray(invoices)) invoices.forEach(i => addParty(i.partyName));
     if (Array.isArray(cbParties)) cbParties.forEach(p => addParty(p.name));
     if (Array.isArray(gazanaParties)) gazanaParties.forEach(p => addParty(p.partyName));
+    if (Array.isArray(gazanaEntriesRes?.entries)) {
+      gazanaEntriesRes.entries.forEach(e => {
+        if (e.gudaam) addParty(e.gudaam);
+        if (e.loomWala) addParty(e.loomWala);
+        if (e.purchaser) addParty(e.purchaser);
+      });
+    }
 
     const sortedParties = Array.from(partyMap.values()).sort((a, b) => a.localeCompare(b));
     allKnownPartiesList = sortedParties;
@@ -1102,9 +1110,10 @@ function setupPartyAutocomplete(inputId, dropdownId) {
       return;
     }
 
+    const itemIcon = inputId === 'formGazanaGudaam' ? '🏬' : '👤';
     dropdown.innerHTML = currentMatches.map((name, idx) => `
       <div class="party-suggestion-item" data-index="${idx}" onmousedown="event.preventDefault(); selectPartyForInput('${inputId}', '${dropdownId}', '${escapeHtml(name)}');" ontouchstart="event.preventDefault(); selectPartyForInput('${inputId}', '${dropdownId}', '${escapeHtml(name)}');">
-        <span style="font-size: 1rem;">👤</span>
+        <span style="font-size: 1rem;">${itemIcon}</span>
         <span>${escapeHtml(name)}</span>
       </div>
     `).join('');
@@ -1207,10 +1216,11 @@ window.selectPartyForInput = selectPartyForInput;
 // Aliases for backwards compatibility
 window.selectGazanaPartySuggestion = (name) => selectPartyForInput('formGazanaPartyName', 'formGazanaPartySuggestions', name);
 
-// Initialize party autocomplete for Banaam Party, Loom Wala, and Purchaser (only suggests when typing)
+// Initialize party autocomplete for Banaam Party, Loom Wala, Purchaser, and Gudaam (only suggests when typing)
 setupPartyAutocomplete('formGazanaPartyName', 'formGazanaPartySuggestions');
 setupPartyAutocomplete('formGazanaLoomWala', 'formGazanaLoomWalaSuggestions');
 setupPartyAutocomplete('formGazanaPurchaser', 'formGazanaPurchaserSuggestions');
+setupPartyAutocomplete('formGazanaGudaam', 'formGazanaGudaamSuggestions');
 
 if ($('yarnPartySelectDropdown')) {
   $('yarnPartySelectDropdown').addEventListener('change', () => {
@@ -4458,7 +4468,7 @@ document.addEventListener('keydown', (e) => {
   };
 
   // On party suggestion textboxes, ArrowDown and ArrowUp should NEVER navigate between form fields
-  if (['formGazanaPartyName', 'formGazanaLoomWala', 'formGazanaPurchaser'].includes(target.id)) {
+  if (['formGazanaPartyName', 'formGazanaLoomWala', 'formGazanaPurchaser', 'formGazanaGudaam'].includes(target.id)) {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
       return;
@@ -4466,7 +4476,8 @@ document.addEventListener('keydown', (e) => {
     const dropdownMap = {
       formGazanaPartyName: 'formGazanaPartySuggestions',
       formGazanaLoomWala: 'formGazanaLoomWalaSuggestions',
-      formGazanaPurchaser: 'formGazanaPurchaserSuggestions'
+      formGazanaPurchaser: 'formGazanaPurchaserSuggestions',
+      formGazanaGudaam: 'formGazanaGudaamSuggestions'
     };
     const dd = $(dropdownMap[target.id]);
     if (dd && dd.style.display !== 'none' && (e.key === 'Enter' || e.key === 'Tab')) {
