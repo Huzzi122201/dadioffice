@@ -376,15 +376,14 @@
             </div>
             <div class="form-group" style="grid-column: 1 / -1;">
               <label class="form-label" for="formGazanaPartyName" style="color: var(--accent-primary); font-weight: 700;">
-                👤 بنام پارٹی *
+                👤 بنام پارٹی
               </label>
               <div class="party-input-wrapper" style="position: relative;">
                 <input
                   class="form-input"
                   type="text"
                   id="formGazanaPartyName"
-                  required
-                  placeholder="پارٹی کا نام تلاش کریں یا لکھیں..."
+                  placeholder="پارٹی کا نام تلاش کریں یا خالی چھوڑیں (Default Party)..."
                   autocomplete="off"
                 />
                 <div id="formGazanaPartySuggestions" class="party-suggestions-dropdown" style="display: none;"></div>
@@ -761,8 +760,8 @@
               <input class="form-input" type="date" id="entryDate" required />
             </div>
             <div class="form-group" style="grid-column: 1 / -1;">
-              <label class="form-label" for="entryPartyName">Party Name *</label>
-              <input class="form-input" type="text" id="entryPartyName" list="cbPartyDatalist" placeholder="Select existing or type new party name" required autocomplete="off" />
+              <label class="form-label" for="entryPartyName">Party Name</label>
+              <input class="form-input" type="text" id="entryPartyName" list="cbPartyDatalist" placeholder="Select existing or type new party name (Default Party if empty)" autocomplete="off" />
               <datalist id="cbPartyDatalist"></datalist>
             </div>
             <div class="form-group" style="grid-column: 1 / -1;">

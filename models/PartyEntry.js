@@ -25,11 +25,13 @@ const partyEntrySchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      default: 'Default Party',
       index: true
     },
     partyNameNorm: {
       type: String,
       trim: true,
+      default: 'default party',
       index: true
     },
 

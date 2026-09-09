@@ -231,9 +231,7 @@ router.post('/', async (req, res) => {
       status
     } = req.body;
 
-    if (!partyName || !partyName.trim()) {
-      return res.status(400).json({ error: 'Banaam Party Name is required.' });
-    }
+    const resolvedPartyName = (partyName && partyName.trim()) ? partyName.trim() : 'Default Party';
 
     const safi = Number(safiGazana) || 0;
     // The entered rate is without GST (rate)
@@ -254,8 +252,8 @@ router.post('/', async (req, res) => {
 
     const newEntry = new PartyEntry({
       date: date ? new Date(date) : new Date(),
-      partyName: partyName.trim(),
-      partyNameNorm: partyName.trim().toLowerCase(),
+      partyName: resolvedPartyName,
+      partyNameNorm: resolvedPartyName.toLowerCase(),
       variety: (variety || '').trim(),
       kachaGazana: Number(kachaGazana) || 0,
       safiGazana: safi,
@@ -308,9 +306,10 @@ router.put('/:id', async (req, res) => {
     if (!entry) return res.status(404).json({ error: 'Party entry not found' });
 
     if (date) entry.date = new Date(date);
-    if (partyName) {
-      entry.partyName = partyName.trim();
-      entry.partyNameNorm = partyName.trim().toLowerCase();
+    if (partyName !== undefined) {
+      const resolvedPartyName = (partyName && partyName.trim()) ? partyName.trim() : 'Default Party';
+      entry.partyName = resolvedPartyName;
+      entry.partyNameNorm = resolvedPartyName.toLowerCase();
     }
     if (variety !== undefined) entry.variety = (variety || '').trim();
     if (kachaGazana !== undefined) entry.kachaGazana = Number(kachaGazana) || 0;

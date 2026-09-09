@@ -1054,6 +1054,7 @@ async function populatePartyNamesDatalist() {
       });
     }
 
+    addParty('Default Party');
     const sortedParties = Array.from(partyMap.values()).sort((a, b) => a.localeCompare(b));
     allKnownPartiesList = sortedParties;
 
@@ -4039,8 +4040,7 @@ if ($('entryRate')) $('entryRate').addEventListener('input', updateCalculatedAmo
 $('entryForm').addEventListener('submit', async (e) => {
   e.preventDefault();
 
-  const partyName = $('entryPartyName').value.trim();
-  if (!partyName) return toast('Party Name is required', 'error');
+  const partyName = $('entryPartyName').value.trim() || 'Default Party';
 
   const rokerNoVal = parseInt($('entryRokerNo').value) || 0;
   const isCashVal = $('entryModeCash') ? $('entryModeCash').checked : false;
@@ -5293,7 +5293,8 @@ async function savePartyGazanaForm() {
   try {
     const id = $('gazanaFormEditId') ? $('gazanaFormEditId').value : '';
     const date = $('formGazanaDate') ? $('formGazanaDate').value : '';
-    const partyName = $('formGazanaPartyName') ? $('formGazanaPartyName').value.trim() : '';
+    const rawPartyName = $('formGazanaPartyName') ? $('formGazanaPartyName').value.trim() : '';
+    const partyName = rawPartyName || 'Default Party';
     const loomWala = $('formGazanaLoomWala') ? $('formGazanaLoomWala').value.trim() : '';
     const purchaser = $('formGazanaPurchaser') ? $('formGazanaPurchaser').value.trim() : '';
     const gudaam = $('formGazanaGudaam') ? $('formGazanaGudaam').value.trim() : '';
@@ -5306,11 +5307,6 @@ async function savePartyGazanaForm() {
     const contractNo = $('formGazanaContractNo') ? $('formGazanaContractNo').value.trim() : '';
     const note = $('formGazanaNote') ? $('formGazanaNote').value.trim() : '';
     const status = $('formGazanaStatus') ? $('formGazanaStatus').value : 'active';
-
-    if (!partyName) {
-      toast('Banaam Party Name is required.', 'error');
-      return;
-    }
 
     if (!safiGazana || safiGazana <= 0) {
       toast('Please enter valid Safi Gazana.', 'error');
