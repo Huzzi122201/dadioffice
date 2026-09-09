@@ -147,11 +147,17 @@ partyEntrySchema.pre('save', function (next) {
   }
 
   const safi = Number(this.safiGazana) || 0;
-  // Rate entered by user is Rate With GST (gstRate)
-  const gstRt = Number(this.gstRate) || Number(this.rate) || 0;
-  this.gstRate = Math.round(gstRt * 100) / 100;
-  // Rate Without GST = gstRate / 1.18
-  this.rate = this.gstRate > 0 ? Math.round((this.gstRate / 1.18) * 100) / 100 : 0;
+  // User enters Rate Without GST (rate)
+  const rt = Number(this.rate) || 0;
+  const gstRt = Number(this.gstRate) || 0;
+
+  if (rt > 0) {
+    this.rate = Math.round(rt * 100) / 100;
+    this.gstRate = Math.round(this.rate * 1.18 * 100) / 100;
+  } else if (gstRt > 0) {
+    this.gstRate = Math.round(gstRt * 100) / 100;
+    this.rate = Math.round((this.gstRate / 1.18) * 100) / 100;
+  }
 
   const adv = Number(this.advance) || 0;
   if (!this.rateType) {

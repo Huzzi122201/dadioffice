@@ -236,10 +236,10 @@ router.post('/', async (req, res) => {
     }
 
     const safi = Number(safiGazana) || 0;
-    // The entered rate is with GST (gstRate)
-    const enteredGstRate = Number(gstRate !== undefined ? gstRate : rate) || 0;
-    const finalGstRate = Math.round(enteredGstRate * 100) / 100;
-    const finalRateWO = finalGstRate > 0 ? Math.round((finalGstRate / 1.18) * 100) / 100 : 0;
+    // The entered rate is without GST (rate)
+    const enteredRateWO = Number(rate !== undefined ? rate : (gstRate ? gstRate / 1.18 : 0)) || 0;
+    const finalRateWO = Math.round(enteredRateWO * 100) / 100;
+    const finalGstRate = Math.round(finalRateWO * 1.18 * 100) / 100;
     const totalWithGst = Math.round(safi * finalGstRate * 100) / 100;
     const totalWithoutGst = Math.round(safi * finalRateWO * 100) / 100;
     const adv = Number(advance) || 0;
@@ -313,10 +313,14 @@ router.put('/:id', async (req, res) => {
     if (variety !== undefined) entry.variety = (variety || '').trim();
     if (kachaGazana !== undefined) entry.kachaGazana = Number(kachaGazana) || 0;
     if (safiGazana !== undefined) entry.safiGazana = Number(safiGazana) || 0;
-    if (gstRate !== undefined || rate !== undefined) {
-      const enteredGst = Number(gstRate !== undefined ? gstRate : rate) || 0;
-      entry.gstRate = Math.round(enteredGst * 100) / 100;
-      entry.rate = entry.gstRate > 0 ? Math.round((entry.gstRate / 1.18) * 100) / 100 : 0;
+    if (rate !== undefined || gstRate !== undefined) {
+      if (rate !== undefined) {
+        entry.rate = Math.round(Number(rate) * 100) / 100;
+        entry.gstRate = Math.round(entry.rate * 1.18 * 100) / 100;
+      } else if (gstRate !== undefined) {
+        entry.gstRate = Math.round(Number(gstRate) * 100) / 100;
+        entry.rate = Math.round((entry.gstRate / 1.18) * 100) / 100;
+      }
     }
     if (rateType !== undefined) entry.rateType = rateType;
     if (loomWala !== undefined) entry.loomWala = (loomWala || '').trim();

@@ -5066,8 +5066,8 @@ function openPartyGazanaForm(preFillParty = '', editRecord = null) {
     if ($('formGazanaVariety')) $('formGazanaVariety').value = editRecord.variety || '';
     if ($('formGazanaKacha')) $('formGazanaKacha').value = editRecord.kachaGazana || '';
     if ($('formGazanaSafi')) $('formGazanaSafi').value = editRecord.safiGazana || '';
-    const rateWithGst = editRecord.gstRate || (editRecord.rate ? Math.round(editRecord.rate * 1.18 * 100) / 100 : '');
-    if ($('formGazanaRate')) $('formGazanaRate').value = rateWithGst || '';
+    const rateWithoutGst = editRecord.rate || (editRecord.gstRate ? Math.round((editRecord.gstRate / 1.18) * 100) / 100 : '');
+    if ($('formGazanaRate')) $('formGazanaRate').value = rateWithoutGst || '';
     if ($('formGazanaAdvance')) $('formGazanaAdvance').value = editRecord.advance || 0;
     if ($('formGazanaStatus')) $('formGazanaStatus').value = editRecord.status || 'active';
     if ($('formGazanaNote')) $('formGazanaNote').value = editRecord.note || '';
@@ -5109,19 +5109,19 @@ function openEditPartyEntryModal(id) {
 // ── Real-time Calculations on Full Page Form ───────────────
 function updateGazanaFullFormCalculations() {
   const safi = parseFloat($('formGazanaSafi')?.value) || 0;
-  // User enters Rate With GST
-  const rateWithGst = parseFloat($('formGazanaRate')?.value) || 0;
+  // User enters Rate Without GST (Rate WO/Gst)
+  const rateWithoutGst = parseFloat($('formGazanaRate')?.value) || 0;
   const advance = parseFloat($('formGazanaAdvance')?.value) || 0;
 
-  // Rate Without GST = rateWithGst / 1.18
-  const rateWithoutGst = rateWithGst > 0 ? (rateWithGst / 1.18) : 0;
-  if ($('formGazanaRateWO')) {
-    $('formGazanaRateWO').value = rateWithoutGst > 0 ? (Math.round(rateWithoutGst * 100) / 100).toFixed(2) : '';
+  // Rate With GST (18%) = rateWithoutGst * 1.18
+  const rateWithGst = rateWithoutGst > 0 ? Math.round(rateWithoutGst * 1.18 * 100) / 100 : 0;
+  if ($('formGazanaGstRate')) {
+    $('formGazanaGstRate').value = rateWithGst > 0 ? rateWithGst.toFixed(2) : '';
   }
 
-  // Calculate both totals: With GST and Without GST
-  const totalWithGst = Math.round(safi * rateWithGst * 100) / 100;
+  // Calculate both totals: Without GST and With GST
   const totalWithoutGst = Math.round(safi * rateWithoutGst * 100) / 100;
+  const totalWithGst = Math.round(safi * rateWithGst * 100) / 100;
 
   // Deduct advance from total amount with GST
   const remaining = Math.max(0, Math.round((totalWithGst - advance) * 100) / 100);
@@ -5270,8 +5270,8 @@ async function savePartyGazanaForm() {
     const variety = $('formGazanaVariety') ? $('formGazanaVariety').value.trim() : '';
     const kachaGazana = parseFloat($('formGazanaKacha')?.value) || 0;
     const safiGazana = parseFloat($('formGazanaSafi')?.value) || 0;
-    const enteredRateWithGst = parseFloat($('formGazanaRate')?.value) || 0;
-    const rateWithoutGst = enteredRateWithGst > 0 ? Math.round((enteredRateWithGst / 1.18) * 100) / 100 : 0;
+    const rateWithoutGst = parseFloat($('formGazanaRate')?.value) || 0;
+    const rateWithGst = rateWithoutGst > 0 ? Math.round(rateWithoutGst * 1.18 * 100) / 100 : 0;
     const advance = parseFloat($('formGazanaAdvance')?.value) || 0;
     const contractNo = $('formGazanaContractNo') ? $('formGazanaContractNo').value.trim() : '';
     const note = $('formGazanaNote') ? $('formGazanaNote').value.trim() : '';
@@ -5287,7 +5287,7 @@ async function savePartyGazanaForm() {
       return;
     }
 
-    if (!enteredRateWithGst || enteredRateWithGst <= 0) {
+    if (!rateWithoutGst || rateWithoutGst <= 0) {
       toast('Please enter valid Rate.', 'error');
       return;
     }
@@ -5302,7 +5302,7 @@ async function savePartyGazanaForm() {
       kachaGazana,
       safiGazana,
       rate: rateWithoutGst,
-      gstRate: enteredRateWithGst,
+      gstRate: rateWithGst,
       rateType: 'pakay',
       advance,
       contractNo,
