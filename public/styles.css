@@ -3069,7 +3069,8 @@ body {
   top: 0;
   z-index: 2;
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-  white-space: nowrap;
+  white-space: nowrap !important;
+  word-break: normal !important;
 }
 
 .gazana-table tbody td {
@@ -3244,6 +3245,8 @@ body {
   .gazana-table td {
     padding: 0.28rem 0.35rem;
     font-size: 0.7rem;
+    white-space: nowrap !important;
+    word-break: normal !important;
   }
 
   .btn-add-payment {
