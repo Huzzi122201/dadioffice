@@ -244,6 +244,7 @@ router.post('/', async (req, res) => {
     const totalWithoutGst = Math.round(safi * finalRateWO * 100) / 100;
     const selectedRateType = rateType === 'kachy' ? 'kachy' : 'pakay';
     const totalBill = selectedRateType === 'kachy' ? totalWithoutGst : totalWithGst;
+    const adv = Number(advance) || 0;
     const rem = Math.max(0, Math.round((totalBill - adv) * 100) / 100);
 
     let finalStatus = status || 'active';
