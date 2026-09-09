@@ -4708,9 +4708,9 @@ async function loadGazanaDashboard(search = '') {
                       <strong style="color: var(--accent-primary); cursor: pointer;" onclick="openPartyGazanaDetail('${escapeHtml(e.partyName)}')">
                         ${escapeHtml(e.partyName)} ↗
                       </strong>
-                      ${e.purchaser ? `<div style="font-size: 0.72rem; color: #0369a1; margin-top: 2px;">🛒 <strong>خریدار:</strong> ${escapeHtml(e.purchaser)}</div>` : ''}
-                      ${e.loomWala ? `<div style="font-size: 0.72rem; color: #4338ca; margin-top: 1px;">🏭 <strong>لوم والا:</strong> ${escapeHtml(e.loomWala)}</div>` : ''}
-                      ${e.gudaam ? `<div style="font-size: 0.72rem; color: #0d9488; margin-top: 1px;">🏬 <strong>گودام:</strong> ${escapeHtml(e.gudaam)}</div>` : ''}
+                      ${e.purchaser ? `<div style="font-size: 0.82rem; color: #0369a1; margin-top: 3px;"><strong>خریدار:</strong> ${escapeHtml(e.purchaser)}</div>` : ''}
+                      ${e.loomWala ? `<div style="font-size: 0.82rem; color: #4338ca; margin-top: 2px;"><strong>لوم والا:</strong> ${escapeHtml(e.loomWala)}</div>` : ''}
+                      ${e.gudaam ? `<div style="font-size: 0.82rem; color: #0d9488; margin-top: 2px;"><strong>گودام:</strong> ${escapeHtml(e.gudaam)}</div>` : ''}
                     </td>
                     <td>${escapeHtml(e.variety || '—')}</td>
                     <td style="text-align:right">${e.kachaGazana > 0 ? e.kachaGazana.toLocaleString() : '—'}</td>
@@ -4928,9 +4928,9 @@ async function openPartyGazanaDetail(partyName) {
                       <td>${formatDate(e.date)}</td>
                       <td>
                         <strong>${escapeHtml(e.variety || '—')}</strong>
-                        ${e.purchaser ? `<div style="font-size: 0.72rem; color: #0369a1; margin-top: 2px;">🛒 <strong>خریدار:</strong> ${escapeHtml(e.purchaser)}</div>` : ''}
-                        ${e.loomWala ? `<div style="font-size: 0.72rem; color: #4338ca; margin-top: 1px;">🏭 <strong>لوم والا:</strong> ${escapeHtml(e.loomWala)}</div>` : ''}
-                        ${e.gudaam ? `<div style="font-size: 0.72rem; color: #0d9488; margin-top: 1px;">🏬 <strong>گودام:</strong> ${escapeHtml(e.gudaam)}</div>` : ''}
+                        ${e.purchaser ? `<div style="font-size: 0.82rem; color: #0369a1; margin-top: 3px;"><strong>خریدار:</strong> ${escapeHtml(e.purchaser)}</div>` : ''}
+                        ${e.loomWala ? `<div style="font-size: 0.82rem; color: #4338ca; margin-top: 2px;"><strong>لوم والا:</strong> ${escapeHtml(e.loomWala)}</div>` : ''}
+                        ${e.gudaam ? `<div style="font-size: 0.82rem; color: #0d9488; margin-top: 2px;"><strong>گودام:</strong> ${escapeHtml(e.gudaam)}</div>` : ''}
                         ${e.note ? `<div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">${escapeHtml(e.note)}</div>` : ''}
                       </td>
                       <td style="text-align:right">${e.kachaGazana > 0 ? e.kachaGazana.toLocaleString() : '—'}</td>
