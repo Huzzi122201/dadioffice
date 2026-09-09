@@ -42,6 +42,7 @@ router.get('/', async (req, res) => {
     let totalSafiGazana = 0;
     let totalKachaGazana = 0;
     let totalAmount = 0;
+    let totalAmountWithoutGst = 0;
     let totalAdvance = 0;
     let totalRemaining = 0;
     let activeCount = 0;
@@ -51,6 +52,7 @@ router.get('/', async (req, res) => {
       totalSafiGazana += e.safiGazana || 0;
       totalKachaGazana += e.kachaGazana || 0;
       totalAmount += e.totalAmount || 0;
+      totalAmountWithoutGst += e.totalAmountWithoutGst || Math.round((e.safiGazana || 0) * (e.rate || 0) * 100) / 100;
       totalAdvance += e.advance || 0;
       totalRemaining += e.remaining || 0;
       if (e.status === 'completed') {
@@ -67,6 +69,7 @@ router.get('/', async (req, res) => {
         totalSafiGazana: Math.round(totalSafiGazana * 100) / 100,
         totalKachaGazana: Math.round(totalKachaGazana * 100) / 100,
         totalAmount: Math.round(totalAmount * 100) / 100,
+        totalAmountWithoutGst: Math.round(totalAmountWithoutGst * 100) / 100,
         totalAdvance: Math.round(totalAdvance * 100) / 100,
         totalRemaining: Math.round(totalRemaining * 100) / 100,
         activeCount,
@@ -129,6 +132,7 @@ router.get('/party/:partyName', async (req, res) => {
     let totalSafiGazana = 0;
     let totalKachaGazana = 0;
     let totalAmount = 0;
+    let totalAmountWithoutGst = 0;
     let totalAdvance = 0;
     let totalRemaining = 0;
     let activeCount = 0;
@@ -140,6 +144,7 @@ router.get('/party/:partyName', async (req, res) => {
       totalSafiGazana += e.safiGazana || 0;
       totalKachaGazana += e.kachaGazana || 0;
       totalAmount += e.totalAmount || 0;
+      totalAmountWithoutGst += e.totalAmountWithoutGst || Math.round((e.safiGazana || 0) * (e.rate || 0) * 100) / 100;
       totalAdvance += e.advance || 0;
       totalRemaining += e.remaining || 0;
       if (e.status === 'completed') {
@@ -158,6 +163,7 @@ router.get('/party/:partyName', async (req, res) => {
         totalSafiGazana: Math.round(totalSafiGazana * 100) / 100,
         totalKachaGazana: Math.round(totalKachaGazana * 100) / 100,
         totalAmount: Math.round(totalAmount * 100) / 100,
+        totalAmountWithoutGst: Math.round(totalAmountWithoutGst * 100) / 100,
         totalAdvance: Math.round(totalAdvance * 100) / 100,
         totalRemaining: Math.round(totalRemaining * 100) / 100,
         activeCount,
@@ -214,6 +220,7 @@ router.post('/', async (req, res) => {
       kachaGazana,
       safiGazana,
       rate,
+      gstRate,
       rateType,
       loomWala,
       purchaser,
@@ -228,18 +235,18 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Banaam Party Name is required.' });
     }
 
-    const selectedRateType = rateType === 'pakay' ? 'pakay' : 'kachy';
     const safi = Number(safiGazana) || 0;
-    const rt = Number(rate) || 0;
-    const gstRt = Math.round(rt * 1.18 * 100) / 100;
+    // The entered rate is with GST (gstRate)
+    const enteredGstRate = Number(gstRate !== undefined ? gstRate : rate) || 0;
+    const finalGstRate = Math.round(enteredGstRate * 100) / 100;
+    const finalRateWO = finalGstRate > 0 ? Math.round((finalGstRate / 1.18) * 100) / 100 : 0;
+    const totalWithGst = Math.round(safi * finalGstRate * 100) / 100;
+    const totalWithoutGst = Math.round(safi * finalRateWO * 100) / 100;
     const adv = Number(advance) || 0;
-    const total = selectedRateType === 'pakay'
-      ? Math.round(safi * 1.18 * rt * 100) / 100
-      : Math.round(safi * rt * 100) / 100;
-    const rem = Math.round((total - adv) * 100) / 100;
+    const rem = Math.max(0, Math.round((totalWithGst - adv) * 100) / 100);
 
     let finalStatus = status || 'active';
-    if (rem <= 0 && total > 0) {
+    if (rem <= 0 && totalWithGst > 0) {
       finalStatus = 'completed';
     }
 
@@ -250,13 +257,14 @@ router.post('/', async (req, res) => {
       variety: (variety || '').trim(),
       kachaGazana: Number(kachaGazana) || 0,
       safiGazana: safi,
-      rate: rt,
-      rateType: selectedRateType,
-      gstRate: gstRt,
+      rate: finalRateWO,
+      rateType: rateType || 'kachy',
+      gstRate: finalGstRate,
       loomWala: (loomWala || '').trim(),
       purchaser: (purchaser || '').trim(),
       gudaam: (gudaam || '').trim(),
-      totalAmount: total,
+      totalAmount: totalWithGst,
+      totalAmountWithoutGst: totalWithoutGst,
       advance: adv,
       remaining: rem,
       contractNo: (contractNo || '').toString().trim(),
@@ -283,6 +291,7 @@ router.put('/:id', async (req, res) => {
       kachaGazana,
       safiGazana,
       rate,
+      gstRate,
       rateType,
       loomWala,
       purchaser,
@@ -304,8 +313,12 @@ router.put('/:id', async (req, res) => {
     if (variety !== undefined) entry.variety = (variety || '').trim();
     if (kachaGazana !== undefined) entry.kachaGazana = Number(kachaGazana) || 0;
     if (safiGazana !== undefined) entry.safiGazana = Number(safiGazana) || 0;
-    if (rate !== undefined) entry.rate = Number(rate) || 0;
-    if (rateType !== undefined) entry.rateType = rateType === 'pakay' ? 'pakay' : 'kachy';
+    if (gstRate !== undefined || rate !== undefined) {
+      const enteredGst = Number(gstRate !== undefined ? gstRate : rate) || 0;
+      entry.gstRate = Math.round(enteredGst * 100) / 100;
+      entry.rate = entry.gstRate > 0 ? Math.round((entry.gstRate / 1.18) * 100) / 100 : 0;
+    }
+    if (rateType !== undefined) entry.rateType = rateType;
     if (loomWala !== undefined) entry.loomWala = (loomWala || '').trim();
     if (purchaser !== undefined) entry.purchaser = (purchaser || '').trim();
     if (gudaam !== undefined) entry.gudaam = (gudaam || '').trim();
@@ -314,13 +327,9 @@ router.put('/:id', async (req, res) => {
     if (note !== undefined) entry.note = (note || '').trim();
 
     const safi = entry.safiGazana || 0;
-    const rt = entry.rate || 0;
-    entry.gstRate = Math.round(rt * 1.18 * 100) / 100;
-    const isPakay = entry.rateType === 'pakay';
-    const total = isPakay
-      ? Math.round(safi * 1.18 * rt * 100) / 100
-      : Math.round(safi * rt * 100) / 100;
-    entry.totalAmount = total;
+    entry.totalAmount = Math.round(safi * (entry.gstRate || 0) * 100) / 100;
+    entry.totalAmountWithoutGst = Math.round(safi * (entry.rate || 0) * 100) / 100;
+    const total = entry.totalAmount;
     const adv = entry.advance || 0;
 
     if (status === 'active') {

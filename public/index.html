@@ -410,37 +410,22 @@
               <input class="form-input form-gazana-calc" type="number" step="any" id="formGazanaSafi" required placeholder="0" />
             </div>
             <div class="form-group">
-              <label class="form-label" for="formGazanaRate" style="color: #0284c7; font-weight: 700;">
-                Rate WO/Gst *
+              <label class="form-label" for="formGazanaRate" style="color: #7c3aed; font-weight: 700;">
+                Rate (مع GST / W/Gst) *
               </label>
               <input class="form-input form-gazana-calc" type="number" step="any" id="formGazanaRate" required placeholder="0.00" />
             </div>
             <div class="form-group">
-              <label class="form-label" for="formGazanaGstRate" style="color: #7c3aed; font-weight: 700;">
-                Rate W/Gst (18%)
+              <label class="form-label" for="formGazanaRateWO" style="color: #0284c7; font-weight: 700;">
+                Rate WO/Gst (بغیر GST ÷ 1.18)
               </label>
-              <input class="form-input" type="number" step="any" id="formGazanaGstRate" readonly placeholder="0.00" style="background: var(--bg-tertiary, #f8fafc); font-weight: 800; color: #7c3aed;" />
+              <input class="form-input" type="number" step="any" id="formGazanaRateWO" readonly placeholder="0.00" style="background: var(--bg-tertiary, #f8fafc); font-weight: 800; color: #0284c7;" />
             </div>
 
-            <!-- Kachy / Pakay Radio Selection Group -->
-            <div class="form-group" style="grid-column: 1 / -1;">
-              <label class="form-label" style="font-weight: 800; color: var(--text-primary);">
-                حساب کی قسم *
-              </label>
-              <div class="rate-type-radio-group">
-                <label class="rate-type-radio-card" id="rateTypeCardKachy">
-                  <input type="radio" name="formGazanaRateType" id="rateTypeKachy" value="kachy" checked />
-                  <div class="radio-card-content">
-                    <div class="radio-card-title">کچے</div>
-                  </div>
-                </label>
-                <label class="rate-type-radio-card" id="rateTypeCardPakay">
-                  <input type="radio" name="formGazanaRateType" id="rateTypePakay" value="pakay" />
-                  <div class="radio-card-content">
-                    <div class="radio-card-title">پکے</div>
-                  </div>
-                </label>
-              </div>
+            <!-- Hidden compatibility fields for rateType -->
+            <div style="display: none;">
+              <input type="radio" name="formGazanaRateType" id="rateTypeKachy" value="kachy" checked />
+              <input type="radio" name="formGazanaRateType" id="rateTypePakay" value="pakay" />
             </div>
           </div>
         </div>
@@ -449,13 +434,23 @@
         <div class="form-section" style="background: linear-gradient(135deg, rgba(30,58,138,0.03), rgba(2,132,199,0.03)); border: 1.5px solid rgba(2,132,199,0.25); border-radius: var(--radius-md); padding: 1.25rem;">
           <h3 class="section-title" style="color: var(--accent-primary);">💰 کل رقم و ایڈوانس حساب</h3>
 
-          <!-- Total Amount Display Banner -->
-          <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-secondary); border: 1px solid var(--border); padding: 14px 18px; border-radius: var(--radius-sm); margin-bottom: 1rem;">
-            <div>
-              <span style="font-size: 1.15rem; color: var(--text-secondary); font-weight: 700;">کل رقم:</span>
+          <!-- Dual Total Amount Display Banners (WO/Gst and W/Gst) -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1rem;">
+            <div style="background: var(--bg-secondary); border: 1.5px solid rgba(2, 132, 199, 0.35); padding: 12px 14px; border-radius: var(--radius-sm);">
+              <div style="font-size: 0.82rem; color: #0284c7; font-weight: 700; margin-bottom: 4px;">
+                کل رقم بغیر GST (WO/Gst):
+              </div>
+              <div id="formGazanaTotalWODisplay" style="font-size: 1.45rem; font-weight: 900; color: #0284c7;">
+                ₹ 0.00
+              </div>
             </div>
-            <div>
-              <span id="formGazanaTotalDisplay" style="font-size: 1.75rem; font-weight: 900; color: #0284c7;">₹ 0.00</span>
+            <div style="background: var(--bg-secondary); border: 1.5px solid rgba(124, 58, 237, 0.35); padding: 12px 14px; border-radius: var(--radius-sm);">
+              <div style="font-size: 0.82rem; color: #7c3aed; font-weight: 700; margin-bottom: 4px;">
+                کل رقم مع GST (W/Gst):
+              </div>
+              <div id="formGazanaTotalDisplay" style="font-size: 1.45rem; font-weight: 900; color: #7c3aed;">
+                ₹ 0.00
+              </div>
             </div>
           </div>
 

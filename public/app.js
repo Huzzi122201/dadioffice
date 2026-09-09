@@ -4685,9 +4685,10 @@ async function loadGazanaDashboard(search = '') {
                 <th>Quality</th>
                 <th style="text-align:right">Kacha<br>Gazana</th>
                 <th style="text-align:right">Safi<br>Gazana</th>
-                <th style="text-align:right" title="Rate Without GST">Rate<br>WO/Gst</th>
+                <th style="text-align:right" title="Rate Without GST (÷ 1.18)">Rate<br>WO/Gst</th>
                 <th style="text-align:right" title="Rate With GST">Rate<br>W/Gst</th>
-                <th style="text-align:right">Total<br>(₹)</th>
+                <th style="text-align:right" title="Total Without GST">Total<br>WO/Gst</th>
+                <th style="text-align:right" title="Total With GST">Total<br>W/Gst</th>
                 <th style="text-align:right">Advance<br>(₹)</th>
                 <th style="text-align:right">Received<br>(₹)</th>
                 <th style="text-align:right">Remaining<br>(₹)</th>
@@ -4701,6 +4702,8 @@ async function loadGazanaDashboard(search = '') {
                 const isCompleted = e.status === 'completed' || e.remaining <= 0;
                 const displayRemaining = isCompleted ? 0 : Math.max(0, e.remaining || 0);
                 const installmentsSum = (e.paymentHistory || []).reduce((sum, p) => sum + (p.amount || 0), 0);
+                const totalWO = e.totalAmountWithoutGst || (e.rate > 0 ? Math.round((e.safiGazana || 0) * e.rate * 100) / 100 : Math.round(((e.safiGazana || 0) * (e.gstRate || 0) / 1.18) * 100) / 100);
+                const totalW = e.totalAmount || Math.round((e.safiGazana || 0) * (e.gstRate || (e.rate * 1.18)) * 100) / 100;
                 return `
                   <tr>
                     <td>${formatDate(e.date)}</td>
@@ -4716,18 +4719,13 @@ async function loadGazanaDashboard(search = '') {
                     <td style="text-align:right">${e.kachaGazana > 0 ? e.kachaGazana.toLocaleString() : '—'}</td>
                     <td style="text-align:right; font-weight: 700; color: #1e40af;">${(e.safiGazana || 0).toLocaleString()}</td>
                     <td style="text-align:right">
-                      <div style="font-weight: 700;">${fmtRate(e.rate)}</div>
-                      ${(!e.rateType || e.rateType === 'kachy') ? `
-                        <span style="font-size: 0.65rem; background: rgba(37,99,235,0.1); color: #2563eb; padding: 1px 4px; border-radius: 3px; font-weight: 700;">کچے</span>
-                      ` : ''}
+                      <div style="font-weight: 700; color: #0284c7;">${fmtRate(e.rate || (e.gstRate ? e.gstRate / 1.18 : 0))}</div>
                     </td>
                     <td style="text-align:right">
                       <div style="font-weight: 700; color: #7c3aed;">${fmtRate(e.gstRate || Math.round((e.rate * 1.18) * 100) / 100)}</div>
-                      ${e.rateType === 'pakay' ? `
-                        <span style="font-size: 0.65rem; background: rgba(124,58,237,0.1); color: #7c3aed; padding: 1px 4px; border-radius: 3px; font-weight: 700;">پکے</span>
-                      ` : ''}
                     </td>
-                    <td style="text-align:right; font-weight: 700; color: #0284c7;">${fmtCurrency(e.totalAmount)}</td>
+                    <td style="text-align:right; font-weight: 700; color: #0284c7;">${fmtCurrency(totalWO)}</td>
+                    <td style="text-align:right; font-weight: 700; color: #7c3aed;">${fmtCurrency(totalW)}</td>
                     <td style="text-align:right; color: #16a34a; font-weight: 600;">${e.advance > 0 ? fmtCurrency(e.advance) : '—'}</td>
                     <td style="text-align:right;">
                       ${installmentsSum > 0 ? `
@@ -4890,10 +4888,11 @@ async function openPartyGazanaDetail(partyName) {
           </div>
         `;
       } else {
-        let dSafi = 0, dTotal = 0, dAdv = 0, dRem = 0;
+        let dSafi = 0, dTotalWO = 0, dTotalW = 0, dAdv = 0, dRem = 0;
         displayedEntries.forEach(e => {
           dSafi += e.safiGazana || 0;
-          dTotal += e.totalAmount || 0;
+          dTotalW += e.totalAmount || 0;
+          dTotalWO += e.totalAmountWithoutGst || (e.rate > 0 ? Math.round((e.safiGazana || 0) * e.rate * 100) / 100 : Math.round(((e.safiGazana || 0) * (e.gstRate || 0) / 1.18) * 100) / 100);
           dAdv += e.advance || 0;
           dRem += e.remaining || 0;
         });
@@ -4907,9 +4906,10 @@ async function openPartyGazanaDetail(partyName) {
                   <th>Quality</th>
                   <th style="text-align:right">Kacha<br>Gazana</th>
                   <th style="text-align:right">Safi<br>Gazana</th>
-                  <th style="text-align:right" title="Rate Without GST">Rate<br>WO/Gst</th>
+                  <th style="text-align:right" title="Rate Without GST (÷ 1.18)">Rate<br>WO/Gst</th>
                   <th style="text-align:right" title="Rate With GST">Rate<br>W/Gst</th>
-                  <th style="text-align:right">Total<br>Amount (₹)</th>
+                  <th style="text-align:right" title="Total Without GST">Total<br>WO/Gst</th>
+                  <th style="text-align:right" title="Total With GST">Total<br>W/Gst</th>
                   <th style="text-align:right">Advance<br>(₹)</th>
                   <th style="text-align:right">Received<br>(₹)</th>
                   <th style="text-align:right">Remaining<br>(₹)</th>
@@ -4923,6 +4923,8 @@ async function openPartyGazanaDetail(partyName) {
                   const isCompleted = e.status === 'completed' || e.remaining <= 0;
                   const displayRemaining = isCompleted ? 0 : Math.max(0, e.remaining || 0);
                   const installmentsSum = (e.paymentHistory || []).reduce((sum, p) => sum + (p.amount || 0), 0);
+                  const totalWO = e.totalAmountWithoutGst || (e.rate > 0 ? Math.round((e.safiGazana || 0) * e.rate * 100) / 100 : Math.round(((e.safiGazana || 0) * (e.gstRate || 0) / 1.18) * 100) / 100);
+                  const totalW = e.totalAmount || Math.round((e.safiGazana || 0) * (e.gstRate || (e.rate * 1.18)) * 100) / 100;
                   return `
                     <tr>
                       <td>${formatDate(e.date)}</td>
@@ -4936,18 +4938,13 @@ async function openPartyGazanaDetail(partyName) {
                       <td style="text-align:right">${e.kachaGazana > 0 ? e.kachaGazana.toLocaleString() : '—'}</td>
                       <td style="text-align:right; font-weight: 700; color: #1e40af;">${(e.safiGazana || 0).toLocaleString()}</td>
                       <td style="text-align:right">
-                        <div style="font-weight: 700;">${fmtRate(e.rate)}</div>
-                        ${(!e.rateType || e.rateType === 'kachy') ? `
-                          <span style="font-size: 0.65rem; background: rgba(37,99,235,0.1); color: #2563eb; padding: 1px 4px; border-radius: 3px; font-weight: 700;">کچے</span>
-                        ` : ''}
+                        <div style="font-weight: 700; color: #0284c7;">${fmtRate(e.rate || (e.gstRate ? e.gstRate / 1.18 : 0))}</div>
                       </td>
                       <td style="text-align:right">
                         <div style="font-weight: 700; color: #7c3aed;">${fmtRate(e.gstRate || Math.round((e.rate * 1.18) * 100) / 100)}</div>
-                        ${e.rateType === 'pakay' ? `
-                          <span style="font-size: 0.65rem; background: rgba(124,58,237,0.1); color: #7c3aed; padding: 1px 4px; border-radius: 3px; font-weight: 700;">پکے</span>
-                        ` : ''}
                       </td>
-                      <td style="text-align:right; font-weight: 700; color: #0284c7;">${fmtCurrency(e.totalAmount)}</td>
+                      <td style="text-align:right; font-weight: 700; color: #0284c7;">${fmtCurrency(totalWO)}</td>
+                      <td style="text-align:right; font-weight: 700; color: #7c3aed;">${fmtCurrency(totalW)}</td>
                       <td style="text-align:right; color: #16a34a; font-weight: 600;">
                         ${e.advance > 0 ? fmtCurrency(e.advance) : '—'}
                       </td>
@@ -5069,7 +5066,8 @@ function openPartyGazanaForm(preFillParty = '', editRecord = null) {
     if ($('formGazanaVariety')) $('formGazanaVariety').value = editRecord.variety || '';
     if ($('formGazanaKacha')) $('formGazanaKacha').value = editRecord.kachaGazana || '';
     if ($('formGazanaSafi')) $('formGazanaSafi').value = editRecord.safiGazana || '';
-    if ($('formGazanaRate')) $('formGazanaRate').value = editRecord.rate || '';
+    const rateWithGst = editRecord.gstRate || (editRecord.rate ? Math.round(editRecord.rate * 1.18 * 100) / 100 : '');
+    if ($('formGazanaRate')) $('formGazanaRate').value = rateWithGst || '';
     if ($('formGazanaAdvance')) $('formGazanaAdvance').value = editRecord.advance || 0;
     if ($('formGazanaStatus')) $('formGazanaStatus').value = editRecord.status || 'active';
     if ($('formGazanaNote')) $('formGazanaNote').value = editRecord.note || '';
@@ -5111,28 +5109,29 @@ function openEditPartyEntryModal(id) {
 // ── Real-time Calculations on Full Page Form ───────────────
 function updateGazanaFullFormCalculations() {
   const safi = parseFloat($('formGazanaSafi')?.value) || 0;
-  const rate = parseFloat($('formGazanaRate')?.value) || 0;
+  // User enters Rate With GST
+  const rateWithGst = parseFloat($('formGazanaRate')?.value) || 0;
   const advance = parseFloat($('formGazanaAdvance')?.value) || 0;
-  const isPakay = Boolean($('rateTypePakay')?.checked);
 
-  // 1: User base rate (Without GST)
-  // 2: GST Rate (User rate x 1.18)
-  const gstRate = Math.round(rate * 1.18 * 100) / 100;
-  if ($('formGazanaGstRate')) {
-    $('formGazanaGstRate').value = rate > 0 ? gstRate.toFixed(2) : '';
+  // Rate Without GST = rateWithGst / 1.18
+  const rateWithoutGst = rateWithGst > 0 ? (rateWithGst / 1.18) : 0;
+  if ($('formGazanaRateWO')) {
+    $('formGazanaRateWO').value = rateWithoutGst > 0 ? (Math.round(rateWithoutGst * 100) / 100).toFixed(2) : '';
   }
 
-  // If kachy: safi * rate (without GST)
-  // If pakay: safi * gstRate (rate * 1.18)
-  const effectiveRate = isPakay ? (rate * 1.18) : rate;
-  const total = Math.round(safi * effectiveRate * 100) / 100;
-  const remaining = Math.max(0, Math.round((total - advance) * 100) / 100);
+  // Calculate both totals: With GST and Without GST
+  const totalWithGst = Math.round(safi * rateWithGst * 100) / 100;
+  const totalWithoutGst = Math.round(safi * rateWithoutGst * 100) / 100;
 
-  if ($('rateTypeCardKachy')) $('rateTypeCardKachy').classList.toggle('active', !isPakay);
-  if ($('rateTypeCardPakay')) $('rateTypeCardPakay').classList.toggle('active', isPakay);
+  // Deduct advance from total amount with GST
+  const remaining = Math.max(0, Math.round((totalWithGst - advance) * 100) / 100);
+
+  if ($('formGazanaTotalWODisplay')) {
+    $('formGazanaTotalWODisplay').textContent = fmtCurrency(totalWithoutGst);
+  }
 
   if ($('formGazanaTotalDisplay')) {
-    $('formGazanaTotalDisplay').textContent = fmtCurrency(total);
+    $('formGazanaTotalDisplay').textContent = fmtCurrency(totalWithGst);
   }
 
   if ($('formGazanaRemainingDisplay')) {
@@ -5141,14 +5140,14 @@ function updateGazanaFullFormCalculations() {
   }
 
   if ($('formGazanaStatus')) {
-    if (remaining <= 0 && total > 0) {
+    if (remaining <= 0 && totalWithGst > 0) {
       $('formGazanaStatus').value = 'completed';
     }
   }
 }
 
 // Bind live listeners for full form calculations
-['formGazanaSafi', 'formGazanaRate', 'formGazanaAdvance', 'formGazanaKacha', 'rateTypeKachy', 'rateTypePakay'].forEach(id => {
+['formGazanaSafi', 'formGazanaRate', 'formGazanaAdvance', 'formGazanaKacha'].forEach(id => {
   const el = $(id);
   if (el) {
     el.addEventListener('input', updateGazanaFullFormCalculations);
@@ -5271,8 +5270,8 @@ async function savePartyGazanaForm() {
     const variety = $('formGazanaVariety') ? $('formGazanaVariety').value.trim() : '';
     const kachaGazana = parseFloat($('formGazanaKacha')?.value) || 0;
     const safiGazana = parseFloat($('formGazanaSafi')?.value) || 0;
-    const rate = parseFloat($('formGazanaRate')?.value) || 0;
-    const rateType = $('rateTypePakay')?.checked ? 'pakay' : 'kachy';
+    const enteredRateWithGst = parseFloat($('formGazanaRate')?.value) || 0;
+    const rateWithoutGst = enteredRateWithGst > 0 ? Math.round((enteredRateWithGst / 1.18) * 100) / 100 : 0;
     const advance = parseFloat($('formGazanaAdvance')?.value) || 0;
     const contractNo = $('formGazanaContractNo') ? $('formGazanaContractNo').value.trim() : '';
     const note = $('formGazanaNote') ? $('formGazanaNote').value.trim() : '';
@@ -5288,7 +5287,7 @@ async function savePartyGazanaForm() {
       return;
     }
 
-    if (!rate || rate <= 0) {
+    if (!enteredRateWithGst || enteredRateWithGst <= 0) {
       toast('Please enter valid Rate.', 'error');
       return;
     }
@@ -5302,8 +5301,9 @@ async function savePartyGazanaForm() {
       variety,
       kachaGazana,
       safiGazana,
-      rate,
-      rateType,
+      rate: rateWithoutGst,
+      gstRate: enteredRateWithGst,
+      rateType: 'pakay',
       advance,
       contractNo,
       note,
@@ -5457,21 +5457,23 @@ async function openPaymentHistoryModal(entryId) {
         ` : ''}
         <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
           <span style="color: var(--text-muted);">Rate WO/Gst:</span>
-          <span>
-            ₹ ${fmtRate(entry.rate)} 
-            ${(!entry.rateType || entry.rateType === 'kachy') ? '<small style="color: #2563eb; font-weight: 700;">(کچے)</small>' : ''}
+          <span style="color: #0284c7; font-weight: 700;">
+            ₹ ${fmtRate(entry.rate || (entry.gstRate ? entry.gstRate / 1.18 : 0))}
           </span>
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
           <span style="color: var(--text-muted);">Rate W/Gst (18%):</span>
           <span style="color: #7c3aed; font-weight: 700;">
-            ₹ ${fmtRate(entry.gstRate || Math.round(entry.rate * 1.18 * 100) / 100)} 
-            ${entry.rateType === 'pakay' ? '<small style="color: #7c3aed; font-weight: 700;">(پکے)</small>' : ''}
+            ₹ ${fmtRate(entry.gstRate || Math.round(entry.rate * 1.18 * 100) / 100)}
           </span>
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-          <span style="color: var(--text-muted);">Total Order Amount:</span>
-          <strong>${fmtCurrency(entry.totalAmount)}</strong>
+          <span style="color: var(--text-muted);">Total (WO/Gst):</span>
+          <strong style="color: #0284c7;">${fmtCurrency(entry.totalAmountWithoutGst || (entry.rate > 0 ? Math.round((entry.safiGazana || 0) * entry.rate * 100) / 100 : Math.round(((entry.safiGazana || 0) * (entry.gstRate || 0) / 1.18) * 100) / 100))}</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+          <span style="color: var(--text-muted);">Total (W/Gst):</span>
+          <strong style="color: #7c3aed;">${fmtCurrency(entry.totalAmount || Math.round((entry.safiGazana || 0) * (entry.gstRate || (entry.rate * 1.18)) * 100) / 100)}</strong>
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 3px; color: #16a34a;">
           <span>Initial Booking Advance:</span>
@@ -5672,14 +5674,13 @@ async function sharePartyGazanaPDF(partyName, action = 'share') {
         <td style="padding: 6px 4px; font-size: 9.5px; text-align: right;">${e.kachaGazana > 0 ? e.kachaGazana.toLocaleString() : '—'}</td>
         <td style="padding: 6px 4px; font-size: 9.5px; text-align: right; font-weight: 700; color: #1e40af;">${(e.safiGazana || 0).toLocaleString()}</td>
         <td style="padding: 6px 4px; font-size: 9.5px; text-align: right;">
-          <div style="font-weight: 700;">₹ ${fmtRate(e.rate)}</div>
-          ${(!e.rateType || e.rateType === 'kachy') ? '<span style="font-size: 7.5px; color: #2563eb; font-weight: 700;">کچے</span>' : ''}
+          <div style="font-weight: 700; color: #0284c7;">₹ ${fmtRate(e.rate || (e.gstRate ? e.gstRate / 1.18 : 0))}</div>
         </td>
         <td style="padding: 6px 4px; font-size: 9.5px; text-align: right; color: #7c3aed;">
           <div style="font-weight: 700;">₹ ${fmtRate(e.gstRate || Math.round(e.rate * 1.18 * 100) / 100)}</div>
-          ${e.rateType === 'pakay' ? '<span style="font-size: 7.5px; color: #7c3aed; font-weight: 700;">پکے</span>' : ''}
         </td>
-        <td style="padding: 6px 4px; font-size: 9.5px; text-align: right; font-weight: 700; color: #0284c7;">${fmtCurrency(e.totalAmount)}</td>
+        <td style="padding: 6px 4px; font-size: 9.5px; text-align: right; font-weight: 700; color: #0284c7;">${fmtCurrency(e.totalAmountWithoutGst || (e.rate > 0 ? Math.round((e.safiGazana || 0) * e.rate * 100) / 100 : Math.round(((e.safiGazana || 0) * (e.gstRate || 0) / 1.18) * 100) / 100))}</td>
+        <td style="padding: 6px 4px; font-size: 9.5px; text-align: right; font-weight: 700; color: #7c3aed;">${fmtCurrency(e.totalAmount)}</td>
         <td style="padding: 6px 4px; font-size: 9.5px; text-align: right; color: #15803d; font-weight: 700;">${fmtCurrency(e.advance)}</td>
         <td style="padding: 6px 4px; font-size: 9.5px; text-align: right; font-weight: 800; color: ${e.remaining > 0 ? '#b91c1c' : '#15803d'};">${fmtCurrency(e.remaining)}</td>
         <td style="padding: 6px 4px; font-size: 9px; text-align: center;">
@@ -5716,8 +5717,8 @@ async function sharePartyGazanaPDF(partyName, action = 'share') {
             <div style="font-size: 12px; font-weight: 800; color: #1e40af; margin-top: 2px;">${(summary.totalSafiGazana || 0).toLocaleString()}</div>
           </div>
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px; text-align: center;">
-            <div style="font-size: 8.5px; color: #64748b; font-weight: 700; text-transform: uppercase;">Total Billed</div>
-            <div style="font-size: 12px; font-weight: 800; color: #0284c7; margin-top: 2px;">${fmtCurrency(summary.totalAmount || 0)}</div>
+            <div style="font-size: 8.5px; color: #64748b; font-weight: 700; text-transform: uppercase;">Total (W/Gst)</div>
+            <div style="font-size: 12px; font-weight: 800; color: #7c3aed; margin-top: 2px;">${fmtCurrency(summary.totalAmount || 0)}</div>
           </div>
           <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; padding: 6px; text-align: center;">
             <div style="font-size: 8.5px; color: #15803d; font-weight: 700; text-transform: uppercase;">Advance Received</div>
@@ -5739,14 +5740,15 @@ async function sharePartyGazanaPDF(partyName, action = 'share') {
               <th style="padding: 6px 4px; text-align: right;">Safi Gazana</th>
               <th style="padding: 6px 4px; text-align: right;">Rate WO/Gst</th>
               <th style="padding: 6px 4px; text-align: right;">Rate W/Gst</th>
-              <th style="padding: 6px 4px; text-align: right;">Total Amount</th>
+              <th style="padding: 6px 4px; text-align: right;">Total WO/Gst</th>
+              <th style="padding: 6px 4px; text-align: right;">Total W/Gst</th>
               <th style="padding: 6px 4px; text-align: right; color: #86efac;">Advance</th>
               <th style="padding: 6px 4px; text-align: right; color: #fca5a5;">Remaining</th>
               <th style="padding: 6px 4px; text-align: center;">Status</th>
             </tr>
           </thead>
           <tbody>
-            ${rowsHtml || '<tr><td colspan="10" style="text-align:center; padding: 12px;">No entries</td></tr>'}
+            ${rowsHtml || '<tr><td colspan="11" style="text-align:center; padding: 12px;">No entries</td></tr>'}
           </tbody>
           <tfoot>
             <tr style="background: #f1f5f9; font-weight: 800; border-top: 1.5px solid #0f172a;">
@@ -5754,7 +5756,8 @@ async function sharePartyGazanaPDF(partyName, action = 'share') {
               <td style="padding: 6px 4px; text-align: right; color: #1e40af;">${(summary.totalSafiGazana || 0).toLocaleString()}</td>
               <td style="padding: 6px 4px; text-align: right;">—</td>
               <td style="padding: 6px 4px; text-align: right;">—</td>
-              <td style="padding: 6px 4px; text-align: right; color: #0284c7;">${fmtCurrency(summary.totalAmount || 0)}</td>
+              <td style="padding: 6px 4px; text-align: right; color: #0284c7;">${fmtCurrency(summary.totalAmountWithoutGst || 0)}</td>
+              <td style="padding: 6px 4px; text-align: right; color: #7c3aed;">${fmtCurrency(summary.totalAmount || 0)}</td>
               <td style="padding: 6px 4px; text-align: right; color: #15803d;">${fmtCurrency(summary.totalAdvance || 0)}</td>
               <td style="padding: 6px 4px; text-align: right; color: ${summary.totalRemaining > 0 ? '#b91c1c' : '#15803d'};">${fmtCurrency(summary.totalRemaining || 0)}</td>
               <td></td>
