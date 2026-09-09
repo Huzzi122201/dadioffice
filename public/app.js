@@ -5230,6 +5230,35 @@ if ($('btnGazanaFormCancel')) {
   $('btnGazanaFormCancel').addEventListener('click', returnFromGazanaForm);
 }
 
+// Double Enter on "نوٹ / ضروری تفصیلات" to save entry
+let lastGazanaNoteEnterTime = 0;
+const gazanaNoteInput = $('formGazanaNote');
+if (gazanaNoteInput) {
+  gazanaNoteInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const now = Date.now();
+      if (now - lastGazanaNoteEnterTime < 650 || e.ctrlKey) {
+        e.preventDefault();
+        lastGazanaNoteEnterTime = 0;
+        // Trim any trailing newline added by the first enter press
+        if (gazanaNoteInput.value.endsWith('\n')) {
+          gazanaNoteInput.value = gazanaNoteInput.value.slice(0, -1);
+        }
+        const saveBtn = $('btnSaveGazanaFullForm');
+        if (saveBtn) {
+          saveBtn.click();
+        } else {
+          savePartyGazanaForm();
+        }
+        return;
+      }
+      lastGazanaNoteEnterTime = now;
+    } else {
+      lastGazanaNoteEnterTime = 0;
+    }
+  });
+}
+
 // ── Save Party Gazana Entry from Full Page Form ───────────
 async function savePartyGazanaForm() {
   try {
