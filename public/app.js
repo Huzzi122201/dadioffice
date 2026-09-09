@@ -4682,7 +4682,7 @@ async function loadGazanaDashboard(search = '') {
               <tr>
                 <th>Date</th>
                 <th>Banaam Party</th>
-                <th>Variety / Quality</th>
+                <th>Quality</th>
                 <th style="text-align:right">Kacha Gazana</th>
                 <th style="text-align:right">Safi Gazana</th>
                 <th style="text-align:right" title="Rate Begair GST">Rate Begair GST</th>
@@ -4904,7 +4904,7 @@ async function openPartyGazanaDetail(partyName) {
               <thead>
                 <tr>
                   <th>Date</th>
-                  <th>Variety / Quality</th>
+                  <th>Quality</th>
                   <th style="text-align:right">Kacha Gazana</th>
                   <th style="text-align:right">Safi Gazana</th>
                   <th style="text-align:right" title="Rate Begair GST">Rate Begair GST</th>
@@ -5433,7 +5433,7 @@ async function openPaymentHistoryModal(entryId) {
         </div>
         ${entry.variety ? `
           <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-            <span style="color: var(--text-muted);">Variety / Quality:</span>
+            <span style="color: var(--text-muted);">Quality:</span>
             <span>${escapeHtml(entry.variety)}</span>
           </div>
         ` : ''}
@@ -5734,7 +5734,7 @@ async function sharePartyGazanaPDF(partyName, action = 'share') {
           <thead>
             <tr style="background: #0f172a; color: #ffffff;">
               <th style="padding: 6px 4px; text-align: left;">Date</th>
-              <th style="padding: 6px 4px; text-align: left;">Variety / Quality</th>
+              <th style="padding: 6px 4px; text-align: left;">Quality</th>
               <th style="padding: 6px 4px; text-align: right;">Kacha Gazana</th>
               <th style="padding: 6px 4px; text-align: right;">Safi Gazana</th>
               <th style="padding: 6px 4px; text-align: right;">Rate Begair GST</th>
