@@ -3431,5 +3431,70 @@ body {
   }
 }
 
+/* Rate Type Selection Cards (Kachy / Pakay) */
+.rate-type-radio-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+@media (max-width: 600px) {
+  .rate-type-radio-group {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rate-type-radio-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  border: 2px solid var(--border, #cbd5e1);
+  border-radius: 8px;
+  background: var(--bg-secondary, #f8fafc);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.rate-type-radio-card:hover {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.rate-type-radio-card.active,
+.rate-type-radio-card:has(input[type="radio"]:checked) {
+  border-color: #1e40af;
+  background: #f0f7ff;
+  box-shadow: 0 2px 8px rgba(30, 64, 175, 0.12);
+}
+
+.rate-type-radio-card input[type="radio"] {
+  margin: 0;
+  accent-color: #1e40af;
+  width: 19px;
+  height: 19px;
+  cursor: pointer;
+}
+
+.radio-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.radio-card-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #1e3a8a;
+}
+
+.radio-card-desc {
+  font-size: 0.82rem;
+  color: var(--text-secondary, #64748b);
+  font-weight: 600;
+}
+
 
 

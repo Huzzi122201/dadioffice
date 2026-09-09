@@ -214,6 +214,10 @@ router.post('/', async (req, res) => {
       kachaGazana,
       safiGazana,
       rate,
+      rateType,
+      loomWala,
+      purchaser,
+      gudaam,
       advance,
       contractNo,
       note,
@@ -224,10 +228,14 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Banaam Party Name is required.' });
     }
 
+    const selectedRateType = rateType === 'pakay' ? 'pakay' : 'kachy';
     const safi = Number(safiGazana) || 0;
     const rt = Number(rate) || 0;
+    const gstRt = Math.round(rt * 1.18 * 100) / 100;
     const adv = Number(advance) || 0;
-    const total = Math.round(safi * 1.18 * rt * 100) / 100;
+    const total = selectedRateType === 'pakay'
+      ? Math.round(safi * 1.18 * rt * 100) / 100
+      : Math.round(safi * rt * 100) / 100;
     const rem = Math.round((total - adv) * 100) / 100;
 
     let finalStatus = status || 'active';
@@ -243,6 +251,11 @@ router.post('/', async (req, res) => {
       kachaGazana: Number(kachaGazana) || 0,
       safiGazana: safi,
       rate: rt,
+      rateType: selectedRateType,
+      gstRate: gstRt,
+      loomWala: (loomWala || '').trim(),
+      purchaser: (purchaser || '').trim(),
+      gudaam: (gudaam || '').trim(),
       totalAmount: total,
       advance: adv,
       remaining: rem,
@@ -270,6 +283,10 @@ router.put('/:id', async (req, res) => {
       kachaGazana,
       safiGazana,
       rate,
+      rateType,
+      loomWala,
+      purchaser,
+      gudaam,
       advance,
       contractNo,
       note,
@@ -288,15 +305,23 @@ router.put('/:id', async (req, res) => {
     if (kachaGazana !== undefined) entry.kachaGazana = Number(kachaGazana) || 0;
     if (safiGazana !== undefined) entry.safiGazana = Number(safiGazana) || 0;
     if (rate !== undefined) entry.rate = Number(rate) || 0;
+    if (rateType !== undefined) entry.rateType = rateType === 'pakay' ? 'pakay' : 'kachy';
+    if (loomWala !== undefined) entry.loomWala = (loomWala || '').trim();
+    if (purchaser !== undefined) entry.purchaser = (purchaser || '').trim();
+    if (gudaam !== undefined) entry.gudaam = (gudaam || '').trim();
     if (advance !== undefined) entry.advance = Number(advance) || 0;
     if (contractNo !== undefined) entry.contractNo = (contractNo || '').toString().trim();
     if (note !== undefined) entry.note = (note || '').trim();
 
     const safi = entry.safiGazana || 0;
     const rt = entry.rate || 0;
-    const adv = entry.advance || 0;
-    const total = Math.round(safi * 1.18 * rt * 100) / 100;
+    entry.gstRate = Math.round(rt * 1.18 * 100) / 100;
+    const isPakay = entry.rateType === 'pakay';
+    const total = isPakay
+      ? Math.round(safi * 1.18 * rt * 100) / 100
+      : Math.round(safi * rt * 100) / 100;
     entry.totalAmount = total;
+    const adv = entry.advance || 0;
 
     if (status === 'active') {
       entry.status = 'active';

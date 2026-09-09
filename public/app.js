@@ -1067,58 +1067,150 @@ async function populatePartyNamesDatalist() {
 // ── Mobile & Desktop Live Party Suggestion Controller ───────
 let allKnownPartiesList = [];
 
-function renderGazanaPartySuggestions(query = '') {
-  const container = $('formGazanaPartySuggestions');
-  if (!container) return;
+function setupPartyAutocomplete(inputId, dropdownId) {
+  const input = $(inputId);
+  const dropdown = $(dropdownId);
+  if (!input || !dropdown) return;
 
-  const q = (query || '').trim().toLowerCase();
-  let matches = allKnownPartiesList;
-  if (q) {
-    matches = allKnownPartiesList.filter(name => name.toLowerCase().includes(q));
-  }
+  let activeIndex = -1;
+  let currentMatches = [];
+  let originalTypedValue = '';
 
-  if (matches.length === 0) {
-    container.style.display = 'none';
-    container.innerHTML = '';
-    return;
-  }
+  const renderSuggestions = (query, showAllIfEmpty = false) => {
+    const q = (query || '').trim().toLowerCase();
+    activeIndex = -1;
 
-  container.innerHTML = matches.slice(0, 30).map(name => `
-    <div class="party-suggestion-item" onmousedown="event.preventDefault(); selectGazanaPartySuggestion('${escapeHtml(name)}');" ontouchstart="event.preventDefault(); selectGazanaPartySuggestion('${escapeHtml(name)}');" onclick="selectGazanaPartySuggestion('${escapeHtml(name)}');">
-      <span style="font-size: 1rem;">👤</span>
-      <span>${escapeHtml(name)}</span>
-    </div>
-  `).join('');
+    // Do NOT show popup if empty unless showAllIfEmpty is true (e.g. user pressed ArrowDown)
+    if (!q && !showAllIfEmpty) {
+      currentMatches = [];
+      dropdown.style.display = 'none';
+      dropdown.innerHTML = '';
+      return;
+    }
 
-  container.style.display = 'block';
-}
+    if (!q && showAllIfEmpty) {
+      currentMatches = (allKnownPartiesList || []).slice(0, 30);
+    } else {
+      currentMatches = (allKnownPartiesList || []).filter(name =>
+        name.toLowerCase().includes(q)
+      ).slice(0, 30);
+    }
 
-function selectGazanaPartySuggestion(name) {
-  if ($('formGazanaPartyName')) {
-    $('formGazanaPartyName').value = name;
-  }
-  const container = $('formGazanaPartySuggestions');
-  if (container) {
-    container.style.display = 'none';
-    container.innerHTML = '';
-  }
-}
-window.selectGazanaPartySuggestion = selectGazanaPartySuggestion;
+    if (currentMatches.length === 0) {
+      dropdown.style.display = 'none';
+      dropdown.innerHTML = '';
+      return;
+    }
 
-if ($('formGazanaPartyName')) {
-  $('formGazanaPartyName').addEventListener('input', (e) => {
-    renderGazanaPartySuggestions(e.target.value);
+    dropdown.innerHTML = currentMatches.map((name, idx) => `
+      <div class="party-suggestion-item" data-index="${idx}" onmousedown="event.preventDefault(); selectPartyForInput('${inputId}', '${dropdownId}', '${escapeHtml(name)}');" ontouchstart="event.preventDefault(); selectPartyForInput('${inputId}', '${dropdownId}', '${escapeHtml(name)}');">
+        <span style="font-size: 1rem;">👤</span>
+        <span>${escapeHtml(name)}</span>
+      </div>
+    `).join('');
+
+    dropdown.style.display = 'block';
+  };
+
+  const updateActiveItem = (newIndex) => {
+    const items = dropdown.querySelectorAll('.party-suggestion-item');
+    items.forEach(el => el.classList.remove('active'));
+
+    if (newIndex >= 0 && newIndex < items.length) {
+      activeIndex = newIndex;
+      const activeEl = items[newIndex];
+      activeEl.classList.add('active');
+      activeEl.scrollIntoView({ block: 'nearest' });
+
+      // Put the selected party name directly into the input
+      if (currentMatches[newIndex]) {
+        input.value = currentMatches[newIndex];
+      }
+    } else if (newIndex === -1) {
+      activeIndex = -1;
+      input.value = originalTypedValue;
+    }
+  };
+
+  input.addEventListener('input', (e) => {
+    originalTypedValue = e.target.value;
+    renderSuggestions(e.target.value, false);
   });
-  $('formGazanaPartyName').addEventListener('focus', (e) => {
-    renderGazanaPartySuggestions(e.target.value);
+
+  input.addEventListener('keydown', (e) => {
+    const isVisible = dropdown.style.display !== 'none' && currentMatches.length > 0;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!isVisible) {
+        // Open list on ArrowDown if not open yet
+        renderSuggestions(input.value, true);
+        if (currentMatches.length > 0) {
+          updateActiveItem(0);
+        }
+      } else {
+        const nextIndex = (activeIndex < currentMatches.length - 1) ? activeIndex + 1 : 0;
+        updateActiveItem(nextIndex);
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (isVisible) {
+        const prevIndex = (activeIndex > 0) ? activeIndex - 1 : currentMatches.length - 1;
+        updateActiveItem(prevIndex);
+      }
+      return;
+    }
+
+    if (isVisible) {
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        if (activeIndex >= 0 && currentMatches[activeIndex]) {
+          e.preventDefault();
+          e.stopPropagation();
+          selectPartyForInput(inputId, dropdownId, currentMatches[activeIndex]);
+          return;
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        dropdown.style.display = 'none';
+        input.value = originalTypedValue;
+        return;
+      }
+    }
   });
-  $('formGazanaPartyName').addEventListener('blur', () => {
+
+  input.addEventListener('blur', () => {
     setTimeout(() => {
-      const container = $('formGazanaPartySuggestions');
-      if (container) container.style.display = 'none';
-    }, 250);
+      dropdown.style.display = 'none';
+    }, 200);
   });
 }
+
+function selectPartyForInput(inputId, dropdownId, name) {
+  const input = $(inputId);
+  const dropdown = $(dropdownId);
+  if (input) {
+    input.value = name;
+  }
+  if (dropdown) {
+    dropdown.style.display = 'none';
+    dropdown.innerHTML = '';
+  }
+}
+window.selectPartyForInput = selectPartyForInput;
+
+// Aliases for backwards compatibility
+window.selectGazanaPartySuggestion = (name) => selectPartyForInput('formGazanaPartyName', 'formGazanaPartySuggestions', name);
+
+// Initialize party autocomplete for Banaam Party, Loom Wala, and Purchaser (only suggests when typing)
+setupPartyAutocomplete('formGazanaPartyName', 'formGazanaPartySuggestions');
+setupPartyAutocomplete('formGazanaLoomWala', 'formGazanaLoomWalaSuggestions');
+setupPartyAutocomplete('formGazanaPurchaser', 'formGazanaPurchaserSuggestions');
 
 if ($('yarnPartySelectDropdown')) {
   $('yarnPartySelectDropdown').addEventListener('change', () => {
@@ -4365,6 +4457,23 @@ document.addEventListener('keydown', (e) => {
     }
   };
 
+  // On party suggestion textboxes, ArrowDown and ArrowUp should NEVER navigate between form fields
+  if (['formGazanaPartyName', 'formGazanaLoomWala', 'formGazanaPurchaser'].includes(target.id)) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      return;
+    }
+    const dropdownMap = {
+      formGazanaPartyName: 'formGazanaPartySuggestions',
+      formGazanaLoomWala: 'formGazanaLoomWalaSuggestions',
+      formGazanaPurchaser: 'formGazanaPurchaserSuggestions'
+    };
+    const dd = $(dropdownMap[target.id]);
+    if (dd && dd.style.display !== 'none' && (e.key === 'Enter' || e.key === 'Tab')) {
+      return;
+    }
+  }
+
   // Handle Enter key navigation
   if (e.key === 'Enter') {
     if (target.tagName === 'BUTTON' || target.type === 'submit') return;
@@ -4576,7 +4685,8 @@ async function loadGazanaDashboard(search = '') {
                 <th>Variety / Quality</th>
                 <th style="text-align:right">Kacha Gazana</th>
                 <th style="text-align:right">Safi Gazana</th>
-                <th style="text-align:right">Rate (₹)</th>
+                <th style="text-align:right" title="Rate Begair GST">Rate Begair GST</th>
+                <th style="text-align:right" title="Rate Bama GST">Rate Bama GST</th>
                 <th style="text-align:right">Total (₹)</th>
                 <th style="text-align:right">Advance (₹)</th>
                 <th style="text-align:right">Received (₹)</th>
@@ -4598,11 +4708,25 @@ async function loadGazanaDashboard(search = '') {
                       <strong style="color: var(--accent-primary); cursor: pointer;" onclick="openPartyGazanaDetail('${escapeHtml(e.partyName)}')">
                         ${escapeHtml(e.partyName)} ↗
                       </strong>
+                      ${e.purchaser ? `<div style="font-size: 0.72rem; color: #0369a1; margin-top: 2px;">🛒 <strong>خریدار:</strong> ${escapeHtml(e.purchaser)}</div>` : ''}
+                      ${e.loomWala ? `<div style="font-size: 0.72rem; color: #4338ca; margin-top: 1px;">🏭 <strong>لوم والا:</strong> ${escapeHtml(e.loomWala)}</div>` : ''}
+                      ${e.gudaam ? `<div style="font-size: 0.72rem; color: #0d9488; margin-top: 1px;">🏬 <strong>گودام:</strong> ${escapeHtml(e.gudaam)}</div>` : ''}
                     </td>
                     <td>${escapeHtml(e.variety || '—')}</td>
                     <td style="text-align:right">${e.kachaGazana > 0 ? e.kachaGazana.toLocaleString() : '—'}</td>
                     <td style="text-align:right; font-weight: 700; color: #1e40af;">${(e.safiGazana || 0).toLocaleString()}</td>
-                    <td style="text-align:right">${fmtRate(e.rate)}</td>
+                    <td style="text-align:right">
+                      <div style="font-weight: 700;">${fmtRate(e.rate)}</div>
+                      ${(!e.rateType || e.rateType === 'kachy') ? `
+                        <span style="font-size: 0.65rem; background: rgba(37,99,235,0.1); color: #2563eb; padding: 1px 4px; border-radius: 3px; font-weight: 700;">کچے</span>
+                      ` : ''}
+                    </td>
+                    <td style="text-align:right">
+                      <div style="font-weight: 700; color: #7c3aed;">${fmtRate(e.gstRate || Math.round((e.rate * 1.18) * 100) / 100)}</div>
+                      ${e.rateType === 'pakay' ? `
+                        <span style="font-size: 0.65rem; background: rgba(124,58,237,0.1); color: #7c3aed; padding: 1px 4px; border-radius: 3px; font-weight: 700;">پکے</span>
+                      ` : ''}
+                    </td>
                     <td style="text-align:right; font-weight: 700; color: #0284c7;">${fmtCurrency(e.totalAmount)}</td>
                     <td style="text-align:right; color: #16a34a; font-weight: 600;">${e.advance > 0 ? fmtCurrency(e.advance) : '—'}</td>
                     <td style="text-align:right;">
@@ -4783,7 +4907,8 @@ async function openPartyGazanaDetail(partyName) {
                   <th>Variety / Quality</th>
                   <th style="text-align:right">Kacha Gazana</th>
                   <th style="text-align:right">Safi Gazana</th>
-                  <th style="text-align:right">Rate (₹)</th>
+                  <th style="text-align:right" title="Rate Begair GST">Rate Begair GST</th>
+                  <th style="text-align:right" title="Rate Bama GST">Rate Bama GST</th>
                   <th style="text-align:right">Total Amount (₹)</th>
                   <th style="text-align:right">Advance (₹)</th>
                   <th style="text-align:right">Received (₹)</th>
@@ -4803,11 +4928,25 @@ async function openPartyGazanaDetail(partyName) {
                       <td>${formatDate(e.date)}</td>
                       <td>
                         <strong>${escapeHtml(e.variety || '—')}</strong>
-                        ${e.note ? `<div style="font-size: 0.72rem; color: var(--text-muted);">${escapeHtml(e.note)}</div>` : ''}
+                        ${e.purchaser ? `<div style="font-size: 0.72rem; color: #0369a1; margin-top: 2px;">🛒 <strong>خریدار:</strong> ${escapeHtml(e.purchaser)}</div>` : ''}
+                        ${e.loomWala ? `<div style="font-size: 0.72rem; color: #4338ca; margin-top: 1px;">🏭 <strong>لوم والا:</strong> ${escapeHtml(e.loomWala)}</div>` : ''}
+                        ${e.gudaam ? `<div style="font-size: 0.72rem; color: #0d9488; margin-top: 1px;">🏬 <strong>گودام:</strong> ${escapeHtml(e.gudaam)}</div>` : ''}
+                        ${e.note ? `<div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">${escapeHtml(e.note)}</div>` : ''}
                       </td>
                       <td style="text-align:right">${e.kachaGazana > 0 ? e.kachaGazana.toLocaleString() : '—'}</td>
                       <td style="text-align:right; font-weight: 700; color: #1e40af;">${(e.safiGazana || 0).toLocaleString()}</td>
-                      <td style="text-align:right">${fmtRate(e.rate)}</td>
+                      <td style="text-align:right">
+                        <div style="font-weight: 700;">${fmtRate(e.rate)}</div>
+                        ${(!e.rateType || e.rateType === 'kachy') ? `
+                          <span style="font-size: 0.65rem; background: rgba(37,99,235,0.1); color: #2563eb; padding: 1px 4px; border-radius: 3px; font-weight: 700;">کچے</span>
+                        ` : ''}
+                      </td>
+                      <td style="text-align:right">
+                        <div style="font-weight: 700; color: #7c3aed;">${fmtRate(e.gstRate || Math.round((e.rate * 1.18) * 100) / 100)}</div>
+                        ${e.rateType === 'pakay' ? `
+                          <span style="font-size: 0.65rem; background: rgba(124,58,237,0.1); color: #7c3aed; padding: 1px 4px; border-radius: 3px; font-weight: 700;">پکے</span>
+                        ` : ''}
+                      </td>
                       <td style="text-align:right; font-weight: 700; color: #0284c7;">${fmtCurrency(e.totalAmount)}</td>
                       <td style="text-align:right; color: #16a34a; font-weight: 600;">
                         ${e.advance > 0 ? fmtCurrency(e.advance) : '—'}
@@ -4914,6 +5053,9 @@ function openPartyGazanaForm(preFillParty = '', editRecord = null) {
   if ($('formGazanaDate')) $('formGazanaDate').value = today;
   if ($('formGazanaAdvance')) $('formGazanaAdvance').value = '0';
   if ($('formGazanaStatus')) $('formGazanaStatus').value = 'active';
+  if ($('formGazanaLoomWala')) $('formGazanaLoomWala').value = '';
+  if ($('formGazanaPurchaser')) $('formGazanaPurchaser').value = '';
+  if ($('formGazanaGudaam')) $('formGazanaGudaam').value = '';
 
   if (editRecord) {
     if ($('partyGazanaFormTitle')) $('partyGazanaFormTitle').textContent = '✏️ ترمیم گزانہ انٹری';
@@ -4921,6 +5063,9 @@ function openPartyGazanaForm(preFillParty = '', editRecord = null) {
     if ($('formGazanaDate')) $('formGazanaDate').value = editRecord.date ? new Date(editRecord.date).toISOString().slice(0, 10) : today;
     if ($('formGazanaPartyName')) $('formGazanaPartyName').value = editRecord.partyName || '';
     if ($('formGazanaContractNo')) $('formGazanaContractNo').value = editRecord.contractNo || '';
+    if ($('formGazanaLoomWala')) $('formGazanaLoomWala').value = editRecord.loomWala || '';
+    if ($('formGazanaPurchaser')) $('formGazanaPurchaser').value = editRecord.purchaser || '';
+    if ($('formGazanaGudaam')) $('formGazanaGudaam').value = editRecord.gudaam || '';
     if ($('formGazanaVariety')) $('formGazanaVariety').value = editRecord.variety || '';
     if ($('formGazanaKacha')) $('formGazanaKacha').value = editRecord.kachaGazana || '';
     if ($('formGazanaSafi')) $('formGazanaSafi').value = editRecord.safiGazana || '';
@@ -4928,11 +5073,17 @@ function openPartyGazanaForm(preFillParty = '', editRecord = null) {
     if ($('formGazanaAdvance')) $('formGazanaAdvance').value = editRecord.advance || 0;
     if ($('formGazanaStatus')) $('formGazanaStatus').value = editRecord.status || 'active';
     if ($('formGazanaNote')) $('formGazanaNote').value = editRecord.note || '';
+
+    const rateType = editRecord.rateType || 'kachy';
+    if ($('rateTypePakay')) $('rateTypePakay').checked = (rateType === 'pakay');
+    if ($('rateTypeKachy')) $('rateTypeKachy').checked = (rateType !== 'pakay');
   } else {
     if ($('partyGazanaFormTitle')) $('partyGazanaFormTitle').textContent = '📋 نئی گزانہ انٹری';
     if (preFillParty && $('formGazanaPartyName')) {
       $('formGazanaPartyName').value = preFillParty;
     }
+    if ($('rateTypeKachy')) $('rateTypeKachy').checked = true;
+    if ($('rateTypePakay')) $('rateTypePakay').checked = false;
   }
 
   updateGazanaFullFormCalculations();
@@ -4962,9 +5113,23 @@ function updateGazanaFullFormCalculations() {
   const safi = parseFloat($('formGazanaSafi')?.value) || 0;
   const rate = parseFloat($('formGazanaRate')?.value) || 0;
   const advance = parseFloat($('formGazanaAdvance')?.value) || 0;
+  const isPakay = Boolean($('rateTypePakay')?.checked);
 
-  const total = Math.round(safi * 1.18 * rate * 100) / 100;
+  // 1: User base rate (Without GST)
+  // 2: GST Rate (User rate x 1.18)
+  const gstRate = Math.round(rate * 1.18 * 100) / 100;
+  if ($('formGazanaGstRate')) {
+    $('formGazanaGstRate').value = rate > 0 ? gstRate.toFixed(2) : '';
+  }
+
+  // If kachy: safi * rate (without GST)
+  // If pakay: safi * gstRate (rate * 1.18)
+  const effectiveRate = isPakay ? (rate * 1.18) : rate;
+  const total = Math.round(safi * effectiveRate * 100) / 100;
   const remaining = Math.max(0, Math.round((total - advance) * 100) / 100);
+
+  if ($('rateTypeCardKachy')) $('rateTypeCardKachy').classList.toggle('active', !isPakay);
+  if ($('rateTypeCardPakay')) $('rateTypeCardPakay').classList.toggle('active', isPakay);
 
   if ($('formGazanaTotalDisplay')) {
     $('formGazanaTotalDisplay').textContent = fmtCurrency(total);
@@ -4983,7 +5148,7 @@ function updateGazanaFullFormCalculations() {
 }
 
 // Bind live listeners for full form calculations
-['formGazanaSafi', 'formGazanaRate', 'formGazanaAdvance', 'formGazanaKacha'].forEach(id => {
+['formGazanaSafi', 'formGazanaRate', 'formGazanaAdvance', 'formGazanaKacha', 'rateTypeKachy', 'rateTypePakay'].forEach(id => {
   const el = $(id);
   if (el) {
     el.addEventListener('input', updateGazanaFullFormCalculations);
@@ -5071,10 +5236,14 @@ async function savePartyGazanaForm() {
     const id = $('gazanaFormEditId') ? $('gazanaFormEditId').value : '';
     const date = $('formGazanaDate') ? $('formGazanaDate').value : '';
     const partyName = $('formGazanaPartyName') ? $('formGazanaPartyName').value.trim() : '';
+    const loomWala = $('formGazanaLoomWala') ? $('formGazanaLoomWala').value.trim() : '';
+    const purchaser = $('formGazanaPurchaser') ? $('formGazanaPurchaser').value.trim() : '';
+    const gudaam = $('formGazanaGudaam') ? $('formGazanaGudaam').value.trim() : '';
     const variety = $('formGazanaVariety') ? $('formGazanaVariety').value.trim() : '';
     const kachaGazana = parseFloat($('formGazanaKacha')?.value) || 0;
     const safiGazana = parseFloat($('formGazanaSafi')?.value) || 0;
     const rate = parseFloat($('formGazanaRate')?.value) || 0;
+    const rateType = $('rateTypePakay')?.checked ? 'pakay' : 'kachy';
     const advance = parseFloat($('formGazanaAdvance')?.value) || 0;
     const contractNo = $('formGazanaContractNo') ? $('formGazanaContractNo').value.trim() : '';
     const note = $('formGazanaNote') ? $('formGazanaNote').value.trim() : '';
@@ -5098,10 +5267,14 @@ async function savePartyGazanaForm() {
     const payload = {
       date,
       partyName,
+      loomWala,
+      purchaser,
+      gudaam,
       variety,
       kachaGazana,
       safiGazana,
       rate,
+      rateType,
       advance,
       contractNo,
       note,
@@ -5235,6 +5408,38 @@ async function openPaymentHistoryModal(entryId) {
             <span>${escapeHtml(entry.variety)}</span>
           </div>
         ` : ''}
+        ${entry.purchaser ? `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+            <span style="color: var(--text-muted);">خریدار:</span>
+            <span style="color: #0369a1; font-weight: 600;">${escapeHtml(entry.purchaser)}</span>
+          </div>
+        ` : ''}
+        ${entry.loomWala ? `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+            <span style="color: var(--text-muted);">لوم والا:</span>
+            <span style="color: #4338ca; font-weight: 600;">${escapeHtml(entry.loomWala)}</span>
+          </div>
+        ` : ''}
+        ${entry.gudaam ? `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+            <span style="color: var(--text-muted);">گودام:</span>
+            <span style="color: #0d9488; font-weight: 600;">${escapeHtml(entry.gudaam)}</span>
+          </div>
+        ` : ''}
+        <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+          <span style="color: var(--text-muted);">Rate Begair GST:</span>
+          <span>
+            ₹ ${fmtRate(entry.rate)} 
+            ${(!entry.rateType || entry.rateType === 'kachy') ? '<small style="color: #2563eb; font-weight: 700;">(کچے)</small>' : ''}
+          </span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+          <span style="color: var(--text-muted);">Rate Bama GST (18%):</span>
+          <span style="color: #7c3aed; font-weight: 700;">
+            ₹ ${fmtRate(entry.gstRate || Math.round(entry.rate * 1.18 * 100) / 100)} 
+            ${entry.rateType === 'pakay' ? '<small style="color: #7c3aed; font-weight: 700;">(پکے)</small>' : ''}
+          </span>
+        </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
           <span style="color: var(--text-muted);">Total Order Amount:</span>
           <strong>${fmtCurrency(entry.totalAmount)}</strong>
@@ -5430,11 +5635,21 @@ async function sharePartyGazanaPDF(partyName, action = 'share') {
         <td style="padding: 6px 4px; font-size: 9.5px;">${formatDate(e.date)}</td>
         <td style="padding: 6px 4px; font-size: 9.5px; font-weight: 700; color: #0f172a;">
           ${escapeHtml(e.variety || '—')}
+          ${e.purchaser ? `<span style="color: #0369a1; font-size: 8px; display: block;">خریدار: ${escapeHtml(e.purchaser)}</span>` : ''}
+          ${e.loomWala ? `<span style="color: #4338ca; font-size: 8px; display: block;">لوم والا: ${escapeHtml(e.loomWala)}</span>` : ''}
+          ${e.gudaam ? `<span style="color: #0d9488; font-size: 8px; display: block;">گودام: ${escapeHtml(e.gudaam)}</span>` : ''}
           ${e.contractNo ? `<span style="color: #2563eb; font-size: 8.5px; display: block;">#${escapeHtml(e.contractNo)}</span>` : ''}
         </td>
         <td style="padding: 6px 4px; font-size: 9.5px; text-align: right;">${e.kachaGazana > 0 ? e.kachaGazana.toLocaleString() : '—'}</td>
         <td style="padding: 6px 4px; font-size: 9.5px; text-align: right; font-weight: 700; color: #1e40af;">${(e.safiGazana || 0).toLocaleString()}</td>
-        <td style="padding: 6px 4px; font-size: 9.5px; text-align: right;">₹ ${fmtRate(e.rate)}</td>
+        <td style="padding: 6px 4px; font-size: 9.5px; text-align: right;">
+          <div style="font-weight: 700;">₹ ${fmtRate(e.rate)}</div>
+          ${(!e.rateType || e.rateType === 'kachy') ? '<span style="font-size: 7.5px; color: #2563eb; font-weight: 700;">کچے</span>' : ''}
+        </td>
+        <td style="padding: 6px 4px; font-size: 9.5px; text-align: right; color: #7c3aed;">
+          <div style="font-weight: 700;">₹ ${fmtRate(e.gstRate || Math.round(e.rate * 1.18 * 100) / 100)}</div>
+          ${e.rateType === 'pakay' ? '<span style="font-size: 7.5px; color: #7c3aed; font-weight: 700;">پکے</span>' : ''}
+        </td>
         <td style="padding: 6px 4px; font-size: 9.5px; text-align: right; font-weight: 700; color: #0284c7;">${fmtCurrency(e.totalAmount)}</td>
         <td style="padding: 6px 4px; font-size: 9.5px; text-align: right; color: #15803d; font-weight: 700;">${fmtCurrency(e.advance)}</td>
         <td style="padding: 6px 4px; font-size: 9.5px; text-align: right; font-weight: 800; color: ${e.remaining > 0 ? '#b91c1c' : '#15803d'};">${fmtCurrency(e.remaining)}</td>
@@ -5493,7 +5708,8 @@ async function sharePartyGazanaPDF(partyName, action = 'share') {
               <th style="padding: 6px 4px; text-align: left;">Variety / Quality</th>
               <th style="padding: 6px 4px; text-align: right;">Kacha Gazana</th>
               <th style="padding: 6px 4px; text-align: right;">Safi Gazana</th>
-              <th style="padding: 6px 4px; text-align: right;">Rate</th>
+              <th style="padding: 6px 4px; text-align: right;">Rate Begair GST</th>
+              <th style="padding: 6px 4px; text-align: right;">Rate Bama GST</th>
               <th style="padding: 6px 4px; text-align: right;">Total Amount</th>
               <th style="padding: 6px 4px; text-align: right; color: #86efac;">Advance</th>
               <th style="padding: 6px 4px; text-align: right; color: #fca5a5;">Remaining</th>
@@ -5501,12 +5717,13 @@ async function sharePartyGazanaPDF(partyName, action = 'share') {
             </tr>
           </thead>
           <tbody>
-            ${rowsHtml || '<tr><td colspan="9" style="text-align:center; padding: 12px;">No entries</td></tr>'}
+            ${rowsHtml || '<tr><td colspan="10" style="text-align:center; padding: 12px;">No entries</td></tr>'}
           </tbody>
           <tfoot>
             <tr style="background: #f1f5f9; font-weight: 800; border-top: 1.5px solid #0f172a;">
               <td colspan="3" style="padding: 6px 4px;">Totals</td>
               <td style="padding: 6px 4px; text-align: right; color: #1e40af;">${(summary.totalSafiGazana || 0).toLocaleString()}</td>
+              <td style="padding: 6px 4px; text-align: right;">—</td>
               <td style="padding: 6px 4px; text-align: right;">—</td>
               <td style="padding: 6px 4px; text-align: right; color: #0284c7;">${fmtCurrency(summary.totalAmount || 0)}</td>
               <td style="padding: 6px 4px; text-align: right; color: #15803d;">${fmtCurrency(summary.totalAdvance || 0)}</td>

@@ -378,7 +378,7 @@
               <label class="form-label" for="formGazanaPartyName" style="color: var(--accent-primary); font-weight: 700;">
                 👤 بنام پارٹی *
               </label>
-              <div class="party-input-wrapper">
+              <div class="party-input-wrapper" style="position: relative;">
                 <input
                   class="form-input"
                   type="text"
@@ -410,8 +410,37 @@
               <input class="form-input form-gazana-calc" type="number" step="any" id="formGazanaSafi" required placeholder="0" />
             </div>
             <div class="form-group">
-              <label class="form-label" for="formGazanaRate" style="color: #0284c7; font-weight: 700;">ریٹ (فی گز) *</label>
+              <label class="form-label" for="formGazanaRate" style="color: #0284c7; font-weight: 700;">
+                Rate Begair GST *
+              </label>
               <input class="form-input form-gazana-calc" type="number" step="any" id="formGazanaRate" required placeholder="0.00" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="formGazanaGstRate" style="color: #7c3aed; font-weight: 700;">
+                Rate Bama GST (18%)
+              </label>
+              <input class="form-input" type="number" step="any" id="formGazanaGstRate" readonly placeholder="0.00" style="background: var(--bg-tertiary, #f8fafc); font-weight: 800; color: #7c3aed;" />
+            </div>
+
+            <!-- Kachy / Pakay Radio Selection Group -->
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label class="form-label" style="font-weight: 800; color: var(--text-primary);">
+                حساب کی قسم *
+              </label>
+              <div class="rate-type-radio-group">
+                <label class="rate-type-radio-card" id="rateTypeCardKachy">
+                  <input type="radio" name="formGazanaRateType" id="rateTypeKachy" value="kachy" checked />
+                  <div class="radio-card-content">
+                    <div class="radio-card-title">کچے</div>
+                  </div>
+                </label>
+                <label class="rate-type-radio-card" id="rateTypeCardPakay">
+                  <input type="radio" name="formGazanaRateType" id="rateTypePakay" value="pakay" />
+                  <div class="radio-card-content">
+                    <div class="radio-card-title">پکے</div>
+                  </div>
+                </label>
+              </div>
             </div>
           </div>
         </div>
@@ -453,6 +482,55 @@
             </div>
             <div>
               <span id="formGazanaRemainingDisplay" style="font-size: 1.75rem; font-weight: 900; color: #b91c1c;">₹ 0.00</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loom Wala, Purchaser & Gudaam Section (Moved Down) -->
+        <div class="form-section">
+          <h3 class="section-title">🏭 لوم، خریدار و گودام</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="formGazanaLoomWala" style="color: #4338ca; font-weight: 700;">
+                🏭 لوم والا
+              </label>
+              <div class="party-input-wrapper" style="position: relative;">
+                <input
+                  class="form-input"
+                  type="text"
+                  id="formGazanaLoomWala"
+                  placeholder="لوم والا کا نام تلاش کریں یا لکھیں..."
+                  autocomplete="off"
+                />
+                <div id="formGazanaLoomWalaSuggestions" class="party-suggestions-dropdown" style="display: none;"></div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="formGazanaPurchaser" style="color: #0369a1; font-weight: 700;">
+                🛒 خریدار
+              </label>
+              <div class="party-input-wrapper" style="position: relative;">
+                <input
+                  class="form-input"
+                  type="text"
+                  id="formGazanaPurchaser"
+                  placeholder="خریدار کا نام تلاش کریں یا لکھیں..."
+                  autocomplete="off"
+                />
+                <div id="formGazanaPurchaserSuggestions" class="party-suggestions-dropdown" style="display: none;"></div>
+              </div>
+            </div>
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label class="form-label" for="formGazanaGudaam" style="color: #0d9488; font-weight: 700;">
+                🏬 گودام
+              </label>
+              <input
+                class="form-input"
+                type="text"
+                id="formGazanaGudaam"
+                placeholder="گودام کا نام لکھیں..."
+                autocomplete="off"
+              />
             </div>
           </div>
         </div>

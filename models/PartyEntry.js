@@ -51,14 +51,40 @@ const partyEntrySchema = new mongoose.Schema(
       default: 0
     },
 
-    // GST Rate / Rate per Safi Gazana
+    // Rate specs: Base Rate (Without GST) & GST Rate
     rate: {
       type: Number,
       required: true,
       default: 0
     },
+    rateType: {
+      type: String,
+      enum: ['kachy', 'pakay'],
+      default: 'kachy'
+    },
+    gstRate: {
+      type: Number,
+      default: 0
+    },
 
-    // Total Amount = Safi Gazana * Rate
+    // Loom Wala, Purchaser, and Gudaam
+    loomWala: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    purchaser: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    gudaam: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+
+    // Total Amount = Safi Gazana * (rate or rate * 1.18 depending on rateType)
     totalAmount: {
       type: Number,
       required: true,
@@ -118,13 +144,22 @@ partyEntrySchema.pre('save', function (next) {
   const rt = Number(this.rate) || 0;
   const adv = Number(this.advance) || 0;
 
+  this.gstRate = Math.round(rt * 1.18 * 100) / 100;
+  if (!this.rateType) {
+    this.rateType = 'kachy';
+  }
+
   let installmentsTotal = 0;
   if (Array.isArray(this.paymentHistory)) {
     installmentsTotal = this.paymentHistory.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
   }
 
   const totalRec = Math.round((adv + installmentsTotal) * 100) / 100;
-  this.totalAmount = Math.round(safi * 1.18 * rt * 100) / 100;
+  if (this.rateType === 'pakay') {
+    this.totalAmount = Math.round(safi * 1.18 * rt * 100) / 100;
+  } else {
+    this.totalAmount = Math.round(safi * rt * 100) / 100;
+  }
 
   if (this.status === 'completed') {
     const currentRemaining = Math.max(0, Math.round((this.totalAmount - totalRec) * 100) / 100);
