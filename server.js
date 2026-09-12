@@ -33,6 +33,9 @@ async function connectDB() {
   }
 
   const db = await mongoose.connect(atlasUri, {
+    maxPoolSize: 5,
+    minPoolSize: 0,
+    maxIdleTimeMS: 10000,
     serverSelectionTimeoutMS: 10000,
   });
   isConnected = db.connections[0].readyState === 1;
