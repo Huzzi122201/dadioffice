@@ -144,9 +144,10 @@ const partyEntrySchema = new mongoose.Schema(
 
 // Auto-populate normalized party name and calculate amounts before saving
 partyEntrySchema.pre('save', function (next) {
-  if (this.partyName) {
-    this.partyNameNorm = this.partyName.trim().toLowerCase();
+  if (!this.partyName || !this.partyName.trim() || this.partyName.trim().toLowerCase() === 'default party') {
+    this.partyName = 'Daily Entries';
   }
+  this.partyNameNorm = this.partyName.trim().toLowerCase();
 
   const safi = Number(this.safiGazana) || 0;
   // User enters Rate Without GST (rate)

@@ -1,5 +1,5 @@
 // Minimal service worker for PWA "Add to Home Screen" support
-const CACHE_NAME = 'costing-v2';
+const CACHE_NAME = 'costing-v3';
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();

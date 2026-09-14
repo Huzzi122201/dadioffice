@@ -54,6 +54,10 @@ router.get('/', async (req, res) => {
       const rateW = Number(e.gstRate) || (rateWO ? Math.round(rateWO * 1.18 * 100) / 100 : 0);
       const wGst = Math.round(safi * rateW * 100) / 100;
       const woGst = Math.round(safi * rateWO * 100) / 100;
+      if (e.partyNameNorm === 'default party' || (e.partyName && e.partyName.toLowerCase() === 'default party')) {
+        e.partyName = 'Daily Entries';
+        e.partyNameNorm = 'daily entries';
+      }
 
       e.totalAmountWithoutGst = woGst;
       e.totalAmount = wGst;
@@ -127,6 +131,13 @@ router.get('/parties', async (req, res) => {
       { $sort: { partyName: 1 } }
     ]);
 
+    aggregation.forEach(p => {
+      if (p._id === 'default party' || (p.partyName && p.partyName.toLowerCase() === 'default party')) {
+        p._id = 'daily entries';
+        p.partyName = 'Daily Entries';
+      }
+    });
+
     res.json(aggregation);
   } catch (err) {
     console.error('Error fetching party summaries:', err);
@@ -137,8 +148,11 @@ router.get('/parties', async (req, res) => {
 // ── GET /api/party-entries/party/:partyName ── Details and entries for a single party
 router.get('/party/:partyName', async (req, res) => {
   try {
-    const norm = req.params.partyName.trim().toLowerCase();
-    const entries = await PartyEntry.find({ partyNameNorm: norm }).sort({ date: -1, createdAt: -1 }).lean();
+    let norm = req.params.partyName.trim().toLowerCase();
+    const queryNorms = (norm === 'default party' || norm === 'daily entries')
+      ? ['default party', 'daily entries']
+      : [norm];
+    const entries = await PartyEntry.find({ partyNameNorm: { $in: queryNorms } }).sort({ date: -1, createdAt: -1 }).lean();
 
     let totalSafiGazana = 0;
     let totalKachaGazana = 0;
@@ -148,9 +162,13 @@ router.get('/party/:partyName', async (req, res) => {
     let totalRemaining = 0;
     let activeCount = 0;
     let completedCount = 0;
-    let partyDisplayName = req.params.partyName;
+    let partyDisplayName = (norm === 'default party' || norm === 'daily entries') ? 'Daily Entries' : req.params.partyName;
 
     entries.forEach(e => {
+      if (e.partyNameNorm === 'default party' || (e.partyName && e.partyName.toLowerCase() === 'default party')) {
+        e.partyName = 'Daily Entries';
+        e.partyNameNorm = 'daily entries';
+      }
       partyDisplayName = e.partyName || partyDisplayName;
       const safi = Number(e.safiGazana) || 0;
       const rateWO = Number(e.rate) || (e.gstRate ? Math.round((Number(e.gstRate) / 1.18) * 100) / 100 : 0);
@@ -260,7 +278,10 @@ router.post('/', async (req, res) => {
       status
     } = req.body;
 
-    const resolvedPartyName = (partyName && partyName.trim()) ? partyName.trim() : 'Daily Entries';
+    let resolvedPartyName = (partyName && partyName.trim()) ? partyName.trim() : 'Daily Entries';
+    if (resolvedPartyName.toLowerCase() === 'default party') {
+      resolvedPartyName = 'Daily Entries';
+    }
 
     const safi = Number(safiGazana) || 0;
     // The entered rate is without GST (rate)
@@ -336,7 +357,10 @@ router.put('/:id', async (req, res) => {
 
     if (date) entry.date = new Date(date);
     if (partyName !== undefined) {
-      const resolvedPartyName = (partyName && partyName.trim()) ? partyName.trim() : 'Daily Entries';
+      let resolvedPartyName = (partyName && partyName.trim()) ? partyName.trim() : 'Daily Entries';
+      if (resolvedPartyName.toLowerCase() === 'default party') {
+        resolvedPartyName = 'Daily Entries';
+      }
       entry.partyName = resolvedPartyName;
       entry.partyNameNorm = resolvedPartyName.toLowerCase();
     }
