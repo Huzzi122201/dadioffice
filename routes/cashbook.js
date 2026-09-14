@@ -608,7 +608,7 @@ async function resolveOrCreateParty(partyNameInput, khataNoInput, partyTypeInput
   if (khataNoInput) {
     party = await CashbookParty.findOne({ khataNo: parseInt(khataNoInput, 10) });
   }
-  const effectiveName = (partyNameInput && partyNameInput.trim()) ? partyNameInput.trim() : (khataNoInput ? '' : 'Default Party');
+  const effectiveName = (partyNameInput && partyNameInput.trim()) ? partyNameInput.trim() : (khataNoInput ? '' : 'Daily Entries');
   if (!party && effectiveName) {
     const cleanName = toTitleCase(effectiveName);
     const norm = cleanName.toLowerCase();

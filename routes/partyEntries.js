@@ -49,10 +49,21 @@ router.get('/', async (req, res) => {
     let completedCount = 0;
 
     entries.forEach(e => {
-      totalSafiGazana += e.safiGazana || 0;
+      const safi = Number(e.safiGazana) || 0;
+      const rateWO = Number(e.rate) || (e.gstRate ? Math.round((Number(e.gstRate) / 1.18) * 100) / 100 : 0);
+      const rateW = Number(e.gstRate) || (rateWO ? Math.round(rateWO * 1.18 * 100) / 100 : 0);
+      const wGst = Math.round(safi * rateW * 100) / 100;
+      const woGst = Math.round(safi * rateWO * 100) / 100;
+
+      e.totalAmountWithoutGst = woGst;
+      e.totalAmount = wGst;
+      e.rate = rateWO;
+      e.gstRate = rateW;
+
+      totalSafiGazana += safi;
       totalKachaGazana += e.kachaGazana || 0;
-      totalAmount += e.totalAmount || 0;
-      totalAmountWithoutGst += e.totalAmountWithoutGst || Math.round((e.safiGazana || 0) * (e.rate || 0) * 100) / 100;
+      totalAmount += wGst;
+      totalAmountWithoutGst += woGst;
       totalAdvance += e.advance || 0;
       totalRemaining += e.remaining || 0;
       if (e.status === 'completed') {
@@ -141,10 +152,21 @@ router.get('/party/:partyName', async (req, res) => {
 
     entries.forEach(e => {
       partyDisplayName = e.partyName || partyDisplayName;
-      totalSafiGazana += e.safiGazana || 0;
+      const safi = Number(e.safiGazana) || 0;
+      const rateWO = Number(e.rate) || (e.gstRate ? Math.round((Number(e.gstRate) / 1.18) * 100) / 100 : 0);
+      const rateW = Number(e.gstRate) || (rateWO ? Math.round(rateWO * 1.18 * 100) / 100 : 0);
+      const wGst = Math.round(safi * rateW * 100) / 100;
+      const woGst = Math.round(safi * rateWO * 100) / 100;
+
+      e.totalAmountWithoutGst = woGst;
+      e.totalAmount = wGst;
+      e.rate = rateWO;
+      e.gstRate = rateW;
+
+      totalSafiGazana += safi;
       totalKachaGazana += e.kachaGazana || 0;
-      totalAmount += e.totalAmount || 0;
-      totalAmountWithoutGst += e.totalAmountWithoutGst || Math.round((e.safiGazana || 0) * (e.rate || 0) * 100) / 100;
+      totalAmount += wGst;
+      totalAmountWithoutGst += woGst;
       totalAdvance += e.advance || 0;
       totalRemaining += e.remaining || 0;
       if (e.status === 'completed') {
@@ -182,12 +204,19 @@ router.get('/:id', async (req, res) => {
     const entry = await PartyEntry.findById(req.params.id);
     if (!entry) return res.status(404).json({ error: 'Party entry not found' });
 
+    const safi = Number(entry.safiGazana) || 0;
+    const rateWO = Number(entry.rate) || (entry.gstRate ? Math.round((Number(entry.gstRate) / 1.18) * 100) / 100 : 0);
+    const rateW = Number(entry.gstRate) || (rateWO ? Math.round(rateWO * 1.18 * 100) / 100 : 0);
+    entry.totalAmountWithoutGst = Math.round(safi * rateWO * 100) / 100;
+    entry.totalAmount = Math.round(safi * rateW * 100) / 100;
+    const billableTotal = entry.rateType === 'kachy' ? entry.totalAmountWithoutGst : entry.totalAmount;
+
     // Auto-reconcile if entry is completed but missing its final settlement payment
     if (entry.status === 'completed') {
       const adv = Number(entry.advance) || 0;
       const installmentsTotal = (entry.paymentHistory || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
       const totalRec = Math.round((adv + installmentsTotal) * 100) / 100;
-      const currentRemaining = Math.max(0, Math.round((entry.totalAmount - totalRec) * 100) / 100);
+      const currentRemaining = Math.max(0, Math.round((billableTotal - totalRec) * 100) / 100);
 
       if (currentRemaining > 0) {
         if (!Array.isArray(entry.paymentHistory)) {
@@ -231,7 +260,7 @@ router.post('/', async (req, res) => {
       status
     } = req.body;
 
-    const resolvedPartyName = (partyName && partyName.trim()) ? partyName.trim() : 'Default Party';
+    const resolvedPartyName = (partyName && partyName.trim()) ? partyName.trim() : 'Daily Entries';
 
     const safi = Number(safiGazana) || 0;
     // The entered rate is without GST (rate)
@@ -241,12 +270,12 @@ router.post('/', async (req, res) => {
     const totalWithGst = Math.round(safi * finalGstRate * 100) / 100;
     const totalWithoutGst = Math.round(safi * finalRateWO * 100) / 100;
     const selectedRateType = rateType === 'kachy' ? 'kachy' : 'pakay';
-    const totalBill = selectedRateType === 'kachy' ? totalWithoutGst : totalWithGst;
+    const billableTotal = selectedRateType === 'kachy' ? totalWithoutGst : totalWithGst;
     const adv = Number(advance) || 0;
-    const rem = Math.max(0, Math.round((totalBill - adv) * 100) / 100);
+    const rem = Math.max(0, Math.round((billableTotal - adv) * 100) / 100);
 
     let finalStatus = status || 'active';
-    if (rem <= 0 && totalBill > 0) {
+    if (rem <= 0 && billableTotal > 0) {
       finalStatus = 'completed';
     }
 
@@ -307,7 +336,7 @@ router.put('/:id', async (req, res) => {
 
     if (date) entry.date = new Date(date);
     if (partyName !== undefined) {
-      const resolvedPartyName = (partyName && partyName.trim()) ? partyName.trim() : 'Default Party';
+      const resolvedPartyName = (partyName && partyName.trim()) ? partyName.trim() : 'Daily Entries';
       entry.partyName = resolvedPartyName;
       entry.partyNameNorm = resolvedPartyName.toLowerCase();
     }
@@ -333,9 +362,8 @@ router.put('/:id', async (req, res) => {
 
     const safi = entry.safiGazana || 0;
     entry.totalAmountWithoutGst = Math.round(safi * (entry.rate || 0) * 100) / 100;
-    const isKachy = entry.rateType === 'kachy';
-    entry.totalAmount = isKachy ? entry.totalAmountWithoutGst : Math.round(safi * (entry.gstRate || 0) * 100) / 100;
-    const total = entry.totalAmount;
+    entry.totalAmount = Math.round(safi * (entry.gstRate || 0) * 100) / 100;
+    const billableTotal = entry.rateType === 'kachy' ? entry.totalAmountWithoutGst : entry.totalAmount;
     const adv = entry.advance || 0;
 
     if (status === 'active') {
@@ -347,16 +375,16 @@ router.put('/:id', async (req, res) => {
       }
       const installmentsTotal = entry.paymentHistory.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
       const totalRec = Math.round((adv + installmentsTotal) * 100) / 100;
-      entry.remaining = Math.max(0, Math.round((total - totalRec) * 100) / 100);
+      entry.remaining = Math.max(0, Math.round((billableTotal - totalRec) * 100) / 100);
     } else if (status === 'completed') {
       entry.status = 'completed';
       entry.remaining = 0;
     } else {
       const installmentsTotal = (entry.paymentHistory || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
       const totalRec = Math.round((adv + installmentsTotal) * 100) / 100;
-      const rem = Math.max(0, Math.round((total - totalRec) * 100) / 100);
+      const rem = Math.max(0, Math.round((billableTotal - totalRec) * 100) / 100);
       entry.remaining = rem;
-      if (rem <= 0 && total > 0) {
+      if (rem <= 0 && billableTotal > 0) {
         entry.status = 'completed';
       }
     }

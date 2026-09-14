@@ -25,13 +25,13 @@ const partyEntrySchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      default: 'Default Party',
+      default: 'Daily Entries',
       index: true
     },
     partyNameNorm: {
       type: String,
       trim: true,
-      default: 'default party',
+      default: 'daily entries',
       index: true
     },
 
@@ -174,15 +174,14 @@ partyEntrySchema.pre('save', function (next) {
   const totalRec = Math.round((adv + installmentsTotal) * 100) / 100;
   // Total without GST
   this.totalAmountWithoutGst = Math.round(safi * this.rate * 100) / 100;
-  // If kachy, bill is without GST; if pakay (default), bill is with GST
-  if (this.rateType === 'kachy') {
-    this.totalAmount = this.totalAmountWithoutGst;
-  } else {
-    this.totalAmount = Math.round(safi * this.gstRate * 100) / 100;
-  }
+  // Total with GST (always the full billed amount)
+  this.totalAmount = Math.round(safi * this.gstRate * 100) / 100;
+
+  // Active billable total: With GST if pakay, Without GST if kachy
+  const billableTotal = this.rateType === 'kachy' ? this.totalAmountWithoutGst : this.totalAmount;
 
   if (this.status === 'completed') {
-    const currentRemaining = Math.max(0, Math.round((this.totalAmount - totalRec) * 100) / 100);
+    const currentRemaining = Math.max(0, Math.round((billableTotal - totalRec) * 100) / 100);
     if (currentRemaining > 0) {
       if (!Array.isArray(this.paymentHistory)) {
         this.paymentHistory = [];
@@ -204,7 +203,7 @@ partyEntrySchema.pre('save', function (next) {
     }
     const cleanInstallmentsTotal = (this.paymentHistory || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
     const cleanTotalRec = Math.round((adv + cleanInstallmentsTotal) * 100) / 100;
-    this.remaining = Math.max(0, Math.round((this.totalAmount - cleanTotalRec) * 100) / 100);
+    this.remaining = Math.max(0, Math.round((billableTotal - cleanTotalRec) * 100) / 100);
   }
 
   next();
