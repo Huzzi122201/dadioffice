@@ -292,7 +292,7 @@ router.post('/', async (req, res) => {
       loomWala: (loomWala || '').trim(),
       purchaser: (purchaser || '').trim(),
       gudaam: (gudaam || '').trim(),
-      totalAmount: totalBill,
+      totalAmount: totalWithGst,
       totalAmountWithoutGst: totalWithoutGst,
       advance: adv,
       remaining: rem,

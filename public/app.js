@@ -228,7 +228,8 @@ async function parseApiResponse(res) {
     throw new Error('Invalid server response: ' + text.slice(0, 80));
   }
   if (!res.ok) {
-    throw new Error(data.error || data.message || `Request failed (${res.status})`);
+    const errorMsg = data.details ? `${data.error || 'Error'}: ${data.details}` : (data.error || data.message || `Request failed (${res.status})`);
+    throw new Error(errorMsg);
   }
   return data;
 }
