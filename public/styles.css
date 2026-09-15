@@ -3038,6 +3038,15 @@ body {
 }
 
 /* Gazana Table Styles (Compact Khata / Roker Style) */
+/* Desktop full-width breakout for Party Gazana section */
+@media (min-width: 1024px) {
+  #costingGazanaSection {
+    width: 96vw;
+    margin-left: calc(-1 * (96vw - 100%) / 2);
+    position: relative;
+  }
+}
+
 .gazana-table-container {
   background: var(--bg-secondary);
   border: 1px solid var(--border);
