@@ -6267,60 +6267,55 @@ async function openPartyReceiptModal(partyName) {
       const isEven = (idx % 2 === 1);
       return `
         <tr style="border-bottom: 1px solid #e2e8f0; ${isEven ? 'background: #f8fafc;' : 'background: #ffffff;'}">
-          <td style="padding: 10px 8px; text-align: center; font-weight: 700; color: #64748b; font-size: 11px; width: 35px;">${idx + 1}</td>
-          <td style="padding: 10px 12px; font-size: 12px; font-weight: 700; color: #0f172a;">
+          <td style="padding: 6px 6px; text-align: center; font-weight: 700; color: #64748b; font-size: 10.5px; width: 30px;">${idx + 1}</td>
+          <td style="padding: 6px 10px; font-size: 11.5px; font-weight: 700; color: #0f172a;">
             ${escapeHtml(e.variety || '—')}
-            ${e.contractNo ? `<span style="display: block; font-size: 9.5px; font-weight: 600; color: #2563eb; margin-top: 2px;">#${escapeHtml(e.contractNo)}</span>` : ''}
-            ${e.purchaser ? `<span style="display: block; font-size: 9px; font-weight: 500; color: #0369a1; margin-top: 1px;">خریدار: ${escapeHtml(e.purchaser)}</span>` : ''}
           </td>
-          <td style="padding: 10px 12px; text-align: right; font-weight: 800; font-size: 13px; color: #b91c1c; white-space: nowrap;">
+          <td style="padding: 6px 10px; text-align: right; font-weight: 800; font-size: 12px; color: #b91c1c; white-space: nowrap;">
             ₹ ${truncatedRem.toLocaleString('en-IN')}
           </td>
         </tr>
       `;
     }).join('') : `
       <tr>
-        <td colspan="3" style="text-align: center; padding: 24px 12px; color: #15803d; font-weight: 700; font-size: 12px;">
-          ✅ No outstanding balance! All entries are fully cleared (تمام بقایا جات ادا ہو چکے ہیں).
+        <td colspan="3" style="text-align: center; padding: 18px 10px; color: #15803d; font-weight: 700; font-size: 11.5px;">
+          ✅ No outstanding balance! All entries are cleared.
         </td>
       </tr>
     `;
 
     if (container) {
       container.innerHTML = `
-        <div id="partyReceiptPrintRoot" style="background: #ffffff; color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; width: 560px; max-width: 100%; box-sizing: border-box; padding: 18px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+        <div id="partyReceiptPrintRoot" style="background: #ffffff; color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; width: 440px; max-width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 6px; box-shadow: 0 1px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
           
-          <!-- Party Name Header -->
-          <div style="background: #f8fafc; border-left: 5px solid #0284c7; border: 1px solid #e2e8f0; border-left-width: 5px; border-radius: 6px; padding: 12px 16px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <div style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Party Name (پارٹی نام):</div>
-              <div style="font-size: 20px; font-weight: 900; color: #0f172a; margin-top: 2px;">${escapeHtml(partyDisplayName)}</div>
+          <!-- Compact Party Name Header -->
+          <div style="background: #f8fafc; border-left: 4px solid #0284c7; border: 1px solid #e2e8f0; border-left-width: 4px; border-radius: 4px; padding: 7px 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 15px; font-weight: 800; color: #0f172a;">
+              ${escapeHtml(partyDisplayName)}
             </div>
-            <div style="text-align: right;">
-              <span style="background: #e0f2fe; color: #0369a1; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 4px;">
-                ${pendingEntries.length} ${pendingEntries.length === 1 ? 'Item' : 'Items'}
-              </span>
-            </div>
+            <span style="background: #e0f2fe; color: #0369a1; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 3px;">
+              ${pendingEntries.length} ${pendingEntries.length === 1 ? 'Item' : 'Items'}
+            </span>
           </div>
 
-          <!-- Table: Quality and its Remaining Amount -->
-          <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; font-size: 12px;">
+          <!-- Compact Table: Quality and its Remaining Amount -->
+          <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; border-radius: 4px; overflow: hidden; font-size: 11px;">
             <thead>
               <tr style="background: #0f172a; color: #ffffff;">
-                <th style="padding: 10px 8px; text-align: center; width: 38px;">#</th>
-                <th style="padding: 10px 14px; text-align: left;">Quality (کوالٹی / ورائٹی)</th>
-                <th style="padding: 10px 14px; text-align: right; width: 170px; color: #fca5a5;">Remaining Amount (بقایا رقم)</th>
+                <th style="padding: 6px 6px; text-align: center; width: 30px;">#</th>
+                <th style="padding: 6px 10px; text-align: left;">Quality (کوالٹی)</th>
+                <th style="padding: 6px 10px; text-align: right; width: 140px; color: #fca5a5;">Remaining (بقایا رقم)</th>
               </tr>
             </thead>
             <tbody>
               ${rowsHtml}
             </tbody>
             <tfoot>
-              <tr style="background: #f8fafc; font-weight: 800; border-top: 2px solid #0f172a;">
-                <td colspan="2" style="padding: 12px 14px; text-align: right; color: #0f172a; font-size: 13px;">
+              <tr style="background: #f8fafc; font-weight: 800; border-top: 1.5px solid #0f172a;">
+                <td colspan="2" style="padding: 8px 10px; text-align: right; color: #0f172a; font-size: 11.5px;">
                   TOTAL (کل رقم):
                 </td>
-                <td style="padding: 12px 14px; text-align: right; color: #b91c1c; font-size: 16px; font-weight: 900;">
+                <td style="padding: 8px 10px; text-align: right; color: #b91c1c; font-size: 13.5px; font-weight: 900;">
                   ₹ ${grandTotal.toLocaleString('en-IN')}
                 </td>
               </tr>
@@ -6347,6 +6342,20 @@ function closePartyReceiptModal() {
   const modal = $('partyReceiptModal');
   if (modal) modal.classList.add('hidden');
 }
+
+// Close receipt modal on backdrop click
+if ($('partyReceiptModal')) {
+  $('partyReceiptModal').addEventListener('click', (e) => {
+    if (e.target === $('partyReceiptModal')) closePartyReceiptModal();
+  });
+}
+
+// Close receipt modal on Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && $('partyReceiptModal') && !$('partyReceiptModal').classList.contains('hidden')) {
+    closePartyReceiptModal();
+  }
+});
 
 async function sharePartyReceiptPDF(action = 'download') {
   if (!currentReceiptPartyName) return;
