@@ -6288,41 +6288,28 @@ async function openPartyReceiptModal(partyName) {
 
     if (container) {
       container.innerHTML = `
-        <div id="partyReceiptPrintRoot" style="background: #ffffff; color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; width: 560px; max-width: 100%; box-sizing: border-box; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+        <div id="partyReceiptPrintRoot" style="background: #ffffff; color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; width: 560px; max-width: 100%; box-sizing: border-box; padding: 18px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
           
-          <!-- Header -->
-          <div style="border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
+          <!-- Party Name Header -->
+          <div style="background: #f8fafc; border-left: 5px solid #0284c7; border: 1px solid #e2e8f0; border-left-width: 5px; border-radius: 6px; padding: 12px 16px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
             <div>
-              <h2 style="margin: 0; font-size: 20px; font-weight: 900; color: #0f172a; letter-spacing: 0.5px; line-height: 1.2;">DADI OFFICE</h2>
-              <div style="font-size: 12px; color: #0284c7; font-weight: 700; margin-top: 1px;">دادی آفس — بقایا رقم رسید</div>
-            </div>
-            <div style="text-align: right;">
-              <span style="display: inline-block; background: #fee2e2; color: #b91c1c; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
-                PAYMENT DUE
-              </span>
-            </div>
-          </div>
-
-          <!-- Party Info Card -->
-          <div style="background: #f8fafc; border-left: 4px solid #0284c7; border: 1px solid #e2e8f0; border-left-width: 4px; border-radius: 6px; padding: 10px 14px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <div style="font-size: 9.5px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">BANAAM PARTY (بنام پارٹی):</div>
-              <div style="font-size: 17px; font-weight: 800; color: #0f172a; margin-top: 2px;">${escapeHtml(partyDisplayName)}</div>
+              <div style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Party Name (پارٹی نام):</div>
+              <div style="font-size: 20px; font-weight: 900; color: #0f172a; margin-top: 2px;">${escapeHtml(partyDisplayName)}</div>
             </div>
             <div style="text-align: right;">
               <span style="background: #e0f2fe; color: #0369a1; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 4px;">
-                ${pendingEntries.length} ${pendingEntries.length === 1 ? 'Pending Item' : 'Pending Items'}
+                ${pendingEntries.length} ${pendingEntries.length === 1 ? 'Item' : 'Items'}
               </span>
             </div>
           </div>
 
-          <!-- Receipt Table -->
-          <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; font-size: 11.5px;">
+          <!-- Table: Quality and its Remaining Amount -->
+          <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; font-size: 12px;">
             <thead>
               <tr style="background: #0f172a; color: #ffffff;">
-                <th style="padding: 10px 8px; text-align: center; width: 35px;">#</th>
-                <th style="padding: 10px 12px; text-align: left;">Quality (کوالٹی / ورائٹی)</th>
-                <th style="padding: 10px 12px; text-align: right; width: 160px; color: #fca5a5;">Remaining (بقایا رقم)</th>
+                <th style="padding: 10px 8px; text-align: center; width: 38px;">#</th>
+                <th style="padding: 10px 14px; text-align: left;">Quality (کوالٹی / ورائٹی)</th>
+                <th style="padding: 10px 14px; text-align: right; width: 170px; color: #fca5a5;">Remaining Amount (بقایا رقم)</th>
               </tr>
             </thead>
             <tbody>
@@ -6330,20 +6317,15 @@ async function openPartyReceiptModal(partyName) {
             </tbody>
             <tfoot>
               <tr style="background: #f8fafc; font-weight: 800; border-top: 2px solid #0f172a;">
-                <td colspan="2" style="padding: 12px; text-align: right; color: #0f172a; font-size: 13px;">
-                  TOTAL (کل واجب الادا رقم):
+                <td colspan="2" style="padding: 12px 14px; text-align: right; color: #0f172a; font-size: 13px;">
+                  TOTAL (کل رقم):
                 </td>
-                <td style="padding: 12px; text-align: right; color: #b91c1c; font-size: 15px; font-weight: 900;">
+                <td style="padding: 12px 14px; text-align: right; color: #b91c1c; font-size: 16px; font-weight: 900;">
                   ₹ ${grandTotal.toLocaleString('en-IN')}
                 </td>
               </tr>
             </tfoot>
           </table>
-
-          <!-- Footer -->
-          <div style="margin-top: 16px; border-top: 1px dashed #cbd5e1; padding-top: 8px; text-align: center; font-size: 10px; color: #94a3b8;">
-            Dadi Office
-          </div>
 
         </div>
       `;
@@ -6473,8 +6455,7 @@ function sendReceiptWhatsApp() {
     msg += `No pending balance. All cleared.\n`;
   }
 
-  msg += `\n*TOTAL PAYABLE: ₹ ${currentReceiptTotal.toLocaleString('en-IN')}*\n`;
-  msg += `(کل واجب الادا رقم: ₹ ${currentReceiptTotal.toLocaleString('en-IN')})`;
+  msg += `\n*TOTAL: ₹ ${currentReceiptTotal.toLocaleString('en-IN')}*`;
 
   const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
   window.open(waUrl, '_blank');
