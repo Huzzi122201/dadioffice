@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const PartyEntry = require('../models/PartyEntry');
+const GeneralPayment = require('../models/GeneralPayment');
 
 // ── GET /api/party-entries ── List all entries with optional filters
 router.get('/', async (req, res) => {
@@ -152,7 +153,10 @@ router.get('/party/:partyName', async (req, res) => {
     const queryNorms = (norm === 'default party' || norm === 'daily entries')
       ? ['default party', 'daily entries']
       : [norm];
-    const entries = await PartyEntry.find({ partyNameNorm: { $in: queryNorms } }).sort({ date: -1, createdAt: -1 }).lean();
+    const [entries, generalPayments] = await Promise.all([
+      PartyEntry.find({ partyNameNorm: { $in: queryNorms } }).sort({ date: -1, createdAt: -1 }).lean(),
+      GeneralPayment.find({ partyNameNorm: { $in: queryNorms } }).sort({ date: -1, createdAt: -1 }).lean()
+    ]);
 
     let totalSafiGazana = 0;
     let totalKachaGazana = 0;
@@ -198,6 +202,7 @@ router.get('/party/:partyName', async (req, res) => {
       partyName: partyDisplayName,
       partyNameNorm: norm,
       entries,
+      generalPayments,
       summary: {
         totalEntries: entries.length,
         totalSafiGazana: Math.round(totalSafiGazana * 100) / 100,
@@ -517,6 +522,16 @@ router.post('/party/:partyName/general-payment', async (req, res) => {
       });
     }
 
+    // Save the original general payment record
+    const partyDisplayName = entries[0].partyName || req.params.partyName;
+    const savedPayment = await GeneralPayment.create({
+      partyName: partyDisplayName,
+      partyNameNorm: norm,
+      date: date ? new Date(date) : new Date(),
+      amount: payAmt,
+      note: (note || '').trim()
+    });
+
     let remainingPayment = payAmt;
     const affectedEntries = [];
 
@@ -555,6 +570,7 @@ router.post('/party/:partyName/general-payment', async (req, res) => {
     res.json({
       message: `General payment of ₹${payAmt.toLocaleString()} distributed across ${affectedEntries.length} entries.`,
       totalPaid: payAmt,
+      generalPaymentId: savedPayment._id,
       affectedEntries
     });
   } catch (err) {

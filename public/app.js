@@ -4859,29 +4859,39 @@ async function openPartyGazanaDetail(partyName) {
     const activeEntries = allEntries.filter(e => e.status === 'active' && (e.remaining > 0 || e.totalAmount === 0));
     const completedEntries = allEntries.filter(e => e.status === 'completed' || e.remaining <= 0);
 
-    // Collect all payments from all entries
-    const allPayments = [];
+    // Collect payments for Payments tab
+    const storedGeneralPayments = (res.generalPayments || []).map(gp => ({
+      date: gp.date,
+      amount: gp.amount,
+      note: gp.note || '',
+      type: 'general',
+      _id: gp._id
+    }));
+
+    const entrySpecificPayments = [];
+    const advancePayments = [];
     allEntries.forEach(e => {
       if (e.advance > 0) {
-        allPayments.push({
+        advancePayments.push({
           date: e.date,
           amount: e.advance,
           note: 'Booking Advance',
           type: 'advance',
-          entryId: e._id,
           entryVariety: e.variety || '—',
           entryDate: e.date
         });
       }
       if (Array.isArray(e.paymentHistory)) {
         e.paymentHistory.forEach(p => {
-          const isGeneral = p.note && p.note.startsWith('[General]');
-          allPayments.push({
+          // Skip [General] distributed records — we show those from storedGeneralPayments
+          if (p.note && p.note.startsWith('[General]')) return;
+          // Skip auto "Paid Amount" settlement records
+          if (p.note && (p.note.includes('Paid Amount') || p.note.includes('Final Settlement'))) return;
+          entrySpecificPayments.push({
             date: p.date,
             amount: p.amount || 0,
             note: p.note || '',
-            type: isGeneral ? 'general' : 'installment',
-            entryId: e._id,
+            type: 'installment',
             entryVariety: e.variety || '—',
             entryDate: e.date,
             paymentId: p._id
@@ -4889,6 +4899,8 @@ async function openPartyGazanaDetail(partyName) {
         });
       }
     });
+
+    const allPayments = [...storedGeneralPayments, ...entrySpecificPayments, ...advancePayments];
     allPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
 
     let displayedEntries = allEntries;
@@ -4924,7 +4936,7 @@ async function openPartyGazanaDetail(partyName) {
           </div>
         </div>
 
-        <!-- Party Ledger Filter Tabs: Active (Default), Completed, All -->
+        <!-- Party Ledger Filter Tabs: Active (Default), Completed, All, Payments -->
         <div class="cb-subnav" style="margin-bottom: 1rem;">
           <button class="cb-subnav-btn ${partyGazanaDetailFilter === 'active' ? 'active' : ''}" onclick="setPartyGazanaDetailFilter('active')">
             🟢 Active (${activeEntries.length})
@@ -4955,11 +4967,8 @@ async function openPartyGazanaDetail(partyName) {
             </div>
           `;
         } else {
-          const generalPayments = allPayments.filter(p => p.type === 'general');
-          const entryPayments = allPayments.filter(p => p.type === 'installment');
-          const advancePayments = allPayments.filter(p => p.type === 'advance');
-          const totalGeneral = generalPayments.reduce((s, p) => s + p.amount, 0);
-          const totalEntry = entryPayments.reduce((s, p) => s + p.amount, 0);
+          const totalGeneral = storedGeneralPayments.reduce((s, p) => s + p.amount, 0);
+          const totalEntry = entrySpecificPayments.reduce((s, p) => s + p.amount, 0);
           const totalAdvance = advancePayments.reduce((s, p) => s + p.amount, 0);
           const grandTotal = allPayments.reduce((s, p) => s + p.amount, 0);
 
@@ -4970,11 +4979,11 @@ async function openPartyGazanaDetail(partyName) {
                 <div style="font-size: 1.1rem; font-weight: 800; color: #15803d; margin-top: 2px;">${fmtCurrency(grandTotal)}</div>
               </div>
               <div style="flex: 1; min-width: 140px; background: rgba(37,99,235,0.06); border: 1px solid rgba(37,99,235,0.2); border-radius: var(--radius-sm); padding: 0.6rem 0.75rem;">
-                <div style="font-size: 0.7rem; font-weight: 600; color: #2563eb; text-transform: uppercase; letter-spacing: 0.02em;">General Payments (${generalPayments.length})</div>
+                <div style="font-size: 0.7rem; font-weight: 600; color: #2563eb; text-transform: uppercase; letter-spacing: 0.02em;">General Payments (${storedGeneralPayments.length})</div>
                 <div style="font-size: 1.1rem; font-weight: 800; color: #2563eb; margin-top: 2px;">${fmtCurrency(totalGeneral)}</div>
               </div>
               <div style="flex: 1; min-width: 140px; background: rgba(2,132,199,0.06); border: 1px solid rgba(2,132,199,0.2); border-radius: var(--radius-sm); padding: 0.6rem 0.75rem;">
-                <div style="font-size: 0.7rem; font-weight: 600; color: #0284c7; text-transform: uppercase; letter-spacing: 0.02em;">Entry Payments (${entryPayments.length})</div>
+                <div style="font-size: 0.7rem; font-weight: 600; color: #0284c7; text-transform: uppercase; letter-spacing: 0.02em;">Entry Payments (${entrySpecificPayments.length})</div>
                 <div style="font-size: 1.1rem; font-weight: 800; color: #0284c7; margin-top: 2px;">${fmtCurrency(totalEntry)}</div>
               </div>
               <div style="flex: 1; min-width: 140px; background: rgba(124,58,237,0.06); border: 1px solid rgba(124,58,237,0.2); border-radius: var(--radius-sm); padding: 0.6rem 0.75rem;">
@@ -4988,7 +4997,6 @@ async function openPartyGazanaDetail(partyName) {
                   <tr>
                     <th>Date</th>
                     <th>Type</th>
-                    <th>Entry / Quality</th>
                     <th style="text-align:right">Amount (₹)</th>
                     <th>Note / Details</th>
                   </tr>
@@ -5000,26 +5008,19 @@ async function openPartyGazanaDetail(partyName) {
                       : p.type === 'advance'
                         ? '<span style="background: rgba(124,58,237,0.1); color: #7c3aed; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">🔖 Advance</span>'
                         : '<span style="background: rgba(2,132,199,0.1); color: #0284c7; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">📝 Entry</span>';
-                    const displayNote = p.type === 'general' && p.note.startsWith('[General] ')
-                      ? p.note.replace('[General] ', '')
-                      : p.note;
                     return `
                       <tr>
                         <td>${formatDate(p.date)}</td>
                         <td>${typeLabel}</td>
-                        <td>
-                          <div style="font-weight: 600;">${escapeHtml(p.entryVariety)}</div>
-                          <div style="font-size: 0.7rem; color: var(--text-muted);">${formatDate(p.entryDate)}</div>
-                        </td>
                         <td style="text-align:right; font-weight: 800; color: #15803d; font-size: 0.85rem;">${fmtCurrency(p.amount)}</td>
-                        <td style="color: var(--text-secondary); font-size: 0.78rem; max-width: 200px; white-space: normal; word-break: break-word;">${escapeHtml(displayNote) || '<span style="color: var(--text-muted);">—</span>'}</td>
+                        <td style="color: var(--text-secondary); font-size: 0.78rem; max-width: 200px; white-space: normal; word-break: break-word;">${escapeHtml(p.note) || '<span style="color: var(--text-muted);">—</span>'}</td>
                       </tr>
                     `;
                   }).join('')}
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td colspan="3" style="text-align: right; font-weight: 800;">Grand Total:</td>
+                    <td colspan="2" style="text-align: right; font-weight: 800;">Grand Total:</td>
                     <td style="text-align: right; font-weight: 800; color: #15803d; font-size: 0.9rem;">${fmtCurrency(grandTotal)}</td>
                     <td></td>
                   </tr>
