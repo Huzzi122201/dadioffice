@@ -4859,6 +4859,38 @@ async function openPartyGazanaDetail(partyName) {
     const activeEntries = allEntries.filter(e => e.status === 'active' && (e.remaining > 0 || e.totalAmount === 0));
     const completedEntries = allEntries.filter(e => e.status === 'completed' || e.remaining <= 0);
 
+    // Collect all payments from all entries
+    const allPayments = [];
+    allEntries.forEach(e => {
+      if (e.advance > 0) {
+        allPayments.push({
+          date: e.date,
+          amount: e.advance,
+          note: 'Booking Advance',
+          type: 'advance',
+          entryId: e._id,
+          entryVariety: e.variety || '—',
+          entryDate: e.date
+        });
+      }
+      if (Array.isArray(e.paymentHistory)) {
+        e.paymentHistory.forEach(p => {
+          const isGeneral = p.note && p.note.startsWith('[General]');
+          allPayments.push({
+            date: p.date,
+            amount: p.amount || 0,
+            note: p.note || '',
+            type: isGeneral ? 'general' : 'installment',
+            entryId: e._id,
+            entryVariety: e.variety || '—',
+            entryDate: e.date,
+            paymentId: p._id
+          });
+        });
+      }
+    });
+    allPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
+
     let displayedEntries = allEntries;
     if (partyGazanaDetailFilter === 'active') {
       displayedEntries = activeEntries;
@@ -4903,12 +4935,100 @@ async function openPartyGazanaDetail(partyName) {
           <button class="cb-subnav-btn ${partyGazanaDetailFilter === 'all' ? 'active' : ''}" onclick="setPartyGazanaDetailFilter('all')">
             📋 All (${allEntries.length})
           </button>
+          <button class="cb-subnav-btn ${partyGazanaDetailFilter === 'payments' ? 'active' : ''}" onclick="setPartyGazanaDetailFilter('payments')">
+            💵 Payments (${allPayments.length})
+          </button>
         </div>
       `;
     }
 
     if ($('partyGazanaEntriesContent')) {
-      if (displayedEntries.length === 0) {
+      // ── Payments Tab View ──
+      if (partyGazanaDetailFilter === 'payments') {
+        if (allPayments.length === 0) {
+          $('partyGazanaEntriesContent').innerHTML = `
+            <div class="empty-state" style="padding: 2.5rem 1rem; text-align: center;">
+              <div class="empty-icon">💵</div>
+              <p style="font-size: 1rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem;">
+                No payments recorded for ${escapeHtml(res.partyName)}.
+              </p>
+            </div>
+          `;
+        } else {
+          const generalPayments = allPayments.filter(p => p.type === 'general');
+          const entryPayments = allPayments.filter(p => p.type === 'installment');
+          const advancePayments = allPayments.filter(p => p.type === 'advance');
+          const totalGeneral = generalPayments.reduce((s, p) => s + p.amount, 0);
+          const totalEntry = entryPayments.reduce((s, p) => s + p.amount, 0);
+          const totalAdvance = advancePayments.reduce((s, p) => s + p.amount, 0);
+          const grandTotal = allPayments.reduce((s, p) => s + p.amount, 0);
+
+          $('partyGazanaEntriesContent').innerHTML = `
+            <div style="display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 1rem;">
+              <div style="flex: 1; min-width: 140px; background: rgba(21,128,61,0.06); border: 1px solid rgba(21,128,61,0.2); border-radius: var(--radius-sm); padding: 0.6rem 0.75rem;">
+                <div style="font-size: 0.7rem; font-weight: 600; color: #15803d; text-transform: uppercase; letter-spacing: 0.02em;">Total Received</div>
+                <div style="font-size: 1.1rem; font-weight: 800; color: #15803d; margin-top: 2px;">${fmtCurrency(grandTotal)}</div>
+              </div>
+              <div style="flex: 1; min-width: 140px; background: rgba(37,99,235,0.06); border: 1px solid rgba(37,99,235,0.2); border-radius: var(--radius-sm); padding: 0.6rem 0.75rem;">
+                <div style="font-size: 0.7rem; font-weight: 600; color: #2563eb; text-transform: uppercase; letter-spacing: 0.02em;">General Payments (${generalPayments.length})</div>
+                <div style="font-size: 1.1rem; font-weight: 800; color: #2563eb; margin-top: 2px;">${fmtCurrency(totalGeneral)}</div>
+              </div>
+              <div style="flex: 1; min-width: 140px; background: rgba(2,132,199,0.06); border: 1px solid rgba(2,132,199,0.2); border-radius: var(--radius-sm); padding: 0.6rem 0.75rem;">
+                <div style="font-size: 0.7rem; font-weight: 600; color: #0284c7; text-transform: uppercase; letter-spacing: 0.02em;">Entry Payments (${entryPayments.length})</div>
+                <div style="font-size: 1.1rem; font-weight: 800; color: #0284c7; margin-top: 2px;">${fmtCurrency(totalEntry)}</div>
+              </div>
+              <div style="flex: 1; min-width: 140px; background: rgba(124,58,237,0.06); border: 1px solid rgba(124,58,237,0.2); border-radius: var(--radius-sm); padding: 0.6rem 0.75rem;">
+                <div style="font-size: 0.7rem; font-weight: 600; color: #7c3aed; text-transform: uppercase; letter-spacing: 0.02em;">Advances (${advancePayments.length})</div>
+                <div style="font-size: 1.1rem; font-weight: 800; color: #7c3aed; margin-top: 2px;">${fmtCurrency(totalAdvance)}</div>
+              </div>
+            </div>
+            <div class="gazana-table-container">
+              <table class="gazana-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Entry / Quality</th>
+                    <th style="text-align:right">Amount (₹)</th>
+                    <th>Note / Details</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${allPayments.map(p => {
+                    const typeLabel = p.type === 'general'
+                      ? '<span style="background: rgba(37,99,235,0.1); color: #2563eb; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">💵 General</span>'
+                      : p.type === 'advance'
+                        ? '<span style="background: rgba(124,58,237,0.1); color: #7c3aed; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">🔖 Advance</span>'
+                        : '<span style="background: rgba(2,132,199,0.1); color: #0284c7; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">📝 Entry</span>';
+                    const displayNote = p.type === 'general' && p.note.startsWith('[General] ')
+                      ? p.note.replace('[General] ', '')
+                      : p.note;
+                    return `
+                      <tr>
+                        <td>${formatDate(p.date)}</td>
+                        <td>${typeLabel}</td>
+                        <td>
+                          <div style="font-weight: 600;">${escapeHtml(p.entryVariety)}</div>
+                          <div style="font-size: 0.7rem; color: var(--text-muted);">${formatDate(p.entryDate)}</div>
+                        </td>
+                        <td style="text-align:right; font-weight: 800; color: #15803d; font-size: 0.85rem;">${fmtCurrency(p.amount)}</td>
+                        <td style="color: var(--text-secondary); font-size: 0.78rem; max-width: 200px; white-space: normal; word-break: break-word;">${escapeHtml(displayNote) || '<span style="color: var(--text-muted);">—</span>'}</td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td colspan="3" style="text-align: right; font-weight: 800;">Grand Total:</td>
+                    <td style="text-align: right; font-weight: 800; color: #15803d; font-size: 0.9rem;">${fmtCurrency(grandTotal)}</td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          `;
+        }
+      } else if (displayedEntries.length === 0) {
         $('partyGazanaEntriesContent').innerHTML = `
           <div class="empty-state" style="padding: 2.5rem 1rem; text-align: center;">
             <div class="empty-icon">📋</div>
