@@ -4676,11 +4676,14 @@ async function loadGazanaDashboard(search = '') {
                   </div>
                 </div>
 
-                <div class="gazana-party-card-right">
+                <div class="gazana-party-card-right" style="display: flex; align-items: center; gap: 6px;">
+                  <button class="btn btn-secondary" title="Generate Receipt" onclick="event.stopPropagation(); openPartyReceiptModal('${escapeHtml(p.partyName)}');" style="font-size: 0.78rem; padding: 4px 9px; font-weight: 700; color: #0284c7; border: 1px solid #bae6fd; background: #f0f9ff; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                    🧾 Receipt
+                  </button>
                   <button class="btn btn-ghost btn-icon" title="Add entry for this party" onclick="event.stopPropagation(); openNewPartyEntryModal('${escapeHtml(p.partyName)}');" style="color: var(--accent-primary); font-size: 1.15rem; padding: 4px 8px; border-radius: var(--radius-sm);">
                     ＋
                   </button>
-                  <span style="font-size: 0.9rem; font-weight: 700; color: var(--accent-primary); margin-left: 4px;">➔</span>
+                  <span style="font-size: 0.9rem; font-weight: 700; color: var(--accent-primary); margin-left: 2px;">➔</span>
                 </div>
               </div>
             `;
@@ -4788,12 +4791,15 @@ async function loadGazanaDashboard(search = '') {
                     </td>
                     <td>
                       <div style="display: flex; gap: 5px; align-items: center;">
+                        <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem; font-weight: 700; color: #0284c7; background: #f0f9ff; border: 1px solid #e0f2fe; border-radius: 4px;" onclick="event.stopPropagation(); openPartyReceiptModal('${escapeHtml(e.partyName)}');" title="Generate Receipt for ${escapeHtml(e.partyName)}">
+                          🧾 Receipt
+                        </button>
                         ${(!isCompleted && displayRemaining > 0) ? `
                           <button class="btn-add-payment" onclick="openQuickPaymentModal('${e._id}', '${escapeHtml(e.partyName)}', ${displayRemaining})" title="Add Partial Payment">
                             ＋ Add Payment
                           </button>
                         ` : ''}
-                        <button class="gazana-menu-btn" onclick="toggleGazanaActionMenu(event, '${e._id}')" title="More Actions">⋮</button>
+                        <button class="gazana-menu-btn" onclick="toggleGazanaActionMenu(event, '${e._id}', '${escapeHtml(e.partyName)}')" title="More Actions">⋮</button>
                       </div>
                     </td>
                   </tr>
@@ -5184,6 +5190,12 @@ if ($('btnPartyGazanaSharePDF')) {
 if ($('btnPartyGazanaDownloadPDF')) {
   $('btnPartyGazanaDownloadPDF').addEventListener('click', () => {
     if (currentGazanaPartyName) sharePartyGazanaPDF(currentGazanaPartyName, 'download');
+  });
+}
+
+if ($('btnPartyGazanaReceipt')) {
+  $('btnPartyGazanaReceipt').addEventListener('click', () => {
+    if (currentGazanaPartyName) openPartyReceiptModal(currentGazanaPartyName);
   });
 }
 
@@ -6083,7 +6095,7 @@ async function sharePartyGazanaPDF(partyName, action = 'share') {
 // ── 3-Dots Action Menu Controller (Floating Portal) ─────────
 let activeGazanaMenuId = null;
 
-function toggleGazanaActionMenu(event, entryId) {
+function toggleGazanaActionMenu(event, entryId, partyName = '') {
   if (event) {
     event.preventDefault();
     event.stopPropagation();
@@ -6102,6 +6114,11 @@ function toggleGazanaActionMenu(event, entryId) {
   menu.id = 'gazanaFloatingMenu';
   menu.className = 'gazana-floating-menu';
   menu.innerHTML = `
+    ${partyName ? `
+      <button class="gazana-menu-item" onclick="closeAllGazanaMenus(); openPartyReceiptModal('${escapeHtml(partyName)}')">
+        <span class="menu-icon">🧾</span> Generate Receipt
+      </button>
+    ` : ''}
     <button class="gazana-menu-item" onclick="closeAllGazanaMenus(); openPaymentHistoryModal('${entryId}')">
       <span class="menu-icon">📋</span> View Payment Log
     </button>
@@ -6116,7 +6133,7 @@ function toggleGazanaActionMenu(event, entryId) {
   document.body.appendChild(menu);
 
   const menuWidth = 165;
-  const menuHeight = 115;
+  const menuHeight = partyName ? 145 : 115;
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
 
@@ -6182,6 +6199,359 @@ window.sharePartyGazanaPDF = sharePartyGazanaPDF;
 window.openGeneralPaymentModal = openGeneralPaymentModal;
 window.closeGeneralPaymentModal = closeGeneralPaymentModal;
 window.submitGeneralPayment = submitGeneralPayment;
+
+// ═══════════════════════════════════════════════════════════
+//  PARTY DUE PAYMENT RECEIPT (No Decimals, No Rounding Off)
+// ═══════════════════════════════════════════════════════════
+let currentReceiptPartyName = '';
+let currentReceiptTotal = 0;
+let currentReceiptPendingEntries = [];
+
+// Truncate decimal digits without rounding off (e.g. 1500.89 -> 1500, not 1501)
+function truncNoRound(val) {
+  if (val == null || isNaN(val)) return 0;
+  return Math.trunc(Number(val));
+}
+
+function fmtReceiptAmount(val) {
+  const truncated = truncNoRound(val);
+  return truncated.toLocaleString('en-IN');
+}
+
+async function openPartyReceiptModal(partyName) {
+  if (!partyName) return;
+  currentReceiptPartyName = partyName;
+  currentReceiptTotal = 0;
+  currentReceiptPendingEntries = [];
+
+  const modal = $('partyReceiptModal');
+  const title = $('partyReceiptModalTitle');
+  const container = $('partyReceiptPreviewContainer');
+  if (title) title.textContent = `Receipt — ${partyName}`;
+  if (container) {
+    container.innerHTML = `
+      <div style="padding: 2.5rem; text-align: center; color: var(--text-muted);">
+        <div style="font-size: 2rem; margin-bottom: 0.5rem; animation: spin 1s linear infinite;">⏳</div>
+        <div>Generating receipt for <strong>${escapeHtml(partyName)}</strong>...</div>
+      </div>
+    `;
+  }
+  if (modal) modal.classList.remove('hidden');
+
+  try {
+    let partyData = null;
+    if (currentGazanaPartyName && currentGazanaPartyName.trim().toLowerCase() === partyName.trim().toLowerCase() && currentGazanaPartyData) {
+      partyData = currentGazanaPartyData;
+    } else {
+      partyData = await apiGet(`${PARTY_ENTRIES_API}/party/${encodeURIComponent(partyName)}`);
+    }
+
+    if (!partyData) throw new Error('Failed to load party details');
+
+    const allEntries = partyData.entries || [];
+    // Only entries that have a remaining balance that the party has to pay
+    const pendingEntries = allEntries.filter(e => (Number(e.remaining) || 0) > 0);
+    currentReceiptPendingEntries = pendingEntries;
+
+    // Calculate total by summing truncated individual amounts (skip decimals, no round off)
+    let grandTotal = 0;
+    const qualityMap = {};
+
+    pendingEntries.forEach(e => {
+      const truncatedRem = truncNoRound(e.remaining);
+      grandTotal += truncatedRem;
+      const q = (e.variety || 'Standard Quality').trim();
+      if (!qualityMap[q]) qualityMap[q] = 0;
+      qualityMap[q] += truncatedRem;
+    });
+
+    currentReceiptTotal = grandTotal;
+
+    const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const partyDisplayName = partyData.partyName || partyName;
+
+    const rowsHtml = pendingEntries.length > 0 ? pendingEntries.map((e, idx) => {
+      const truncatedRem = truncNoRound(e.remaining);
+      const isEven = (idx % 2 === 1);
+      return `
+        <tr style="border-bottom: 1px solid #e2e8f0; ${isEven ? 'background: #f8fafc;' : 'background: #ffffff;'}">
+          <td style="padding: 9px 8px; text-align: center; font-weight: 700; color: #64748b; font-size: 11px;">${idx + 1}</td>
+          <td style="padding: 9px 8px; font-size: 11px; color: #334155; white-space: nowrap;">${formatDate(e.date)}</td>
+          <td style="padding: 9px 10px; font-size: 11.5px; font-weight: 700; color: #0f172a;">
+            ${escapeHtml(e.variety || '—')}
+            ${e.contractNo ? `<span style="display: block; font-size: 9px; font-weight: 600; color: #2563eb; margin-top: 1px;">#${escapeHtml(e.contractNo)}</span>` : ''}
+            ${e.purchaser ? `<span style="display: block; font-size: 8.5px; font-weight: 500; color: #0369a1;">خریدار: ${escapeHtml(e.purchaser)}</span>` : ''}
+          </td>
+          <td style="padding: 9px 10px; text-align: right; font-weight: 800; font-size: 12.5px; color: #b91c1c; white-space: nowrap;">
+            ₹ ${truncatedRem.toLocaleString('en-IN')}
+          </td>
+        </tr>
+      `;
+    }).join('') : `
+      <tr>
+        <td colspan="4" style="text-align: center; padding: 24px 12px; color: #15803d; font-weight: 700; font-size: 12px;">
+          ✅ No outstanding balance! All entries are fully cleared (تمام بقایا جات ادا ہو چکے ہیں).
+        </td>
+      </tr>
+    `;
+
+    // Quality breakdown section if multiple qualities or multiple entries
+    const qualityKeys = Object.keys(qualityMap);
+    let qualitySummaryHtml = '';
+    if (qualityKeys.length > 1 || (qualityKeys.length === 1 && pendingEntries.length > 1)) {
+      qualitySummaryHtml = `
+        <div style="margin-top: 12px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 12px;">
+          <div style="font-size: 10px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">
+            Summary by Quality (کوالٹی کے مطابق بقایا تفصیل):
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 6px;">
+            ${qualityKeys.map(q => `
+              <div style="display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 4px 8px; border-radius: 4px; border: 1px solid #e2e8f0; font-size: 11px;">
+                <span style="font-weight: 700; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;">${escapeHtml(q)}</span>
+                <span style="font-weight: 800; color: #b91c1c;">₹ ${qualityMap[q].toLocaleString('en-IN')}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    if (container) {
+      container.innerHTML = `
+        <div id="partyReceiptPrintRoot" style="background: #ffffff; color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; width: 600px; max-width: 100%; box-sizing: border-box; padding: 18px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+          
+          <!-- Header -->
+          <div style="border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <h2 style="margin: 0; font-size: 20px; font-weight: 900; color: #0f172a; letter-spacing: 0.5px; line-height: 1.2;">DADI OFFICE</h2>
+              <div style="font-size: 12px; color: #0284c7; font-weight: 700; margin-top: 1px;">دادی آفس — بقایا رقم رسید</div>
+              <div style="font-size: 10px; color: #64748b; margin-top: 2px;">Payment Due Receipt</div>
+            </div>
+            <div style="text-align: right;">
+              <span style="display: inline-block; background: #fee2e2; color: #b91c1c; font-size: 10.5px; font-weight: 800; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
+                PAYMENT DUE
+              </span>
+              <div style="font-size: 11px; color: #475569; margin-top: 4px; font-weight: 600;">
+                Date: <span style="color: #0f172a;">${todayStr}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Party Info Card -->
+          <div style="background: #f8fafc; border-left: 4px solid #0284c7; border: 1px solid #e2e8f0; border-left-width: 4px; border-radius: 6px; padding: 9px 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-size: 9.5px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">BANAAM PARTY (بنام پارٹی):</div>
+              <div style="font-size: 16px; font-weight: 800; color: #0f172a; margin-top: 1px;">${escapeHtml(partyDisplayName)}</div>
+            </div>
+            <div style="text-align: right;">
+              <span style="background: #e0f2fe; color: #0369a1; font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 4px;">
+                ${pendingEntries.length} ${pendingEntries.length === 1 ? 'Pending Item' : 'Pending Items'}
+              </span>
+            </div>
+          </div>
+
+          <!-- Receipt Table -->
+          <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; font-size: 11px;">
+            <thead>
+              <tr style="background: #0f172a; color: #ffffff;">
+                <th style="padding: 8px 6px; text-align: center; width: 32px;">#</th>
+                <th style="padding: 8px 8px; text-align: left; width: 85px;">Date (تاریخ)</th>
+                <th style="padding: 8px 10px; text-align: left;">Quality (کوالٹی / ورائٹی)</th>
+                <th style="padding: 8px 10px; text-align: right; width: 140px; color: #fca5a5;">Remaining (بقایا رقم)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+            <tfoot>
+              <tr style="background: #f8fafc; font-weight: 800; border-top: 2px solid #0f172a;">
+                <td colspan="3" style="padding: 10px 10px; text-align: right; color: #0f172a; font-size: 12px;">
+                  TOTAL PAYABLE (کل واجب الادا رقم):
+                </td>
+                <td style="padding: 10px 10px; text-align: right; color: #b91c1c; font-size: 14px; font-weight: 900;">
+                  ₹ ${grandTotal.toLocaleString('en-IN')}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+
+          ${qualitySummaryHtml}
+
+          <!-- Grand Total Highlight Banner -->
+          <div style="margin-top: 12px; background: linear-gradient(135deg, #0f172a, #1e3a8a); color: #ffffff; padding: 12px 16px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-size: 10px; color: #93c5fd; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">TOTAL OUTSTANDING AMOUNT</div>
+              <div style="font-size: 12px; font-weight: 700; color: #e2e8f0; margin-top: 1px;">کل واجب الادا بقایا رقم</div>
+            </div>
+            <div style="font-size: 20px; font-weight: 900; color: #38bdf8; letter-spacing: 0.5px;">
+              ₹ ${grandTotal.toLocaleString('en-IN')}
+            </div>
+          </div>
+
+          <!-- Note & Footer -->
+          <div style="margin-top: 14px; border-top: 1px dashed #cbd5e1; padding-top: 8px; text-align: center; font-size: 9.5px; color: #64748b;">
+            <div style="font-weight: 600;">براہ کرم درج بالا بقایا رقم کی جلد از جلد ادائیگی فرمائیں۔ شکریہ!</div>
+            <div style="margin-top: 2px; font-size: 8.5px; color: #94a3b8;">Receipt generated on ${new Date().toLocaleString()} · Dadi Office</div>
+          </div>
+
+        </div>
+      `;
+    }
+  } catch (err) {
+    if (container) {
+      container.innerHTML = `
+        <div style="padding: 2rem; text-align: center; color: #b91c1c;">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚠️</div>
+          <div>Failed to generate receipt: ${escapeHtml(err.message)}</div>
+        </div>
+      `;
+    }
+    toast('Failed to generate receipt: ' + err.message, 'error');
+  }
+}
+
+function closePartyReceiptModal() {
+  const modal = $('partyReceiptModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function sharePartyReceiptPDF(action = 'download') {
+  if (!currentReceiptPartyName) return;
+  try {
+    toast(action === 'share' ? 'Preparing Receipt to share...' : 'Downloading Receipt PDF...', 'info');
+    const targetElement = document.getElementById('partyReceiptPrintRoot');
+    if (!targetElement) throw new Error('Receipt content not found');
+
+    const cleanParty = currentReceiptPartyName.replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '_') || 'Party';
+    const cleanDate = new Date().toISOString().slice(0, 10);
+    const fileName = `Receipt_${cleanParty}_${cleanDate}.pdf`;
+
+    const opt = {
+      margin: [6, 6, 6, 6],
+      filename: fileName,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    if (typeof html2pdf !== 'undefined') {
+      const pdfWorker = html2pdf().set(opt).from(targetElement);
+      const pdfBlob = await pdfWorker.output('blob');
+
+      if (action === 'share') {
+        const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+          try {
+            await navigator.share({
+              files: [pdfFile],
+              title: `Receipt - ${currentReceiptPartyName}`,
+              text: `Payment Due Receipt for ${currentReceiptPartyName}: Total Due ₹ ${currentReceiptTotal.toLocaleString('en-IN')}`,
+            });
+            toast('Shared Receipt PDF successfully! ✅', 'success');
+            return;
+          } catch (shareErr) {
+            if (shareErr.name === 'AbortError') return;
+          }
+        }
+      }
+
+      // Download PDF
+      const downloadUrl = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+      toast('Downloaded Receipt PDF successfully! ✅', 'success');
+    } else {
+      printPartyReceipt();
+    }
+  } catch (err) {
+    toast('Receipt PDF generation failed: ' + err.message, 'error');
+  }
+}
+
+function printPartyReceipt() {
+  const target = document.getElementById('partyReceiptPrintRoot');
+  if (!target) return;
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) {
+    window.print();
+    return;
+  }
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Receipt - ${currentReceiptPartyName}</title>
+        <style>
+          @page { margin: 8mm; size: A4 portrait; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 12px; color: #0f172a; }
+          * { box-sizing: border-box; }
+        </style>
+      </head>
+      <body>
+        ${target.outerHTML}
+        <script>
+          window.onload = function() {
+            window.print();
+            setTimeout(function() { window.close(); }, 500);
+          };
+        <\/script>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+}
+
+function sendReceiptWhatsApp() {
+  if (!currentReceiptPartyName) return;
+  const todayStr = new Date().toLocaleDateString('en-GB');
+  let msg = `*📋 DADI OFFICE — PAYMENT DUE RECEIPT*\n`;
+  msg += `*Party:* ${currentReceiptPartyName}\n`;
+  msg += `*Date:* ${todayStr}\n\n`;
+  msg += `*Pending Items (کوالٹی اور بقایا رقم):*\n`;
+
+  if (currentReceiptPendingEntries.length > 0) {
+    currentReceiptPendingEntries.forEach((e, idx) => {
+      const rem = truncNoRound(e.remaining);
+      const dt = formatDate(e.date);
+      const quality = e.variety || 'Quality';
+      msg += `${idx + 1}. ${dt} | *${quality}*: ₹ ${rem.toLocaleString('en-IN')}\n`;
+    });
+  } else {
+    msg += `No pending balance. All cleared.\n`;
+  }
+
+  msg += `\n*TOTAL PAYABLE: ₹ ${currentReceiptTotal.toLocaleString('en-IN')}*\n`;
+  msg += `(کل واجب الادا رقم: ₹ ${currentReceiptTotal.toLocaleString('en-IN')})\n\n`;
+  msg += `براہ کرم بقایا رقم کی جلد از جلد ادائیگی فرمائیں۔ شکریہ!`;
+
+  const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+  window.open(waUrl, '_blank');
+}
+
+// Bind Receipt Toolbar Button Listeners
+if ($('btnReceiptSharePDF')) {
+  $('btnReceiptSharePDF').addEventListener('click', () => sharePartyReceiptPDF('share'));
+}
+if ($('btnReceiptDownloadPDF')) {
+  $('btnReceiptDownloadPDF').addEventListener('click', () => sharePartyReceiptPDF('download'));
+}
+if ($('btnReceiptPrint')) {
+  $('btnReceiptPrint').addEventListener('click', () => printPartyReceipt());
+}
+if ($('btnReceiptWhatsApp')) {
+  $('btnReceiptWhatsApp').addEventListener('click', () => sendReceiptWhatsApp());
+}
+
+window.openPartyReceiptModal = openPartyReceiptModal;
+window.closePartyReceiptModal = closePartyReceiptModal;
+window.sharePartyReceiptPDF = sharePartyReceiptPDF;
+window.printPartyReceipt = printPartyReceipt;
+window.sendReceiptWhatsApp = sendReceiptWhatsApp;
 
 // ── Generic API PATCH helper ──────────────────────────────
 async function apiPatch(url, data) {

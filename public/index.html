@@ -339,6 +339,7 @@
         </div>
         <div class="cb-header-btns">
           <button class="btn btn-primary" id="btnGeneralPayment" style="background: linear-gradient(135deg, #15803d, #10b981); color: #fff; font-weight: 700;">💵 General Payment (عمومی رقم)</button>
+          <button class="btn btn-primary" id="btnPartyGazanaReceipt" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; font-weight: 700;">🧾 Generate Receipt (رسید)</button>
           <button class="btn btn-primary" id="btnPartyGazanaSharePDF" style="background: #2563eb; color: #fff;">📄 Share PDF</button>
           <button class="btn btn-primary" id="btnPartyGazanaDownloadPDF" style="background: #7c3aed; color: #fff;">📥 Download PDF</button>
           <button class="btn btn-primary" id="btnAddEntryForThisParty" style="background: #0284c7; color: #fff; font-weight: 700;">＋ Add Entry</button>
@@ -1229,10 +1230,43 @@
     </div>
   </div>
 
+  <!-- ═══ Party Due Payment Receipt Modal ═══ -->
+  <div class="modal-overlay hidden" id="partyReceiptModal">
+    <div class="modal" style="max-width: 680px; width: 96%; max-height: 92vh; display: flex; flex-direction: column; padding: 1.25rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 12px;">
+        <h3 class="modal-title" style="margin: 0; font-size: 1.15rem; display: flex; align-items: center; gap: 6px; color: #0f172a;">
+          🧾 <span id="partyReceiptModalTitle">Party Payment Receipt</span>
+        </h3>
+        <button type="button" class="btn btn-ghost" onclick="closePartyReceiptModal()" style="font-size: 1.25rem; line-height: 1; padding: 4px 8px;" title="Close">✕</button>
+      </div>
+
+      <!-- Action Toolbar -->
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; padding: 8px; background: var(--bg-tertiary); border-radius: var(--radius-sm);">
+        <button class="btn btn-primary" id="btnReceiptSharePDF" style="background: #2563eb; color: #fff; font-weight: 700; flex: 1; min-width: 125px; padding: 7px 12px; font-size: 0.85rem;">
+          📄 Share PDF
+        </button>
+        <button class="btn btn-primary" id="btnReceiptDownloadPDF" style="background: #7c3aed; color: #fff; font-weight: 700; flex: 1; min-width: 125px; padding: 7px 12px; font-size: 0.85rem;">
+          📥 Download PDF
+        </button>
+        <button class="btn btn-secondary" id="btnReceiptPrint" style="font-weight: 600; flex: 1; min-width: 90px; padding: 7px 12px; font-size: 0.85rem;">
+          🖨️ Print
+        </button>
+        <button class="btn btn-success" id="btnReceiptWhatsApp" style="background: #15803d; color: #fff; font-weight: 600; flex: 1; min-width: 110px; padding: 7px 12px; font-size: 0.85rem;">
+          💬 WhatsApp
+        </button>
+      </div>
+
+      <!-- Scrollable Receipt Preview Container -->
+      <div id="partyReceiptPreviewContainer" style="overflow-y: auto; flex: 1; border: 1px solid var(--border); border-radius: 8px; background: #f8fafc; padding: 12px; display: flex; justify-content: center;">
+        <!-- Populated dynamically by JS -->
+      </div>
+    </div>
+  </div>
+
   <!-- ═══ Toast Container ═══ -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <script src="/app.js?v=2.2.0"></script>
+  <script src="/app.js?v=2.3.0"></script>
 </body>
 </html>
 
