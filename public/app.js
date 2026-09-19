@@ -6361,24 +6361,114 @@ async function sharePartyReceiptPDF(action = 'download') {
   if (!currentReceiptPartyName) return;
   try {
     toast(action === 'share' ? 'Preparing Receipt to share...' : 'Downloading Receipt PDF...', 'info');
-    const targetElement = document.getElementById('partyReceiptPrintRoot');
-    if (!targetElement) throw new Error('Receipt content not found');
+
+    let partyData = null;
+    if (currentGazanaPartyName && currentGazanaPartyName.trim().toLowerCase() === currentReceiptPartyName.trim().toLowerCase() && currentGazanaPartyData) {
+      partyData = currentGazanaPartyData;
+    } else {
+      partyData = await apiGet(`${PARTY_ENTRIES_API}/party/${encodeURIComponent(currentReceiptPartyName)}`);
+    }
+
+    if (!partyData) throw new Error('Party details not found');
+
+    const allEntries = partyData.entries || [];
+    const pendingEntries = allEntries.filter(e => (Number(e.remaining) || 0) > 0);
+    const partyDisplayName = partyData.partyName || currentReceiptPartyName;
+
+    let grandTotal = 0;
+    pendingEntries.forEach(e => {
+      grandTotal += truncNoRound(e.remaining);
+    });
+
+    const rowsHtml = pendingEntries.length > 0 ? pendingEntries.map((e, idx) => {
+      const truncatedRem = truncNoRound(e.remaining);
+      const isEven = (idx % 2 === 1);
+      return `
+        <tr style="border-bottom: 1px solid #cbd5e1; ${isEven ? 'background-color: #f8fafc;' : 'background-color: #ffffff;'}">
+          <td style="padding: 6px 8px; text-align: center; font-weight: 700; color: #475569; font-size: 11px; width: 32px;">${idx + 1}</td>
+          <td style="padding: 6px 12px; font-size: 12px; font-weight: 700; color: #0f172a;">
+            ${escapeHtml(e.variety || '—')}
+          </td>
+          <td style="padding: 6px 12px; text-align: right; font-weight: 800; font-size: 12.5px; color: #b91c1c; white-space: nowrap;">
+            ₹ ${truncatedRem.toLocaleString('en-IN')}
+          </td>
+        </tr>
+      `;
+    }).join('') : `
+      <tr>
+        <td colspan="3" style="text-align: center; padding: 20px 10px; color: #15803d; font-weight: 700; font-size: 12px;">
+          ✅ No outstanding balance! All entries are cleared.
+        </td>
+      </tr>
+    `;
+
+    const container = document.createElement('div');
+    container.style.position = 'fixed';
+    container.style.left = '0px';
+    container.style.top = '0px';
+    container.style.zIndex = '-99999';
+    container.style.opacity = '1';
+    container.style.pointerEvents = 'none';
+
+    container.innerHTML = `
+      <div id="receiptPdfRoot" style="background: #ffffff; color: #0f172a; font-family: Arial, Helvetica, sans-serif; width: 480px; max-width: 480px; box-sizing: border-box; padding: 16px; border: 1px solid #cbd5e1; border-radius: 6px;">
+        
+        <!-- Compact Party Name Header -->
+        <div style="background-color: #f1f5f9; border-left: 5px solid #0284c7; border: 1px solid #cbd5e1; border-left-width: 5px; border-radius: 4px; padding: 8px 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="font-size: 16px; font-weight: 800; color: #0f172a;">
+            ${escapeHtml(partyDisplayName)}
+          </div>
+          <span style="background-color: #e0f2fe; color: #0369a1; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 3px;">
+            ${pendingEntries.length} ${pendingEntries.length === 1 ? 'Item' : 'Items'}
+          </span>
+        </div>
+
+        <!-- Table -->
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 11.5px;">
+          <thead>
+            <tr style="background-color: #0f172a; color: #ffffff;">
+              <th style="padding: 7px 8px; text-align: center; width: 32px; color: #ffffff;">#</th>
+              <th style="padding: 7px 12px; text-align: left; color: #ffffff;">Quality (کوالٹی)</th>
+              <th style="padding: 7px 12px; text-align: right; width: 150px; color: #fca5a5;">Remaining (بقایا رقم)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+          <tfoot>
+            <tr style="background-color: #f8fafc; font-weight: 800; border-top: 2px solid #0f172a;">
+              <td colspan="2" style="padding: 9px 12px; text-align: right; color: #0f172a; font-size: 12px;">
+                TOTAL (کل رقم):
+              </td>
+              <td style="padding: 9px 12px; text-align: right; color: #b91c1c; font-size: 14.5px; font-weight: 900;">
+                ₹ ${grandTotal.toLocaleString('en-IN')}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+
+      </div>
+    `;
+
+    document.body.appendChild(container);
 
     const cleanParty = currentReceiptPartyName.replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '_') || 'Party';
-    const cleanDate = new Date().toISOString().slice(0, 10);
-    const fileName = `Receipt_${cleanParty}_${cleanDate}.pdf`;
+    const fileName = `Receipt_${cleanParty}.pdf`;
 
     const opt = {
       margin: [6, 6, 6, 6],
       filename: fileName,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, logging: false },
+      html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0 },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
     if (typeof html2pdf !== 'undefined') {
+      const targetElement = container.querySelector('#receiptPdfRoot') || container.firstElementChild;
       const pdfWorker = html2pdf().set(opt).from(targetElement);
       const pdfBlob = await pdfWorker.output('blob');
+
+      if (container.parentNode) document.body.removeChild(container);
 
       if (action === 'share') {
         const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
@@ -6387,7 +6477,7 @@ async function sharePartyReceiptPDF(action = 'download') {
             await navigator.share({
               files: [pdfFile],
               title: `Receipt - ${currentReceiptPartyName}`,
-              text: `Payment Due Receipt for ${currentReceiptPartyName}: Total Due ₹ ${currentReceiptTotal.toLocaleString('en-IN')}`,
+              text: `Payment Due Receipt for ${currentReceiptPartyName}: Total Due ₹ ${grandTotal.toLocaleString('en-IN')}`,
             });
             toast('Shared Receipt PDF successfully! ✅', 'success');
             return;
@@ -6408,6 +6498,7 @@ async function sharePartyReceiptPDF(action = 'download') {
       URL.revokeObjectURL(downloadUrl);
       toast('Downloaded Receipt PDF successfully! ✅', 'success');
     } else {
+      if (container.parentNode) document.body.removeChild(container);
       printPartyReceipt();
     }
   } catch (err) {
