@@ -1242,20 +1242,17 @@
 
       <!-- Action Toolbar -->
       <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; padding: 6px 8px; background: var(--bg-tertiary); border-radius: var(--radius-sm);">
-        <button class="btn btn-primary" id="btnReceiptSharePDF" style="background: #2563eb; color: #fff; font-weight: 700; flex: 1; min-width: 95px; padding: 6px 8px; font-size: 0.8rem;">
+        <button class="btn btn-primary" id="btnReceiptSharePDF" style="background: #2563eb; color: #fff; font-weight: 700; flex: 1; min-width: 100px; padding: 6px 10px; font-size: 0.8rem;">
           📄 Share PDF
         </button>
-        <button class="btn btn-primary" id="btnReceiptDownloadPDF" style="background: #7c3aed; color: #fff; font-weight: 700; flex: 1; min-width: 105px; padding: 6px 8px; font-size: 0.8rem;">
+        <button class="btn btn-primary" id="btnReceiptDownloadPDF" style="background: #7c3aed; color: #fff; font-weight: 700; flex: 1; min-width: 110px; padding: 6px 10px; font-size: 0.8rem;">
           📥 Download PDF
         </button>
-        <button class="btn btn-secondary" id="btnReceiptPrint" style="font-weight: 600; flex: 1; min-width: 70px; padding: 6px 8px; font-size: 0.8rem;">
+        <button class="btn btn-secondary" id="btnReceiptPrint" style="font-weight: 600; flex: 1; min-width: 75px; padding: 6px 10px; font-size: 0.8rem;">
           🖨️ Print
         </button>
-        <button class="btn btn-success" id="btnReceiptWhatsApp" style="background: #15803d; color: #fff; font-weight: 600; flex: 1; min-width: 90px; padding: 6px 8px; font-size: 0.8rem;">
+        <button class="btn btn-success" id="btnReceiptWhatsApp" style="background: #15803d; color: #fff; font-weight: 600; flex: 1; min-width: 95px; padding: 6px 10px; font-size: 0.8rem;">
           💬 WhatsApp
-        </button>
-        <button type="button" class="btn btn-secondary" onclick="closePartyReceiptModal()" style="background: #fee2e2; color: #b91c1c; border-color: #fca5a5; font-weight: 700; padding: 6px 12px; font-size: 0.8rem;">
-          ✕ Close
         </button>
       </div>
 
@@ -1263,20 +1260,13 @@
       <div id="partyReceiptPreviewContainer" style="overflow-y: auto; flex: 1; border: 1px solid var(--border); border-radius: 6px; background: #f8fafc; padding: 8px; display: flex; justify-content: center;">
         <!-- Populated dynamically by JS -->
       </div>
-
-      <!-- Bottom Close Button Bar -->
-      <div style="display: flex; justify-content: flex-end; margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border);">
-        <button type="button" class="btn btn-secondary" onclick="closePartyReceiptModal()" style="padding: 5px 16px; font-size: 0.82rem; font-weight: 600;">
-          Close (بند کریں)
-        </button>
-      </div>
     </div>
   </div>
 
   <!-- ═══ Toast Container ═══ -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <script src="/app.js?v=2.3.3"></script>
+  <script src="/app.js?v=2.3.4"></script>
 </body>
 </html>
 
