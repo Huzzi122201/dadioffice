@@ -338,6 +338,7 @@
           <h2 class="form-title" id="partyGazanaDetailTitle">Party Gazana Ledger</h2>
         </div>
         <div class="cb-header-btns">
+          <button class="btn btn-primary" id="btnGeneralPayment" style="background: linear-gradient(135deg, #15803d, #10b981); color: #fff; font-weight: 700;">💵 General Payment (عمومی رقم)</button>
           <button class="btn btn-primary" id="btnPartyGazanaSharePDF" style="background: #2563eb; color: #fff;">📄 Share PDF</button>
           <button class="btn btn-primary" id="btnPartyGazanaDownloadPDF" style="background: #7c3aed; color: #fff;">📥 Download PDF</button>
           <button class="btn btn-primary" id="btnAddEntryForThisParty" style="background: #0284c7; color: #fff; font-weight: 700;">＋ Add Entry</button>
@@ -1195,6 +1196,36 @@
       <div class="modal-actions" style="margin-top: 1rem;">
         <button type="button" class="btn btn-secondary" onclick="closePaymentHistoryModal()">Close</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ═══ General Party Payment Modal ═══ -->
+  <div class="modal-overlay hidden" id="generalPaymentModal">
+    <div class="modal" style="max-width: 440px;">
+      <h3 class="modal-title" style="color: #15803d; font-size: 1.1rem;">
+        💵 General Party Payment (عمومی رقم وصولی)
+      </h3>
+      <div id="generalPaymentModalSummary" style="font-size: 0.8125rem; color: var(--text-secondary); margin: 6px 0 12px; padding: 8px; background: var(--bg-surface-secondary, rgba(255,255,255,0.03)); border-radius: 6px;">
+        <!-- populated by JS -->
+      </div>
+      <form id="generalPaymentForm" onsubmit="event.preventDefault(); submitGeneralPayment();">
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label class="form-label" for="generalPaymentDate">Payment Date (تاریخ) *</label>
+          <input type="date" class="form-input" id="generalPaymentDate" required />
+        </div>
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label class="form-label" for="generalPaymentAmount" style="color: #15803d; font-weight: 700;">Payment Amount (وصول شدہ رقم ₹) *</label>
+          <input type="number" step="any" min="0.01" class="form-input" id="generalPaymentAmount" required placeholder="Enter amount..." style="font-size: 1.1rem; font-weight: 800; color: #15803d;" />
+        </div>
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+          <label class="form-label" for="generalPaymentNote">Note / Details (تفصیل)</label>
+          <input type="text" class="form-input" id="generalPaymentNote" placeholder="e.g. Received via Bank / Cash / Cheque" />
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeGeneralPaymentModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" style="background: linear-gradient(135deg, #15803d, #10b981); color: #fff; font-weight: 700;">💵 Save General Payment</button>
+        </div>
+      </form>
     </div>
   </div>
 

@@ -484,6 +484,85 @@ router.delete('/:id/payment/:paymentId', async (req, res) => {
   }
 });
 
+// ── POST /api/party-entries/party/:partyName/general-payment ── General party-level payment (distributed across entries)
+router.post('/party/:partyName/general-payment', async (req, res) => {
+  try {
+    const { amount, date, note } = req.body;
+    const payAmt = Number(amount);
+
+    if (!payAmt || payAmt <= 0) {
+      return res.status(400).json({ error: 'Valid payment amount is required.' });
+    }
+
+    let norm = req.params.partyName.trim().toLowerCase();
+    const queryNorms = (norm === 'default party' || norm === 'daily entries')
+      ? ['default party', 'daily entries']
+      : [norm];
+
+    // Find all active entries with remaining > 0, oldest first
+    const entries = await PartyEntry.find({
+      partyNameNorm: { $in: queryNorms },
+      status: 'active',
+      remaining: { $gt: 0 }
+    }).sort({ date: 1, createdAt: 1 });
+
+    if (entries.length === 0) {
+      return res.status(400).json({ error: 'No active entries with outstanding balance found for this party.' });
+    }
+
+    const totalOutstanding = entries.reduce((sum, e) => sum + (e.remaining || 0), 0);
+    if (payAmt > Math.round(totalOutstanding * 100) / 100 + 0.01) {
+      return res.status(400).json({
+        error: `Payment amount (₹${payAmt.toLocaleString()}) exceeds total outstanding balance (₹${totalOutstanding.toLocaleString()}).`
+      });
+    }
+
+    let remainingPayment = payAmt;
+    const affectedEntries = [];
+
+    for (const entry of entries) {
+      if (remainingPayment <= 0) break;
+
+      const deduction = Math.min(remainingPayment, entry.remaining);
+      remainingPayment = Math.round((remainingPayment - deduction) * 100) / 100;
+
+      const payNote = note ? `[General] ${note.trim()}` : '[General] Party Payment';
+      entry.paymentHistory.push({
+        date: date ? new Date(date) : new Date(),
+        amount: deduction,
+        note: payNote,
+        receivedBy: ''
+      });
+
+      const installmentsTotal = entry.paymentHistory.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+      const totalRec = Math.round((entry.advance + installmentsTotal) * 100) / 100;
+      entry.remaining = Math.max(0, Math.round((entry.totalAmount - totalRec) * 100) / 100);
+
+      if (entry.remaining <= 0) {
+        entry.status = 'completed';
+      }
+
+      await entry.save();
+      affectedEntries.push({
+        _id: entry._id,
+        variety: entry.variety,
+        deduction,
+        newRemaining: entry.remaining,
+        newStatus: entry.status
+      });
+    }
+
+    res.json({
+      message: `General payment of ₹${payAmt.toLocaleString()} distributed across ${affectedEntries.length} entries.`,
+      totalPaid: payAmt,
+      affectedEntries
+    });
+  } catch (err) {
+    console.error('Error recording general party payment:', err);
+    res.status(500).json({ error: 'Failed to record general payment', details: err.message });
+  }
+});
+
 // ── PATCH /api/party-entries/:id/status ── Toggle or set status
 router.patch('/:id/status', async (req, res) => {
   try {

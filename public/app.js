@@ -5066,6 +5066,15 @@ if ($('btnPartyGazanaDownloadPDF')) {
   });
 }
 
+if ($('btnGeneralPayment')) {
+  $('btnGeneralPayment').addEventListener('click', () => {
+    if (currentGazanaPartyName && currentGazanaPartyData) {
+      const totalRemaining = currentGazanaPartyData.summary ? (currentGazanaPartyData.summary.totalRemaining || 0) : 0;
+      openGeneralPaymentModal(currentGazanaPartyName, totalRemaining);
+    }
+  });
+}
+
 // ── Open Party Gazana Form (Full Page View) ─────────────────
 let gazanaReturnTo = 'dashboard'; // 'dashboard' or 'ledger'
 
@@ -5452,6 +5461,85 @@ async function submitPartyPayment() {
     }
   } catch (err) {
     toast('Failed to record payment: ' + err.message, 'error');
+  }
+}
+
+// ── General Party Payment Modal ────────────────────────────
+function openGeneralPaymentModal(partyName, totalRemaining) {
+  $('generalPaymentDate').value = new Date().toISOString().slice(0, 10);
+  $('generalPaymentAmount').value = totalRemaining > 0 ? totalRemaining : '';
+  $('generalPaymentNote').value = '';
+
+  const activeEntries = (currentGazanaPartyData && currentGazanaPartyData.entries)
+    ? currentGazanaPartyData.entries.filter(e => e.status === 'active' && e.remaining > 0)
+    : [];
+
+  const summary = currentGazanaPartyData ? (currentGazanaPartyData.summary || {}) : {};
+
+  $('generalPaymentModalSummary').innerHTML = `
+    <div style="font-size: 0.82rem; display: flex; flex-direction: column; gap: 4px;">
+      <div style="display: flex; justify-content: space-between;">
+        <span style="color: var(--text-muted);">Party:</span>
+        <strong>👤 ${escapeHtml(partyName)}</strong>
+      </div>
+      <div style="display: flex; justify-content: space-between;">
+        <span style="color: var(--text-muted);">Active Entries with Balance:</span>
+        <strong>${activeEntries.length} entries</strong>
+      </div>
+      ${summary.totalAmount ? `
+        <div style="display: flex; justify-content: space-between;">
+          <span style="color: var(--text-muted);">Total Order Amount:</span>
+          <strong>${fmtCurrency(summary.totalAmount)}</strong>
+        </div>
+      ` : ''}
+      <div style="display: flex; justify-content: space-between; border-top: 1px dashed var(--border); padding-top: 5px; margin-top: 2px; color: #b91c1c; font-weight: 800;">
+        <span>Total Outstanding Balance (بقایا):</span>
+        <span style="font-size: 0.95rem;">${fmtCurrency(totalRemaining)}</span>
+      </div>
+      <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; background: rgba(21,128,61,0.06); padding: 4px 6px; border-radius: 4px; border-left: 3px solid #15803d;">
+        💡 This payment will be distributed across active entries (oldest first) and deducted from outstanding balance.
+      </div>
+    </div>
+  `;
+
+  $('generalPaymentModal').classList.remove('hidden');
+  setTimeout(() => $('generalPaymentAmount').focus(), 50);
+}
+
+function closeGeneralPaymentModal() {
+  $('generalPaymentModal').classList.add('hidden');
+}
+
+async function submitGeneralPayment() {
+  try {
+    const amount = parseFloat($('generalPaymentAmount').value);
+    const date = $('generalPaymentDate').value;
+    const note = $('generalPaymentNote').value.trim();
+
+    if (!amount || amount <= 0) {
+      toast('Please enter a valid payment amount.', 'error');
+      return;
+    }
+
+    if (!currentGazanaPartyName) {
+      toast('No party selected.', 'error');
+      return;
+    }
+
+    const res = await apiPost(
+      `${PARTY_ENTRIES_API}/party/${encodeURIComponent(currentGazanaPartyName)}/general-payment`,
+      { amount, date, note }
+    );
+
+    toast(`${res.message || 'General payment recorded successfully!'}`, 'success');
+    closeGeneralPaymentModal();
+
+    // Refresh the party ledger view
+    if (currentGazanaPartyName) {
+      openPartyGazanaDetail(currentGazanaPartyName);
+    }
+  } catch (err) {
+    toast('Failed to record general payment: ' + err.message, 'error');
   }
 }
 
@@ -5970,6 +6058,9 @@ window.closeAllGazanaMenus = closeAllGazanaMenus;
 window.toggleEntryStatus = toggleEntryStatus;
 window.deletePartyEntry = deletePartyEntry;
 window.sharePartyGazanaPDF = sharePartyGazanaPDF;
+window.openGeneralPaymentModal = openGeneralPaymentModal;
+window.closeGeneralPaymentModal = closeGeneralPaymentModal;
+window.submitGeneralPayment = submitGeneralPayment;
 
 // ── Generic API PATCH helper ──────────────────────────────
 async function apiPatch(url, data) {
