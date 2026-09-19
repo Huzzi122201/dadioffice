@@ -198,55 +198,6 @@ router.get('/party/:partyName', async (req, res) => {
       }
     });
 
-    // ── Lazy migration: reconstruct old general payments from [General] tagged paymentHistory ──
-    // Group distributed [General] payments by date+note to reconstruct original amounts
-    const generalFromHistory = {};
-    entries.forEach(e => {
-      if (Array.isArray(e.paymentHistory)) {
-        e.paymentHistory.forEach(p => {
-          if (p.note && p.note.startsWith('[General]')) {
-            const payDate = new Date(p.date).toISOString().slice(0, 10);
-            const payNote = p.note.replace('[General] ', '').replace('[General]', '').trim() || 'Party Payment';
-            const key = `${payDate}__${payNote}`;
-            if (!generalFromHistory[key]) {
-              generalFromHistory[key] = { date: p.date, note: payNote, amount: 0 };
-            }
-            generalFromHistory[key].amount += Number(p.amount) || 0;
-          }
-        });
-      }
-    });
-
-    // Check which reconstructed payments are missing from GeneralPayment collection and create them
-    const reconstructed = Object.values(generalFromHistory);
-    if (reconstructed.length > 0 && generalPayments.length < reconstructed.length) {
-      for (const rp of reconstructed) {
-        const rpDate = new Date(rp.date).toISOString().slice(0, 10);
-        const rpAmt = Math.round(rp.amount * 100) / 100;
-        const alreadyExists = generalPayments.some(gp => {
-          const gpDate = new Date(gp.date).toISOString().slice(0, 10);
-          const gpAmt = Math.round(gp.amount * 100) / 100;
-          return gpDate === rpDate && gpAmt === rpAmt;
-        });
-        if (!alreadyExists) {
-          try {
-            const created = await GeneralPayment.create({
-              partyName: partyDisplayName,
-              partyNameNorm: norm,
-              date: new Date(rp.date),
-              amount: rpAmt,
-              note: rp.note
-            });
-            generalPayments.push(created.toObject ? created.toObject() : created);
-          } catch (migErr) {
-            console.error('Error migrating old general payment:', migErr);
-          }
-        }
-      }
-      // Re-sort after migration
-      generalPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
-    }
-
     res.json({
       partyName: partyDisplayName,
       partyNameNorm: norm,
