@@ -6255,19 +6255,11 @@ async function openPartyReceiptModal(partyName) {
 
     // Calculate total by summing truncated individual amounts (skip decimals, no round off)
     let grandTotal = 0;
-    const qualityMap = {};
-
     pendingEntries.forEach(e => {
-      const truncatedRem = truncNoRound(e.remaining);
-      grandTotal += truncatedRem;
-      const q = (e.variety || 'Standard Quality').trim();
-      if (!qualityMap[q]) qualityMap[q] = 0;
-      qualityMap[q] += truncatedRem;
+      grandTotal += truncNoRound(e.remaining);
     });
 
     currentReceiptTotal = grandTotal;
-
-    const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     const partyDisplayName = partyData.partyName || partyName;
 
     const rowsHtml = pendingEntries.length > 0 ? pendingEntries.map((e, idx) => {
@@ -6275,89 +6267,62 @@ async function openPartyReceiptModal(partyName) {
       const isEven = (idx % 2 === 1);
       return `
         <tr style="border-bottom: 1px solid #e2e8f0; ${isEven ? 'background: #f8fafc;' : 'background: #ffffff;'}">
-          <td style="padding: 9px 8px; text-align: center; font-weight: 700; color: #64748b; font-size: 11px;">${idx + 1}</td>
-          <td style="padding: 9px 8px; font-size: 11px; color: #334155; white-space: nowrap;">${formatDate(e.date)}</td>
-          <td style="padding: 9px 10px; font-size: 11.5px; font-weight: 700; color: #0f172a;">
+          <td style="padding: 10px 8px; text-align: center; font-weight: 700; color: #64748b; font-size: 11px; width: 35px;">${idx + 1}</td>
+          <td style="padding: 10px 12px; font-size: 12px; font-weight: 700; color: #0f172a;">
             ${escapeHtml(e.variety || '—')}
-            ${e.contractNo ? `<span style="display: block; font-size: 9px; font-weight: 600; color: #2563eb; margin-top: 1px;">#${escapeHtml(e.contractNo)}</span>` : ''}
-            ${e.purchaser ? `<span style="display: block; font-size: 8.5px; font-weight: 500; color: #0369a1;">خریدار: ${escapeHtml(e.purchaser)}</span>` : ''}
+            ${e.contractNo ? `<span style="display: block; font-size: 9.5px; font-weight: 600; color: #2563eb; margin-top: 2px;">#${escapeHtml(e.contractNo)}</span>` : ''}
+            ${e.purchaser ? `<span style="display: block; font-size: 9px; font-weight: 500; color: #0369a1; margin-top: 1px;">خریدار: ${escapeHtml(e.purchaser)}</span>` : ''}
           </td>
-          <td style="padding: 9px 10px; text-align: right; font-weight: 800; font-size: 12.5px; color: #b91c1c; white-space: nowrap;">
+          <td style="padding: 10px 12px; text-align: right; font-weight: 800; font-size: 13px; color: #b91c1c; white-space: nowrap;">
             ₹ ${truncatedRem.toLocaleString('en-IN')}
           </td>
         </tr>
       `;
     }).join('') : `
       <tr>
-        <td colspan="4" style="text-align: center; padding: 24px 12px; color: #15803d; font-weight: 700; font-size: 12px;">
+        <td colspan="3" style="text-align: center; padding: 24px 12px; color: #15803d; font-weight: 700; font-size: 12px;">
           ✅ No outstanding balance! All entries are fully cleared (تمام بقایا جات ادا ہو چکے ہیں).
         </td>
       </tr>
     `;
 
-    // Quality breakdown section if multiple qualities or multiple entries
-    const qualityKeys = Object.keys(qualityMap);
-    let qualitySummaryHtml = '';
-    if (qualityKeys.length > 1 || (qualityKeys.length === 1 && pendingEntries.length > 1)) {
-      qualitySummaryHtml = `
-        <div style="margin-top: 12px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 12px;">
-          <div style="font-size: 10px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">
-            Summary by Quality (کوالٹی کے مطابق بقایا تفصیل):
-          </div>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 6px;">
-            ${qualityKeys.map(q => `
-              <div style="display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 4px 8px; border-radius: 4px; border: 1px solid #e2e8f0; font-size: 11px;">
-                <span style="font-weight: 700; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;">${escapeHtml(q)}</span>
-                <span style="font-weight: 800; color: #b91c1c;">₹ ${qualityMap[q].toLocaleString('en-IN')}</span>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `;
-    }
-
     if (container) {
       container.innerHTML = `
-        <div id="partyReceiptPrintRoot" style="background: #ffffff; color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; width: 600px; max-width: 100%; box-sizing: border-box; padding: 18px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+        <div id="partyReceiptPrintRoot" style="background: #ffffff; color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; width: 560px; max-width: 100%; box-sizing: border-box; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
           
           <!-- Header -->
-          <div style="border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: flex-start;">
+          <div style="border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
             <div>
               <h2 style="margin: 0; font-size: 20px; font-weight: 900; color: #0f172a; letter-spacing: 0.5px; line-height: 1.2;">DADI OFFICE</h2>
               <div style="font-size: 12px; color: #0284c7; font-weight: 700; margin-top: 1px;">دادی آفس — بقایا رقم رسید</div>
-              <div style="font-size: 10px; color: #64748b; margin-top: 2px;">Payment Due Receipt</div>
             </div>
             <div style="text-align: right;">
-              <span style="display: inline-block; background: #fee2e2; color: #b91c1c; font-size: 10.5px; font-weight: 800; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
+              <span style="display: inline-block; background: #fee2e2; color: #b91c1c; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
                 PAYMENT DUE
               </span>
-              <div style="font-size: 11px; color: #475569; margin-top: 4px; font-weight: 600;">
-                Date: <span style="color: #0f172a;">${todayStr}</span>
-              </div>
             </div>
           </div>
 
           <!-- Party Info Card -->
-          <div style="background: #f8fafc; border-left: 4px solid #0284c7; border: 1px solid #e2e8f0; border-left-width: 4px; border-radius: 6px; padding: 9px 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="background: #f8fafc; border-left: 4px solid #0284c7; border: 1px solid #e2e8f0; border-left-width: 4px; border-radius: 6px; padding: 10px 14px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
             <div>
               <div style="font-size: 9.5px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">BANAAM PARTY (بنام پارٹی):</div>
-              <div style="font-size: 16px; font-weight: 800; color: #0f172a; margin-top: 1px;">${escapeHtml(partyDisplayName)}</div>
+              <div style="font-size: 17px; font-weight: 800; color: #0f172a; margin-top: 2px;">${escapeHtml(partyDisplayName)}</div>
             </div>
             <div style="text-align: right;">
-              <span style="background: #e0f2fe; color: #0369a1; font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 4px;">
+              <span style="background: #e0f2fe; color: #0369a1; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 4px;">
                 ${pendingEntries.length} ${pendingEntries.length === 1 ? 'Pending Item' : 'Pending Items'}
               </span>
             </div>
           </div>
 
           <!-- Receipt Table -->
-          <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; font-size: 11px;">
+          <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; font-size: 11.5px;">
             <thead>
               <tr style="background: #0f172a; color: #ffffff;">
-                <th style="padding: 8px 6px; text-align: center; width: 32px;">#</th>
-                <th style="padding: 8px 8px; text-align: left; width: 85px;">Date (تاریخ)</th>
-                <th style="padding: 8px 10px; text-align: left;">Quality (کوالٹی / ورائٹی)</th>
-                <th style="padding: 8px 10px; text-align: right; width: 140px; color: #fca5a5;">Remaining (بقایا رقم)</th>
+                <th style="padding: 10px 8px; text-align: center; width: 35px;">#</th>
+                <th style="padding: 10px 12px; text-align: left;">Quality (کوالٹی / ورائٹی)</th>
+                <th style="padding: 10px 12px; text-align: right; width: 160px; color: #fca5a5;">Remaining (بقایا رقم)</th>
               </tr>
             </thead>
             <tbody>
@@ -6365,33 +6330,19 @@ async function openPartyReceiptModal(partyName) {
             </tbody>
             <tfoot>
               <tr style="background: #f8fafc; font-weight: 800; border-top: 2px solid #0f172a;">
-                <td colspan="3" style="padding: 10px 10px; text-align: right; color: #0f172a; font-size: 12px;">
-                  TOTAL PAYABLE (کل واجب الادا رقم):
+                <td colspan="2" style="padding: 12px; text-align: right; color: #0f172a; font-size: 13px;">
+                  TOTAL (کل واجب الادا رقم):
                 </td>
-                <td style="padding: 10px 10px; text-align: right; color: #b91c1c; font-size: 14px; font-weight: 900;">
+                <td style="padding: 12px; text-align: right; color: #b91c1c; font-size: 15px; font-weight: 900;">
                   ₹ ${grandTotal.toLocaleString('en-IN')}
                 </td>
               </tr>
             </tfoot>
           </table>
 
-          ${qualitySummaryHtml}
-
-          <!-- Grand Total Highlight Banner -->
-          <div style="margin-top: 12px; background: linear-gradient(135deg, #0f172a, #1e3a8a); color: #ffffff; padding: 12px 16px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <div style="font-size: 10px; color: #93c5fd; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">TOTAL OUTSTANDING AMOUNT</div>
-              <div style="font-size: 12px; font-weight: 700; color: #e2e8f0; margin-top: 1px;">کل واجب الادا بقایا رقم</div>
-            </div>
-            <div style="font-size: 20px; font-weight: 900; color: #38bdf8; letter-spacing: 0.5px;">
-              ₹ ${grandTotal.toLocaleString('en-IN')}
-            </div>
-          </div>
-
-          <!-- Note & Footer -->
-          <div style="margin-top: 14px; border-top: 1px dashed #cbd5e1; padding-top: 8px; text-align: center; font-size: 9.5px; color: #64748b;">
-            <div style="font-weight: 600;">براہ کرم درج بالا بقایا رقم کی جلد از جلد ادائیگی فرمائیں۔ شکریہ!</div>
-            <div style="margin-top: 2px; font-size: 8.5px; color: #94a3b8;">Receipt generated on ${new Date().toLocaleString()} · Dadi Office</div>
+          <!-- Footer -->
+          <div style="margin-top: 16px; border-top: 1px dashed #cbd5e1; padding-top: 8px; text-align: center; font-size: 10px; color: #94a3b8;">
+            Dadi Office
           </div>
 
         </div>
@@ -6508,26 +6459,22 @@ function printPartyReceipt() {
 
 function sendReceiptWhatsApp() {
   if (!currentReceiptPartyName) return;
-  const todayStr = new Date().toLocaleDateString('en-GB');
   let msg = `*📋 DADI OFFICE — PAYMENT DUE RECEIPT*\n`;
-  msg += `*Party:* ${currentReceiptPartyName}\n`;
-  msg += `*Date:* ${todayStr}\n\n`;
+  msg += `*Party:* ${currentReceiptPartyName}\n\n`;
   msg += `*Pending Items (کوالٹی اور بقایا رقم):*\n`;
 
   if (currentReceiptPendingEntries.length > 0) {
     currentReceiptPendingEntries.forEach((e, idx) => {
       const rem = truncNoRound(e.remaining);
-      const dt = formatDate(e.date);
       const quality = e.variety || 'Quality';
-      msg += `${idx + 1}. ${dt} | *${quality}*: ₹ ${rem.toLocaleString('en-IN')}\n`;
+      msg += `${idx + 1}. *${quality}*: ₹ ${rem.toLocaleString('en-IN')}\n`;
     });
   } else {
     msg += `No pending balance. All cleared.\n`;
   }
 
   msg += `\n*TOTAL PAYABLE: ₹ ${currentReceiptTotal.toLocaleString('en-IN')}*\n`;
-  msg += `(کل واجب الادا رقم: ₹ ${currentReceiptTotal.toLocaleString('en-IN')})\n\n`;
-  msg += `براہ کرم بقایا رقم کی جلد از جلد ادائیگی فرمائیں۔ شکریہ!`;
+  msg += `(کل واجب الادا رقم: ₹ ${currentReceiptTotal.toLocaleString('en-IN')})`;
 
   const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
   window.open(waUrl, '_blank');
