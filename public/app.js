@@ -5466,12 +5466,7 @@ async function savePartyGazanaForm() {
     const note = $('formGazanaNote') ? $('formGazanaNote').value.trim() : '';
     const status = $('formGazanaStatus') ? $('formGazanaStatus').value : 'active';
 
-    if (!safiGazana || safiGazana <= 0) {
-      toast('Please enter valid Safi Gazana.', 'error');
-      return;
-    }
-
-    if (!rateWithoutGst || rateWithoutGst <= 0) {
+    if (safiGazana > 0 && (!rateWithoutGst || rateWithoutGst <= 0)) {
       toast('Please enter valid Rate.', 'error');
       return;
     }
