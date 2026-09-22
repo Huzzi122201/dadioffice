@@ -53,36 +53,55 @@ router.get('/parties', async (req, res) => {
 
     const parties = await CashbookParty.find(query).sort({ khataNo: 1 }).lean();
 
-    // Attach summary stats for each party
-    const enriched = await Promise.all(parties.map(async (p) => {
-      const entries = await CashbookEntry.find({ khataNo: p.khataNo }).lean();
-      let totalNaam = 0, totalJama = 0, txnCount = entries.length;
-      entries.forEach(e => {
-        totalNaam += e.naam || 0;
-        totalJama += e.jama || 0;
-      });
+    // Single aggregation to compute stats for ALL khatas at once (replaces N+1 queries)
+    const khataNumbers = parties.map(p => p.khataNo);
+    const statsAgg = await CashbookEntry.aggregate([
+      { $match: { khataNo: { $in: khataNumbers } } },
+      {
+        $group: {
+          _id: '$khataNo',
+          totalNaam: { $sum: '$naam' },
+          totalJama: { $sum: '$jama' },
+          txnCount: { $sum: 1 },
+          jamaBags: {
+            $sum: { $cond: [{ $gt: ['$jama', 0] }, '$bags', 0] }
+          },
+          naamBags: {
+            $sum: { $cond: [{ $gt: ['$naam', 0] }, '$bags', 0] }
+          },
+          jamaMeters: {
+            $sum: { $cond: [{ $gt: ['$jama', 0] }, '$meters', 0] }
+          },
+          naamMeters: {
+            $sum: { $cond: [{ $gt: ['$naam', 0] }, '$meters', 0] }
+          },
+        }
+      }
+    ]);
 
-      const jamaBags = entries.filter(e => e.jama > 0).reduce((s, e) => s + (e.bags || 0), 0);
-      const naamBags = entries.filter(e => e.naam > 0).reduce((s, e) => s + (e.bags || 0), 0);
-      const totalBags = jamaBags > 0 ? jamaBags : naamBags;
+    // Build lookup map: khataNo -> stats
+    const statsMap = {};
+    statsAgg.forEach(s => { statsMap[s._id] = s; });
 
-      const jamaMeters = entries.filter(e => e.jama > 0).reduce((s, e) => s + (e.meters || 0), 0);
-      const naamMeters = entries.filter(e => e.naam > 0).reduce((s, e) => s + (e.meters || 0), 0);
-      const totalMeters = jamaMeters > 0 ? jamaMeters : naamMeters;
+    // Merge party info with aggregated stats (same logic as before)
+    const enriched = parties.map(p => {
+      const s = statsMap[p.khataNo] || { totalNaam: 0, totalJama: 0, txnCount: 0, jamaBags: 0, naamBags: 0, jamaMeters: 0, naamMeters: 0 };
+      const totalBags = s.jamaBags > 0 ? s.jamaBags : s.naamBags;
+      const totalMeters = s.jamaMeters > 0 ? s.jamaMeters : s.naamMeters;
 
       const opening = Number(p.openingBalance) || 0;
       const openingNet = (p.balanceType === 'jama' || p.balanceType === 'cash') ? opening : p.balanceType === 'banam' ? -opening : 0;
-      const balance = openingNet + totalJama - totalNaam;
+      const balance = openingNet + s.totalJama - s.totalNaam;
       return {
         ...p,
-        totalNaam,
-        totalJama,
+        totalNaam: s.totalNaam,
+        totalJama: s.totalJama,
         balance,
         totalBags,
         totalMeters,
-        txnCount,
+        txnCount: s.txnCount,
       };
-    }));
+    });
 
     res.json(enriched);
   } catch (err) {
@@ -313,14 +332,51 @@ router.get('/rokers', async (req, res) => {
       { $sort: { rokerNo: -1 } },
     ]);
 
-    const enriched = await Promise.all(rokers.map(async (r) => {
-      const prevCashInHand = await getCashInHandBalance(r.rokerNo);
+    // Pre-compute Cash-In-Hand for ALL rokers in a single aggregation (replaces N+1 getCashInHandBalance calls)
+    const cashInHandParty = await CashbookParty.findOne({
+      $or: [{ khataNo: 95 }, { nameNorm: 'cash in hand' }]
+    }).lean();
+
+    let cihByRoker = {};
+    let cihOpeningNet = 0;
+    if (cashInHandParty) {
+      const opening = Number(cashInHandParty.openingBalance) || 0;
+      cihOpeningNet = (cashInHandParty.balanceType === 'jama' || cashInHandParty.balanceType === 'cash') ? opening : cashInHandParty.balanceType === 'banam' ? -opening : 0;
+
+      // Get CIH totals grouped by rokerNo in ascending order
+      const cihAgg = await CashbookEntry.aggregate([
+        { $match: { khataNo: cashInHandParty.khataNo } },
+        {
+          $group: {
+            _id: '$rokerNo',
+            naam: { $sum: '$naam' },
+            jama: { $sum: '$jama' },
+          }
+        },
+        { $sort: { _id: 1 } }
+      ]);
+
+      // Build cumulative prefix-sum: for each rokerNo, compute CIH balance from all PREVIOUS rokers
+      let cumulative = cihOpeningNet;
+      const cumulativeMap = {};
+      cihAgg.forEach(r => {
+        cumulativeMap[r._id] = cumulative; // CIH *before* this roker
+        cumulative += (r.jama || 0) - (r.naam || 0);
+      });
+      // For rokers not in CIH entries, their "previous CIH" is the full cumulative
+      cihByRoker = cumulativeMap;
+      cihByRoker._total = cumulative; // total CIH after all rokers
+    }
+
+    const enriched = rokers.map(r => {
+      // Use pre-computed CIH: if this rokerNo exists in CIH entries, use its prefix sum; otherwise use total
+      const prevCashInHand = cihByRoker[r.rokerNo] !== undefined ? cihByRoker[r.rokerNo] : (cihByRoker._total || cihOpeningNet);
       return {
         ...r,
         cashInHand: prevCashInHand,
         endRokerValue: (r.totalJama || 0) + prevCashInHand,
       };
-    }));
+    });
 
     let filtered = enriched;
     if (search && search.trim()) {
@@ -332,6 +388,16 @@ router.get('/rokers', async (req, res) => {
     }
 
     res.json(filtered);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/cashbook/cash-in-hand ── Lightweight CIH balance endpoint
+router.get('/cash-in-hand', async (req, res) => {
+  try {
+    const balance = await getCashInHandBalance();
+    res.json({ balance });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

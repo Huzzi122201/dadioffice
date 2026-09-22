@@ -1666,12 +1666,11 @@ async function loadCashbookDashboard() {
       const url = `${CB_API}/rokers${search ? '?search=' + encodeURIComponent(search) : ''}`;
       const rokers = await apiGet(url);
 
-      // Client fallback for Cash In Hand balance if server hasn't restarted
+      // Get Cash In Hand balance via lightweight endpoint (instead of full /parties)
       let fallbackCih = 0;
       try {
-        const parties = await apiGet(`${CB_API}/parties`);
-        const cih = parties.find(p => p.khataNo === 95 || (p.nameNorm && p.nameNorm === 'cash in hand'));
-        if (cih) fallbackCih = cih.balance;
+        const cihRes = await apiGet(`${CB_API}/cash-in-hand`);
+        fallbackCih = cihRes.balance || 0;
       } catch (e) {}
 
       const totalEntries = rokers.reduce((sum, r) => sum + (r.entryCount || 0), 0);
@@ -4628,17 +4627,29 @@ async function loadGazanaDashboard(search = '') {
     if (search) queryParams.set('q', search);
     if (status && status !== 'all') queryParams.set('status', status);
 
-    const [entriesRes, partiesRes] = await Promise.all([
-      apiGet(`${PARTY_ENTRIES_API}?${queryParams.toString()}`).catch(() => ({ entries: [], summary: {} })),
-      apiGet(`${PARTY_ENTRIES_API}/parties${search ? '?q=' + encodeURIComponent(search) : ''}`).catch(() => [])
-    ]);
+    // Only fetch what the current view mode needs (performance: halves API calls)
+    let entriesRes = { entries: [], summary: {} };
+    let partiesRes = [];
+
+    if (viewMode === 'parties') {
+      // Parties view only needs the parties aggregation
+      partiesRes = await apiGet(`${PARTY_ENTRIES_API}/parties${search ? '?q=' + encodeURIComponent(search) : ''}`).catch(() => []);
+    } else {
+      // Entries view only needs the entries list
+      entriesRes = await apiGet(`${PARTY_ENTRIES_API}?${queryParams.toString()}`).catch(() => ({ entries: [], summary: {} }));
+    }
 
     gazanaDashboardData = entriesRes;
     const entries = entriesRes.entries || [];
     const summary = entriesRes.summary || {};
 
     if ($('gazanaEntriesCount')) {
-      $('gazanaEntriesCount').textContent = `(${entries.length} Entries)`;
+      if (viewMode === 'parties') {
+        const totalEntries = partiesRes.reduce((sum, p) => sum + (p.totalEntries || 0), 0);
+        $('gazanaEntriesCount').textContent = `(${totalEntries} Entries)`;
+      } else {
+        $('gazanaEntriesCount').textContent = `(${entries.length} Entries)`;
+      }
     }
 
     // Render Content (Grouped by Party vs All Entries List)

@@ -55,7 +55,8 @@ router.get('/', async (req, res) => {
       }
     }
 
-    const entries = await PartyEntry.find(query).sort({ date: -1, createdAt: -1 }).lean();
+    const limit = parseInt(req.query.limit) || 200;
+    const entries = await PartyEntry.find(query).sort({ date: -1, createdAt: -1 }).limit(limit).lean();
 
     // Summary calculation for this filtered set
     let totalSafiGazana = 0;

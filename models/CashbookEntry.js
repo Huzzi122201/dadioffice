@@ -150,5 +150,11 @@ cashbookEntrySchema.index({ purchaseRef: 1 });
 cashbookEntrySchema.index({ txnType: 1 });
 cashbookEntrySchema.index({ isPurchase: 1, remainingBags: 1 });
 cashbookEntrySchema.index({ linkedPurchaseId: 1 });
+// Performance: covers party stats aggregation (replaces N+1 queries)
+cashbookEntrySchema.index({ khataNo: 1, naam: 1, jama: 1, bags: 1, meters: 1 });
+// Performance: covers roker listing with isAutoCounterEntry filter
+cashbookEntrySchema.index({ isAutoCounterEntry: 1, rokerNo: 1 });
+// Performance: covers partyName search
+cashbookEntrySchema.index({ partyName: 1 });
 
 module.exports = mongoose.model('CashbookEntry', cashbookEntrySchema);
