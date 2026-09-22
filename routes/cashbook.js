@@ -864,12 +864,24 @@ router.put('/entries/:id', async (req, res) => {
 
     if (isPurchase !== undefined) entry.isPurchase = Boolean(isPurchase);
     if (isSell !== undefined) entry.isSell = Boolean(isSell);
-    entry.linkedPurchaseId = null;
+    entry.linkedPurchaseId = (entry.isSell && linkedPurchaseId) ? linkedPurchaseId : null;
 
     if (entry.isCash) {
       entry.isPurchase = false;
       entry.isSell = false;
       entry.linkedPurchaseId = null;
+    }
+
+    if (oldIsSell && !entry.isSell && oldLinkedPurchaseId) {
+      const oldPurchase = await CashbookEntry.findById(oldLinkedPurchaseId);
+      if (oldPurchase) {
+        oldPurchase.remainingBags = (oldPurchase.remainingBags || 0) + (oldBags || 0);
+        if (oldPurchase.linkedProfitLossEntryId) {
+          await CashbookEntry.findByIdAndDelete(oldPurchase.linkedProfitLossEntryId);
+          oldPurchase.linkedProfitLossEntryId = null;
+        }
+        await oldPurchase.save();
+      }
     }
 
     await entry.save();

@@ -4046,8 +4046,8 @@ $('entryForm').addEventListener('submit', async (e) => {
   const rokerNoVal = parseInt($('entryRokerNo').value) || 0;
   const isCashVal = $('entryModeCash') ? $('entryModeCash').checked : false;
   const side = $('entrySide').value;
-  const isPurchaseVal = !isCashVal && (side === 'jama');
-  const isSellVal = !isCashVal && (side === 'banam');
+  const isPurchaseVal = !isCashVal && (side === 'jama') && Boolean($('entryTypePurchase')?.checked);
+  const isSellVal = !isCashVal && (side === 'banam') && Boolean($('entryTypeSell')?.checked);
   const linkedPurchaseIdVal = (isSellVal && $('sellPurchaseSelect')) ? ($('sellPurchaseSelect').value || null) : null;
 
   const naamVal = (side === 'banam') ? Math.round(parseFloat($('entryNaam').value) || 0) : 0;
