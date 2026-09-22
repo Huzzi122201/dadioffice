@@ -4597,6 +4597,15 @@ function calcGazanaAmounts(e) {
   return { safi, rateWO, rateW, totalWO, totalW, isKachy, billableTotal };
 }
 
+// ── Helper to determine if a Gazana entry is Completed ──────
+function isGazanaEntryCompleted(e) {
+  if (!e) return false;
+  const safi = Number(e.safiGazana) || 0;
+  // If safi gazana is empty or 0, it is awaiting safi gazana and must remain active only
+  if (safi <= 0) return false;
+  return e.status === 'completed' || (e.remaining !== undefined && e.remaining !== null && e.remaining <= 0);
+}
+
 // ── Switch Gazana View Mode (Recent Entries vs By Party) ───
 function setGazanaViewMode(mode) {
   gazanaViewMode = mode;
@@ -4726,7 +4735,7 @@ async function loadGazanaDashboard(search = '') {
             </thead>
             <tbody>
               ${entries.map(e => {
-                const isCompleted = e.status === 'completed' || e.remaining <= 0;
+                const isCompleted = isGazanaEntryCompleted(e);
                 const displayRemaining = isCompleted ? 0 : Math.max(0, e.remaining || 0);
                 const installmentsSum = (e.paymentHistory || []).reduce((sum, p) => sum + (p.amount || 0), 0);
                 const calc = calcGazanaAmounts(e);
@@ -4862,8 +4871,8 @@ async function openPartyGazanaDetail(partyName) {
     const allEntries = res.entries || [];
     const summary = res.summary || {};
 
-    const activeEntries = allEntries.filter(e => e.status === 'active' && (e.remaining > 0 || e.totalAmount === 0));
-    const completedEntries = allEntries.filter(e => e.status === 'completed' || e.remaining <= 0);
+    const activeEntries = allEntries.filter(e => !isGazanaEntryCompleted(e));
+    const completedEntries = allEntries.filter(e => isGazanaEntryCompleted(e));
 
     // Collect payments for Payments tab
     const storedGeneralPayments = (res.generalPayments || []).map(gp => ({
@@ -5053,7 +5062,7 @@ async function openPartyGazanaDetail(partyName) {
           dTotalW += calc.totalW;
           dTotalWO += calc.totalWO;
           dAdv += e.advance || 0;
-          dRem += (e.status === 'completed' || e.remaining <= 0) ? 0 : (e.remaining || 0);
+          dRem += isGazanaEntryCompleted(e) ? 0 : (e.remaining || 0);
         });
 
         $('partyGazanaEntriesContent').innerHTML = `
@@ -5079,7 +5088,7 @@ async function openPartyGazanaDetail(partyName) {
               </thead>
               <tbody>
                 ${displayedEntries.map(e => {
-                  const isCompleted = e.status === 'completed' || e.remaining <= 0;
+                  const isCompleted = isGazanaEntryCompleted(e);
                   const displayRemaining = isCompleted ? 0 : Math.max(0, e.remaining || 0);
                   const installmentsSum = (e.paymentHistory || []).reduce((sum, p) => sum + (p.amount || 0), 0);
                   const calc = calcGazanaAmounts(e);
@@ -5328,7 +5337,9 @@ function updateGazanaFullFormCalculations() {
   }
 
   if ($('formGazanaStatus')) {
-    if (remaining <= 0 && activeTotal > 0) {
+    if (safi <= 0 || activeTotal <= 0) {
+      $('formGazanaStatus').value = 'active';
+    } else if (remaining <= 0 && activeTotal > 0) {
       $('formGazanaStatus').value = 'completed';
     }
   }
@@ -5464,7 +5475,7 @@ async function savePartyGazanaForm() {
     const advance = parseFloat($('formGazanaAdvance')?.value) || 0;
     const contractNo = $('formGazanaContractNo') ? $('formGazanaContractNo').value.trim() : '';
     const note = $('formGazanaNote') ? $('formGazanaNote').value.trim() : '';
-    const status = $('formGazanaStatus') ? $('formGazanaStatus').value : 'active';
+    const status = (safiGazana <= 0) ? 'active' : ($('formGazanaStatus') ? $('formGazanaStatus').value : 'active');
 
     if (safiGazana > 0 && (!rateWithoutGst || rateWithoutGst <= 0)) {
       toast('Please enter valid Rate.', 'error');
@@ -5680,7 +5691,7 @@ async function openPaymentHistoryModal(entryId) {
     const history = Array.isArray(entry.paymentHistory) ? entry.paymentHistory : [];
     const installmentsTotal = history.reduce((sum, p) => sum + (p.amount || 0), 0);
     const totalRec = Math.round(((entry.advance || 0) + installmentsTotal) * 100) / 100;
-    const isCompleted = entry.status === 'completed' || entry.remaining <= 0;
+    const isCompleted = isGazanaEntryCompleted(entry);
     const displayRemaining = isCompleted ? 0 : Math.max(0, entry.remaining || 0);
     const calc = calcGazanaAmounts(entry);
 
@@ -5855,6 +5866,10 @@ async function deleteInstallmentPayment(entryId, paymentId) {
 // ── Mark Entry as Completed (Radio Button) ────────────────
 async function markGazanaEntryCompleted(entryId) {
   try {
+    const entry = await apiGet(`${PARTY_ENTRIES_API}/${entryId}`);
+    if (entry && (Number(entry.safiGazana) || 0) <= 0) {
+      return toast('Cannot mark entry as completed because Safi Gazana is empty or 0.', 'warning');
+    }
     await apiPatch(`${PARTY_ENTRIES_API}/${entryId}/status`, { status: 'completed' });
     toast('Entry marked as completed! ✅', 'success');
 
@@ -5872,6 +5887,10 @@ const markEntryCompleted = markGazanaEntryCompleted;
 // ── Toggle Status ──────────────────────────────────────────
 async function toggleEntryStatus(entryId, currentStatus) {
   try {
+    const entry = await apiGet(`${PARTY_ENTRIES_API}/${entryId}`);
+    if (entry && currentStatus === 'active' && (Number(entry.safiGazana) || 0) <= 0) {
+      return toast('Cannot mark entry as completed because Safi Gazana is empty or 0.', 'warning');
+    }
     const newStatus = currentStatus === 'active' ? 'completed' : 'active';
     await apiPatch(`${PARTY_ENTRIES_API}/${entryId}/status`, { status: newStatus });
     toast(`Entry marked as ${newStatus}!`, 'info');

@@ -10,7 +10,22 @@ router.get('/', async (req, res) => {
     let query = {};
 
     if (status && status !== 'all') {
-      query.status = status;
+      if (status === 'completed') {
+        query.status = 'completed';
+        query.safiGazana = { $gt: 0 };
+      } else if (status === 'active') {
+        query.$and = query.$and || [];
+        query.$and.push({
+          $or: [
+            { status: 'active' },
+            { safiGazana: { $lte: 0 } },
+            { safiGazana: null },
+            { safiGazana: { $exists: false } }
+          ]
+        });
+      } else {
+        query.status = status;
+      }
     }
 
     if (partyName && partyName.trim()) {
@@ -19,12 +34,15 @@ router.get('/', async (req, res) => {
 
     if (q && q.trim()) {
       const regex = new RegExp(q.trim(), 'i');
-      query.$or = [
-        { partyName: regex },
-        { variety: regex },
-        { contractNo: regex },
-        { note: regex }
-      ];
+      query.$and = query.$and || [];
+      query.$and.push({
+        $or: [
+          { partyName: regex },
+          { variety: regex },
+          { contractNo: regex },
+          { note: regex }
+        ]
+      });
     }
 
     if (startDate || endDate) {
@@ -71,7 +89,7 @@ router.get('/', async (req, res) => {
       totalAmountWithoutGst += woGst;
       totalAdvance += e.advance || 0;
       totalRemaining += e.remaining || 0;
-      if (e.status === 'completed') {
+      if (e.status === 'completed' && safi > 0) {
         completedCount++;
       } else {
         activeCount++;
@@ -120,10 +138,33 @@ router.get('/parties', async (req, res) => {
           totalAdvance: { $sum: '$advance' },
           totalRemaining: { $sum: '$remaining' },
           activeCount: {
-            $sum: { $cond: [{ $eq: ['$status', 'active'] }, 1, 0] }
+            $sum: {
+              $cond: [
+                {
+                  $or: [
+                    { $eq: ['$status', 'active'] },
+                    { $lte: ['$safiGazana', 0] },
+                    { $eq: ['$safiGazana', null] }
+                  ]
+                },
+                1,
+                0
+              ]
+            }
           },
           completedCount: {
-            $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] }
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ['$status', 'completed'] },
+                    { $gt: ['$safiGazana', 0] }
+                  ]
+                },
+                1,
+                0
+              ]
+            }
           },
           lastDate: { $max: '$date' },
           lastVariety: { $last: '$variety' }
@@ -191,7 +232,7 @@ router.get('/party/:partyName', async (req, res) => {
       totalAmountWithoutGst += woGst;
       totalAdvance += e.advance || 0;
       totalRemaining += e.remaining || 0;
-      if (e.status === 'completed') {
+      if (e.status === 'completed' && safi > 0) {
         completedCount++;
       } else {
         activeCount++;
@@ -301,7 +342,9 @@ router.post('/', async (req, res) => {
     const rem = Math.max(0, Math.round((billableTotal - adv) * 100) / 100);
 
     let finalStatus = status || 'active';
-    if (rem <= 0 && billableTotal > 0) {
+    if (safi <= 0) {
+      finalStatus = 'active';
+    } else if (rem <= 0 && billableTotal > 0) {
       finalStatus = 'completed';
     }
 
@@ -395,7 +438,10 @@ router.put('/:id', async (req, res) => {
     const billableTotal = entry.rateType === 'kachy' ? entry.totalAmountWithoutGst : entry.totalAmount;
     const adv = entry.advance || 0;
 
-    if (status === 'active') {
+    if (safi <= 0) {
+      entry.status = 'active';
+      entry.remaining = 0;
+    } else if (status === 'active') {
       entry.status = 'active';
       if (Array.isArray(entry.paymentHistory)) {
         entry.paymentHistory = entry.paymentHistory.filter(
@@ -589,6 +635,10 @@ router.patch('/:id/status', async (req, res) => {
     const targetStatus = (status && ['active', 'completed'].includes(status))
       ? status
       : (entry.status === 'active' ? 'completed' : 'active');
+
+    if (targetStatus === 'completed' && (Number(entry.safiGazana) || 0) <= 0) {
+      return res.status(400).json({ error: 'Cannot mark entry as completed when Safi Gazana is empty or 0.' });
+    }
 
     entry.status = targetStatus;
 
