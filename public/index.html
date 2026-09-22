@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Textile Costing Sheet</title>
   <link rel="manifest" href="/manifest.json" />
-  <link rel="stylesheet" href="/styles.css?v=2.2.0" />
+  <link rel="stylesheet" href="/styles.css?v=2.4.1" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
@@ -337,12 +337,16 @@
           <button class="btn-back" id="btnPartyGazanaBack">←</button>
           <h2 class="form-title" id="partyGazanaDetailTitle">Party Gazana Ledger</h2>
         </div>
-        <div class="cb-header-btns">
-          <button class="btn btn-primary" id="btnGeneralPayment" style="background: linear-gradient(135deg, #15803d, #10b981); color: #fff; font-weight: 700;">💵 General Payment (عمومی رقم)</button>
-          <button class="btn btn-primary" id="btnPartyGazanaReceipt" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; font-weight: 700;">🧾 Generate Receipt (رسید)</button>
-          <button class="btn btn-primary" id="btnPartyGazanaSharePDF" style="background: #2563eb; color: #fff;">📄 Share PDF</button>
-          <button class="btn btn-primary" id="btnPartyGazanaDownloadPDF" style="background: #7c3aed; color: #fff;">📥 Download PDF</button>
-          <button class="btn btn-primary" id="btnAddEntryForThisParty" style="background: #0284c7; color: #fff; font-weight: 700;">＋ Add Entry</button>
+        <div class="party-gazana-header-actions">
+          <div class="party-gazana-btn-row">
+            <button class="btn btn-primary" id="btnGeneralPayment" style="background: linear-gradient(135deg, #15803d, #10b981); color: #fff; font-weight: 700;">💵 General Payment (عمومی رقم)</button>
+            <button class="btn btn-primary" id="btnPartyGazanaReceipt" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; font-weight: 700;">🧾 Generate Receipt (رسید)</button>
+          </div>
+          <div class="party-gazana-btn-row">
+            <button class="btn btn-primary" id="btnPartyGazanaSharePDF" style="background: #2563eb; color: #fff;">📄 Share PDF</button>
+            <button class="btn btn-primary" id="btnPartyGazanaDownloadPDF" style="background: #7c3aed; color: #fff;">📥 Download PDF</button>
+            <button class="btn btn-primary" id="btnAddEntryForThisParty" style="background: #0284c7; color: #fff; font-weight: 700;">＋ Add Entry</button>
+          </div>
         </div>
       </div>
 
@@ -1266,7 +1270,7 @@
   <!-- ═══ Toast Container ═══ -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <script src="/app.js?v=2.4.0"></script>
+  <script src="/app.js?v=2.4.1"></script>
 </body>
 </html>
 

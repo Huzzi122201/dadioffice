@@ -1420,6 +1420,46 @@ body {
   gap: 0.5rem;
 }
 
+.party-gazana-header-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  align-items: flex-end;
+}
+
+.party-gazana-btn-row {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.party-gazana-btn-row .btn {
+  font-size: 0.82rem;
+  padding: 0.45rem 0.85rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .party-gazana-header-actions {
+    width: 100%;
+    align-items: stretch;
+    margin-top: 0.5rem;
+  }
+
+  .party-gazana-btn-row {
+    width: 100%;
+    display: flex;
+    gap: 0.35rem;
+  }
+
+  .party-gazana-btn-row .btn {
+    flex: 1;
+    font-size: 0.72rem !important;
+    padding: 0.35rem 0.45rem !important;
+    justify-content: center;
+  }
+}
+
 /* ── Stats Row ──────────────────────────────────────────── */
 .cb-stats-row {
   display: grid;
