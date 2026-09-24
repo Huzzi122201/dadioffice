@@ -33,16 +33,48 @@ router.get('/', async (req, res) => {
     }
 
     if (q && q.trim()) {
-      const regex = new RegExp(q.trim(), 'i');
-      query.$and = query.$and || [];
-      query.$and.push({
-        $or: [
-          { partyName: regex },
-          { variety: regex },
-          { contractNo: regex },
-          { note: regex }
-        ]
+      const qTrim = q.trim();
+      const escapedQ = qTrim.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escapedQ, 'i');
+      const orConditions = [
+        { partyName: regex },
+        { variety: regex },
+        { contractNo: regex },
+        { note: regex },
+        { purchaser: regex },
+        { loomWala: regex },
+        { gudaam: regex }
+      ];
+
+      const numVal = parseFloat(qTrim);
+      if (!isNaN(numVal)) {
+        orConditions.push({ safiGazana: numVal });
+        orConditions.push({ kachaGazana: numVal });
+      }
+
+      orConditions.push({
+        $expr: {
+          $or: [
+            {
+              $regexMatch: {
+                input: { $toString: { $ifNull: ['$safiGazana', ''] } },
+                regex: escapedQ,
+                options: 'i'
+              }
+            },
+            {
+              $regexMatch: {
+                input: { $toString: { $ifNull: ['$kachaGazana', ''] } },
+                regex: escapedQ,
+                options: 'i'
+              }
+            }
+          ]
+        }
       });
+
+      query.$and = query.$and || [];
+      query.$and.push({ $or: orConditions });
     }
 
     if (startDate || endDate) {
@@ -123,7 +155,46 @@ router.get('/parties', async (req, res) => {
     const { q } = req.query;
     let matchStage = {};
     if (q && q.trim()) {
-      matchStage.partyName = new RegExp(q.trim(), 'i');
+      const qTrim = q.trim();
+      const escapedQ = qTrim.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escapedQ, 'i');
+      const orConditions = [
+        { partyName: regex },
+        { variety: regex },
+        { contractNo: regex },
+        { purchaser: regex },
+        { loomWala: regex },
+        { gudaam: regex }
+      ];
+
+      const numVal = parseFloat(qTrim);
+      if (!isNaN(numVal)) {
+        orConditions.push({ safiGazana: numVal });
+        orConditions.push({ kachaGazana: numVal });
+      }
+
+      orConditions.push({
+        $expr: {
+          $or: [
+            {
+              $regexMatch: {
+                input: { $toString: { $ifNull: ['$safiGazana', ''] } },
+                regex: escapedQ,
+                options: 'i'
+              }
+            },
+            {
+              $regexMatch: {
+                input: { $toString: { $ifNull: ['$kachaGazana', ''] } },
+                regex: escapedQ,
+                options: 'i'
+              }
+            }
+          ]
+        }
+      });
+
+      matchStage.$or = orConditions;
     }
 
     const aggregation = await PartyEntry.aggregate([

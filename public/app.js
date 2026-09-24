@@ -4610,7 +4610,11 @@ function setGazanaViewMode(mode) {
   gazanaViewMode = mode;
   if ($('tabGazanaEntries')) $('tabGazanaEntries').classList.toggle('active', mode === 'all');
   if ($('tabGazanaParties')) $('tabGazanaParties').classList.toggle('active', mode === 'parties');
-  loadGazanaDashboard($('gazanaSearchInput') ? $('gazanaSearchInput').value.trim() : '');
+  // Clear search input text when moving between Recent Entries and By Party tabs
+  if ($('gazanaSearchInput')) {
+    $('gazanaSearchInput').value = '';
+  }
+  loadGazanaDashboard('');
 }
 
 // ── Load Party Gazana Dashboard ────────────────────────────
@@ -4867,13 +4871,17 @@ if ($('btnNewPartyEntry')) {
 function setPartyGazanaDetailFilter(filter) {
   partyGazanaDetailFilter = filter;
   if (currentGazanaPartyName) {
-    openPartyGazanaDetail(currentGazanaPartyName);
+    openPartyGazanaDetail(currentGazanaPartyName, false);
   }
 }
 
 // ── Open Single Party Gazana Ledger Detail ──────────────────
-async function openPartyGazanaDetail(partyName) {
+async function openPartyGazanaDetail(partyName, resetTab = true) {
   if (!partyName) return;
+  // If opening another party or requested to reset tab, always default to 'active' tab
+  if (resetTab || currentGazanaPartyName !== partyName) {
+    partyGazanaDetailFilter = 'active';
+  }
   currentGazanaPartyName = partyName;
 
   try {
@@ -5425,7 +5433,7 @@ if (varietyInput) {
 function returnFromGazanaForm() {
   if (gazanaReturnTo === 'ledger' && currentGazanaPartyName) {
     showView(viewPartyGazanaDetail);
-    openPartyGazanaDetail(currentGazanaPartyName);
+    openPartyGazanaDetail(currentGazanaPartyName, false);
   } else {
     showView(viewDashboard);
     switchCostingSubtab('gazana');
@@ -5522,7 +5530,7 @@ async function savePartyGazanaForm() {
     // Return to appropriate view
     if (gazanaReturnTo === 'ledger' && currentGazanaPartyName) {
       showView(viewPartyGazanaDetail);
-      openPartyGazanaDetail(currentGazanaPartyName);
+      openPartyGazanaDetail(currentGazanaPartyName, false);
     } else {
       showView(viewDashboard);
       switchCostingSubtab('gazana');
@@ -5605,7 +5613,7 @@ async function submitPartyPayment() {
     closePartyPaymentModal();
 
     if (views.find(v => v.classList.contains('active')) === viewPartyGazanaDetail && currentGazanaPartyName) {
-      openPartyGazanaDetail(currentGazanaPartyName);
+      openPartyGazanaDetail(currentGazanaPartyName, false);
     } else {
       loadGazanaDashboard($('gazanaSearchInput') ? $('gazanaSearchInput').value.trim() : '');
     }
@@ -5686,7 +5694,7 @@ async function submitGeneralPayment() {
 
     // Refresh the party ledger view
     if (currentGazanaPartyName) {
-      openPartyGazanaDetail(currentGazanaPartyName);
+      openPartyGazanaDetail(currentGazanaPartyName, false);
     }
   } catch (err) {
     toast('Failed to record general payment: ' + err.message, 'error');
@@ -5864,7 +5872,7 @@ async function deleteInstallmentPayment(entryId, paymentId) {
       openPaymentHistoryModal(entryId);
 
       if (views.find(v => v.classList.contains('active')) === viewPartyGazanaDetail && currentGazanaPartyName) {
-        openPartyGazanaDetail(currentGazanaPartyName);
+        openPartyGazanaDetail(currentGazanaPartyName, false);
       } else {
         loadGazanaDashboard($('gazanaSearchInput') ? $('gazanaSearchInput').value.trim() : '');
       }
@@ -5885,7 +5893,7 @@ async function markGazanaEntryCompleted(entryId) {
     toast('Entry marked as completed! ✅', 'success');
 
     if (views.find(v => v.classList.contains('active')) === viewPartyGazanaDetail && currentGazanaPartyName) {
-      openPartyGazanaDetail(currentGazanaPartyName);
+      openPartyGazanaDetail(currentGazanaPartyName, false);
     } else {
       loadGazanaDashboard($('gazanaSearchInput') ? $('gazanaSearchInput').value.trim() : '');
     }
@@ -5907,7 +5915,7 @@ async function toggleEntryStatus(entryId, currentStatus) {
     toast(`Entry marked as ${newStatus}!`, 'info');
 
     if (views.find(v => v.classList.contains('active')) === viewPartyGazanaDetail && currentGazanaPartyName) {
-      openPartyGazanaDetail(currentGazanaPartyName);
+      openPartyGazanaDetail(currentGazanaPartyName, false);
     } else {
       loadGazanaDashboard($('gazanaSearchInput') ? $('gazanaSearchInput').value.trim() : '');
     }
@@ -5924,7 +5932,7 @@ function deletePartyEntry(id) {
       toast('Gazana entry deleted', 'success');
 
       if (views.find(v => v.classList.contains('active')) === viewPartyGazanaDetail && currentGazanaPartyName) {
-        openPartyGazanaDetail(currentGazanaPartyName);
+        openPartyGazanaDetail(currentGazanaPartyName, false);
       } else {
         loadGazanaDashboard($('gazanaSearchInput') ? $('gazanaSearchInput').value.trim() : '');
       }
