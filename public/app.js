@@ -1154,6 +1154,13 @@ function setupPartyAutocomplete(inputId, dropdownId) {
     renderSuggestions(e.target.value, false);
   });
 
+  input.addEventListener('focus', () => {
+    if (input.value && input.value.trim()) {
+      originalTypedValue = input.value;
+      renderSuggestions(input.value, false);
+    }
+  });
+
   input.addEventListener('keydown', (e) => {
     const isVisible = dropdown.style.display !== 'none' && currentMatches.length > 0;
 
@@ -1213,6 +1220,8 @@ function selectPartyForInput(inputId, dropdownId, name) {
   const dropdown = $(dropdownId);
   if (input) {
     input.value = name;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
   }
   if (dropdown) {
     dropdown.style.display = 'none';
@@ -1224,11 +1233,12 @@ window.selectPartyForInput = selectPartyForInput;
 // Aliases for backwards compatibility
 window.selectGazanaPartySuggestion = (name) => selectPartyForInput('formGazanaPartyName', 'formGazanaPartySuggestions', name);
 
-// Initialize party autocomplete for Banaam Party, Loom Wala, Purchaser, and Gudaam (only suggests when typing)
+// Initialize party autocomplete for Banaam Party, Loom Wala, Purchaser, Gudaam, and Cashbook Roker entry
 setupPartyAutocomplete('formGazanaPartyName', 'formGazanaPartySuggestions');
 setupPartyAutocomplete('formGazanaLoomWala', 'formGazanaLoomWalaSuggestions');
 setupPartyAutocomplete('formGazanaPurchaser', 'formGazanaPurchaserSuggestions');
 setupPartyAutocomplete('formGazanaGudaam', 'formGazanaGudaamSuggestions');
+setupPartyAutocomplete('entryPartyName', 'entryPartySuggestions');
 
 if ($('yarnPartySelectDropdown')) {
   $('yarnPartySelectDropdown').addEventListener('change', () => {
@@ -3795,10 +3805,11 @@ async function populateOpenPurchasesSelect(selectedId = null) {
 }
 
 function handleTradeTypeChange() {
+  const isJama = $('entrySide') && $('entrySide').value === 'jama';
   const isSell = $('entryTypeSell') ? $('entryTypeSell').checked : false;
   const isCash = $('entryModeCash') ? $('entryModeCash').checked : false;
   if ($('sellPurchaseSection')) {
-    if (isSell && !isCash) {
+    if (!isJama && isSell && !isCash) {
       $('sellPurchaseSection').style.display = '';
       populateOpenPurchasesSelect();
     } else {
@@ -3808,6 +3819,7 @@ function handleTradeTypeChange() {
 }
 
 function handleCashModeToggle() {
+  const isJama = $('entrySide') && $('entrySide').value === 'jama';
   const isCash = $('entryModeCash') ? $('entryModeCash').checked : false;
   const isSell = $('entryTypeSell') ? $('entryTypeSell').checked : false;
 
@@ -3816,7 +3828,7 @@ function handleCashModeToggle() {
     if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = 'none';
   } else {
     if ($('entryTypeSection')) $('entryTypeSection').style.display = '';
-    if (isSell) {
+    if (!isJama && isSell) {
       if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = '';
     } else {
       if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = 'none';
@@ -3868,6 +3880,7 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
     if ($('wrapperTypeNormal')) $('wrapperTypeNormal').style.display = '';
     if ($('wrapperTypePurchase')) $('wrapperTypePurchase').style.display = '';
     if ($('wrapperTypeSell')) $('wrapperTypeSell').style.display = 'none';
+    if ($('entryTypeSell')) $('entryTypeSell').checked = false;
 
     if (editData) {
       if (editData.isPurchase && $('entryTypePurchase')) {
@@ -3928,8 +3941,9 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
     }
   }
 
-  // Populate party datalist
+  // Populate party datalist & refresh allKnownPartiesList for autocomplete
   populatePartyDatalist();
+  populatePartyNamesDatalist();
 
   // Reset contract rate indicators
   if ($('entryContractBadge')) $('entryContractBadge').style.display = 'none';
@@ -3940,6 +3954,12 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
     if (!editData) {
       fetchContractRateForSeller(preSelectPartyName, false);
     }
+  }
+
+  // Hide suggestions initially
+  if ($('entryPartySuggestions')) {
+    $('entryPartySuggestions').style.display = 'none';
+    $('entryPartySuggestions').innerHTML = '';
   }
 
   // Fill edit data
@@ -3964,6 +3984,9 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
   }
 
   handleCashModeToggle();
+  if (activeSide === 'jama' && $('sellPurchaseSection')) {
+    $('sellPurchaseSection').style.display = 'none';
+  }
   showView(viewEntryForm);
 
   // Set default cursor / focus to Date input without selecting whole text
