@@ -3805,34 +3805,15 @@ async function populateOpenPurchasesSelect(selectedId = null) {
 }
 
 function handleTradeTypeChange() {
-  const isJama = $('entrySide') && $('entrySide').value === 'jama';
-  const isSell = $('entryTypeSell') ? $('entryTypeSell').checked : false;
-  const isCash = $('entryModeCash') ? $('entryModeCash').checked : false;
-  if ($('sellPurchaseSection')) {
-    if (!isJama && isSell && !isCash) {
-      $('sellPurchaseSection').style.display = '';
-      populateOpenPurchasesSelect();
-    } else {
-      $('sellPurchaseSection').style.display = 'none';
-    }
-  }
+  // Trade type radio changes
 }
 
 function handleCashModeToggle() {
-  const isJama = $('entrySide') && $('entrySide').value === 'jama';
   const isCash = $('entryModeCash') ? $('entryModeCash').checked : false;
-  const isSell = $('entryTypeSell') ? $('entryTypeSell').checked : false;
-
   if (isCash) {
     if ($('entryTypeSection')) $('entryTypeSection').style.display = 'none';
-    if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = 'none';
   } else {
     if ($('entryTypeSection')) $('entryTypeSection').style.display = '';
-    if (!isJama && isSell) {
-      if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = '';
-    } else {
-      if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = 'none';
-    }
   }
 }
 
@@ -3857,7 +3838,6 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
 
   // Show trade type radio section
   if ($('entryTypeSection')) $('entryTypeSection').style.display = '';
-  if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = 'none';
 
   // Determine active side
   let activeSide = side || 'jama';
@@ -3891,7 +3871,6 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
     } else {
       if ($('entryTypePurchase')) $('entryTypePurchase').checked = true; // Default to Purchase for Jama
     }
-    if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = 'none';
 
   } else {
     $('entryFormTitle').textContent = editData ? '✏️ Edit Banam Entry (بنام)' : (preSelectRokerNo ? `🔴 Add Banam Entry to Roker #${preSelectRokerNo}` : '🔴 New Banam Entry (بنام)');
@@ -3906,6 +3885,7 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
     if ($('wrapperTypeNormal')) $('wrapperTypeNormal').style.display = '';
     if ($('wrapperTypePurchase')) $('wrapperTypePurchase').style.display = 'none';
     if ($('wrapperTypeSell')) $('wrapperTypeSell').style.display = '';
+    if ($('entryTypePurchase')) $('entryTypePurchase').checked = false;
 
     if (editData) {
       if (editData.isSell && $('entryTypeSell')) {
@@ -3915,13 +3895,6 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
       }
     } else {
       if ($('entryTypeSell')) $('entryTypeSell').checked = true; // Default to Sell for Banam
-    }
-
-    if ($('entryTypeSell') && $('entryTypeSell').checked) {
-      if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = '';
-      await populateOpenPurchasesSelect(editData ? editData.linkedPurchaseId : null);
-    } else {
-      if ($('sellPurchaseSection')) $('sellPurchaseSection').style.display = 'none';
     }
   }
 
@@ -3984,9 +3957,6 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
   }
 
   handleCashModeToggle();
-  if (activeSide === 'jama' && $('sellPurchaseSection')) {
-    $('sellPurchaseSection').style.display = 'none';
-  }
   showView(viewEntryForm);
 
   // Set default cursor / focus to Date input without selecting whole text
@@ -5030,9 +5000,8 @@ async function openPartyGazanaDetail(partyName, resetTab = true) {
           `;
         } else {
           const totalGeneral = storedGeneralPayments.reduce((s, p) => s + p.amount, 0);
-          const totalEntry = entrySpecificPayments.reduce((s, p) => s + p.amount, 0);
-          const totalAdvance = advancePayments.reduce((s, p) => s + p.amount, 0);
           const grandTotal = allPayments.reduce((s, p) => s + p.amount, 0);
+          const remainingBal = summary.totalRemaining || 0;
 
           $('partyGazanaEntriesContent').innerHTML = `
             <div style="display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 1rem;">
@@ -5044,13 +5013,9 @@ async function openPartyGazanaDetail(partyName, resetTab = true) {
                 <div style="font-size: 0.7rem; font-weight: 600; color: #2563eb; text-transform: uppercase; letter-spacing: 0.02em;">General Payments (${storedGeneralPayments.length})</div>
                 <div style="font-size: 1.1rem; font-weight: 800; color: #2563eb; margin-top: 2px;">${fmtCurrency(totalGeneral)}</div>
               </div>
-              <div style="flex: 1; min-width: 140px; background: rgba(2,132,199,0.06); border: 1px solid rgba(2,132,199,0.2); border-radius: var(--radius-sm); padding: 0.6rem 0.75rem;">
-                <div style="font-size: 0.7rem; font-weight: 600; color: #0284c7; text-transform: uppercase; letter-spacing: 0.02em;">Entry Payments (${entrySpecificPayments.length})</div>
-                <div style="font-size: 1.1rem; font-weight: 800; color: #0284c7; margin-top: 2px;">${fmtCurrency(totalEntry)}</div>
-              </div>
-              <div style="flex: 1; min-width: 140px; background: rgba(124,58,237,0.06); border: 1px solid rgba(124,58,237,0.2); border-radius: var(--radius-sm); padding: 0.6rem 0.75rem;">
-                <div style="font-size: 0.7rem; font-weight: 600; color: #7c3aed; text-transform: uppercase; letter-spacing: 0.02em;">Advances (${advancePayments.length})</div>
-                <div style="font-size: 1.1rem; font-weight: 800; color: #7c3aed; margin-top: 2px;">${fmtCurrency(totalAdvance)}</div>
+              <div style="flex: 1; min-width: 140px; background: ${remainingBal > 0 ? 'rgba(220,38,38,0.06)' : 'rgba(21,128,61,0.06)'}; border: 1px solid ${remainingBal > 0 ? 'rgba(220,38,38,0.25)' : 'rgba(21,128,61,0.2)'}; border-radius: var(--radius-sm); padding: 0.6rem 0.75rem;">
+                <div style="font-size: 0.7rem; font-weight: 600; color: ${remainingBal > 0 ? '#b91c1c' : '#15803d'}; text-transform: uppercase; letter-spacing: 0.02em;">Remaining Balance (بقایا)</div>
+                <div style="font-size: 1.1rem; font-weight: 800; color: ${remainingBal > 0 ? '#b91c1c' : '#15803d'}; margin-top: 2px;">${fmtCurrency(remainingBal)}</div>
               </div>
             </div>
             <div class="gazana-table-container">
