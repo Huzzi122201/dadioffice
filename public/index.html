@@ -33,115 +33,53 @@
 
     <!-- ─── Dashboard View (Costing Tab) ─── -->
     <section class="view active" id="viewDashboard">
-      <!-- Subnav inside Costing View: Invoices vs Party Gazana Entries -->
-      <div class="cb-subnav" style="margin-bottom: 1.25rem;">
-        <button class="cb-subnav-btn active" id="subtabCostingInvoices" data-costing-subtab="invoices">📊 Invoices &amp; Costing</button>
-        <button class="cb-subnav-btn" id="subtabCostingGazana" data-costing-subtab="gazana">📋 Party Gazana Entries (بنام انٹریز)</button>
+      <div class="dashboard-header">
+        <div>
+          <h2 class="dashboard-title">Invoices <span class="dashboard-count" id="invoiceCount"></span></h2>
+        </div>
+        <button class="btn btn-primary" id="btnNewInvoice">
+          ＋ New Invoice
+        </button>
       </div>
 
-      <!-- Section 1: Invoices View -->
-      <div id="costingInvoicesSection">
-        <div class="dashboard-header">
-          <div>
-            <h2 class="dashboard-title">Invoices <span class="dashboard-count" id="invoiceCount"></span></h2>
-          </div>
-          <button class="btn btn-primary" id="btnNewInvoice">
-            ＋ New Invoice
-          </button>
+      <div class="search-section">
+        <div class="search-wrapper">
+          <span class="search-icon">🔍</span>
+          <input
+            type="text"
+            class="search-input"
+            id="searchInput"
+            placeholder="Search by party name..."
+            autocomplete="off"
+          />
         </div>
 
-        <div class="search-section">
-          <div class="search-wrapper">
-            <span class="search-icon">🔍</span>
-            <input
-              type="text"
-              class="search-input"
-              id="searchInput"
-              placeholder="Search by party name..."
-              autocomplete="off"
-            />
+        <div class="filter-controls">
+          <div class="filter-group">
+            <label class="filter-label" for="filterType">Filter By:</label>
+            <select class="filter-select" id="filterType">
+              <option value="party">Party Name (Default)</option>
+              <option value="date">Date</option>
+              <option value="qty">Quantity</option>
+              <option value="fabric">Fabric / Loom</option>
+            </select>
           </div>
 
-          <div class="filter-controls">
-            <div class="filter-group">
-              <label class="filter-label" for="filterType">Filter By:</label>
-              <select class="filter-select" id="filterType">
-                <option value="party">Party Name (Default)</option>
-                <option value="date">Date</option>
-                <option value="qty">Quantity</option>
-                <option value="fabric">Fabric / Loom</option>
-              </select>
-            </div>
-
-            <div class="filter-group">
-              <label class="filter-label" for="sortBy">Sort By:</label>
-              <select class="filter-select" id="sortBy">
-                <option value="newest">Date (Newest First)</option>
-                <option value="oldest">Date (Oldest First)</option>
-                <option value="qtyHigh">Quantity (High → Low)</option>
-                <option value="costHigh">Cost / Meter (High → Low)</option>
-                <option value="partyAZ">Party Name (A → Z)</option>
-              </select>
-            </div>
+          <div class="filter-group">
+            <label class="filter-label" for="sortBy">Sort By:</label>
+            <select class="filter-select" id="sortBy">
+              <option value="newest">Date (Newest First)</option>
+              <option value="oldest">Date (Oldest First)</option>
+              <option value="qtyHigh">Quantity (High → Low)</option>
+              <option value="costHigh">Cost / Meter (High → Low)</option>
+              <option value="partyAZ">Party Name (A → Z)</option>
+            </select>
           </div>
-        </div>
-
-        <div class="invoice-list" id="invoiceList">
-          <!-- populated by JS -->
         </div>
       </div>
 
-      <!-- Section 2: Party Gazana Entries View -->
-      <div id="costingGazanaSection" style="display: none;">
-        <div class="dashboard-header">
-          <div>
-            <h2 class="dashboard-title">📋 Party Gazana Entries <span class="dashboard-count" id="gazanaEntriesCount">(0)</span></h2>
-          </div>
-          <div class="cb-header-btns">
-            <button class="btn btn-primary" id="btnNewPartyEntry" style="background: linear-gradient(135deg, #1e40af, #0284c7); color: #fff; font-weight: 700; box-shadow: 0 4px 14px rgba(30, 64, 175, 0.35);">
-              ＋ New Gazana Entry (نئی انٹری)
-            </button>
-          </div>
-        </div>
-
-        <!-- Gazana Navigation Sub-tabs: Recent Entries vs By Party -->
-        <div class="cb-subnav" style="margin-bottom: 1rem;">
-          <button class="cb-subnav-btn active" id="tabGazanaEntries" onclick="setGazanaViewMode('all')">
-            📝 Recent Entries (انٹریز)
-          </button>
-          <button class="cb-subnav-btn" id="tabGazanaParties" onclick="setGazanaViewMode('parties')">
-            👥 By Party (پارٹیز سمری)
-          </button>
-        </div>
-
-        <!-- Gazana Controls & Filter -->
-        <div class="search-section">
-          <div class="search-wrapper">
-            <span class="search-icon">🔍</span>
-            <input
-              type="text"
-              class="search-input"
-              id="gazanaSearchInput"
-              placeholder="Search by party, quality, contract #, safi/kacha gazana..."
-              autocomplete="off"
-            />
-          </div>
-
-          <div class="filter-controls">
-            <div class="filter-group">
-              <label class="filter-label" for="gazanaStatusFilter">Status:</label>
-              <select class="filter-select" id="gazanaStatusFilter">
-                <option value="all">All Entries (سب انٹریز)</option>
-                <option value="active" selected>🟢 Active / Pending (ایکٹو)</option>
-                <option value="completed">✅ Completed / Paid (مکمل)</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div id="gazanaMainContent">
-          <!-- populated by JS -->
-        </div>
+      <div class="invoice-list" id="invoiceList">
+        <!-- populated by JS -->
       </div>
     </section>
 
@@ -574,21 +512,55 @@
       </form>
     </section>
 
-    <!-- ─── Yarn Stock Dashboard ─── -->
-    <section class="view" id="viewYarnDashboard">
+    <!-- ─── Party Gazana Dashboard View ─── -->
+    <section class="view" id="viewPartyGazanaDashboard">
       <div class="dashboard-header">
-        <h2 class="dashboard-title">🧶 Yarn Stock <span class="dashboard-count" id="yarnPartyCount">(0)</span></h2>
-        <button class="btn btn-primary" id="btnNewYarnIssue">＋ Issue Yarn</button>
-      </div>
-
-      <div class="search-section">
-        <div class="search-wrapper">
-          <span class="search-icon">🔍</span>
-          <input type="text" class="search-input" id="yarnSearchInput" placeholder="Search by party name..." autocomplete="off" />
+        <div>
+          <h2 class="dashboard-title">📋 Party Gazana Entries <span class="dashboard-count" id="gazanaEntriesCount">(0)</span></h2>
+        </div>
+        <div class="cb-header-btns">
+          <button class="btn btn-primary" id="btnNewPartyEntry" style="background: linear-gradient(135deg, #1e40af, #0284c7); color: #fff; font-weight: 700; box-shadow: 0 4px 14px rgba(30, 64, 175, 0.35);">
+            ＋ New Gazana Entry (نئی انٹری)
+          </button>
         </div>
       </div>
 
-      <div id="yarnStockGrid">
+      <!-- Gazana Navigation Sub-tabs: Recent Entries vs By Party -->
+      <div class="cb-subnav" style="margin-bottom: 1rem;">
+        <button class="cb-subnav-btn active" id="tabGazanaEntries" onclick="setGazanaViewMode('all')">
+          📝 Recent Entries (انٹریز)
+        </button>
+        <button class="cb-subnav-btn" id="tabGazanaParties" onclick="setGazanaViewMode('parties')">
+          👥 By Party (پارٹیز سمری)
+        </button>
+      </div>
+
+      <!-- Gazana Controls & Filter -->
+      <div class="search-section">
+        <div class="search-wrapper">
+          <span class="search-icon">🔍</span>
+          <input
+            type="text"
+            class="search-input"
+            id="gazanaSearchInput"
+            placeholder="Search by party, quality, contract #, safi/kacha gazana..."
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="filter-controls">
+          <div class="filter-group">
+            <label class="filter-label" for="gazanaStatusFilter">Status:</label>
+            <select class="filter-select" id="gazanaStatusFilter">
+              <option value="all">All Entries (سب انٹریز)</option>
+              <option value="active" selected>🟢 Active / Pending (ایکٹو)</option>
+              <option value="completed">✅ Completed / Paid (مکمل)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div id="gazanaMainContent">
         <!-- populated by JS -->
       </div>
     </section>
@@ -596,72 +568,6 @@
     <!-- Global Party Names Datalist for Auto-completion -->
     <datalist id="partyNamesDatalist"></datalist>
     <datalist id="cbPartyDatalist"></datalist>
-
-    <!-- ─── Yarn Issue Form ─── -->
-    <section class="view" id="viewYarnForm">
-      <div class="form-header">
-        <button class="btn-back" id="btnYarnFormBack">←</button>
-        <h2 class="form-title" id="yarnFormTitle">Issue Yarn</h2>
-      </div>
-
-      <form id="yarnForm" class="card" autocomplete="off">
-        <div class="form-section">
-          <h3 class="section-title">📋 Yarn Issuance Details</h3>
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label" for="yarnPartyName">Party Name *</label>
-              <select class="form-input" id="yarnPartySelectDropdown" style="margin-bottom: 6px;">
-                <option value="">-- Choose Existing Party --</option>
-              </select>
-              <input class="form-input" type="text" id="yarnPartyName" list="partyNamesDatalist" placeholder="Or type new party name..." required />
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="yarnDate">Date</label>
-              <input class="form-input" type="date" id="yarnDate" />
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="yarnWarpBags">Warp Bags</label>
-              <input class="form-input" type="number" id="yarnWarpBags" min="0" step="0.01" />
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="yarnWarpQuality">Warp Quality</label>
-              <input class="form-input" type="text" id="yarnWarpQuality" />
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="yarnWeftBags">Weft Bags</label>
-              <input class="form-input" type="number" id="yarnWeftBags" min="0" step="0.01" />
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="yarnWeftQuality">Weft Quality</label>
-              <input class="form-input" type="text" id="yarnWeftQuality" />
-            <div class="form-group" style="grid-column: 1 / -1;">
-              <label class="form-label" for="yarnNote">Note (optional)</label>
-              <input class="form-input" type="text" id="yarnNote" />
-            </div>
-          </div>
-        </div>
-
-        <div class="form-actions">
-          <button type="submit" class="btn btn-primary btn-lg">💾 Save Issuance</button>
-          <button type="button" class="btn btn-secondary btn-lg" id="btnYarnFormCancel">Cancel</button>
-        </div>
-      </form>
-    </section>
-
-    <!-- ─── Yarn Party History ─── -->
-    <section class="view" id="viewYarnHistory">
-      <div class="yarn-history-header">
-        <div class="header-left">
-          <button class="btn-back" id="btnYarnHistoryBack">←</button>
-          <h2 class="form-title" id="yarnHistoryTitle">Party Yarn History</h2>
-        </div>
-        <button class="btn btn-primary" id="btnIssueYarnFromHistory">＋ Issue Yarn</button>
-      </div>
-
-      <div id="yarnHistoryContent">
-        <!-- populated by JS -->
-      </div>
-    </section>
 
     <!-- ═══ CASHBOOK VIEWS ═══ -->
 
@@ -894,9 +800,9 @@
       <span class="tab-icon">📊</span>
       <span class="tab-label">Costing</span>
     </button>
-    <button class="bottom-nav-tab" id="tabYarn" data-tab="yarn">
-      <span class="tab-icon">🧶</span>
-      <span class="tab-label">Yarn Stock</span>
+    <button class="bottom-nav-tab" id="tabGazana" data-tab="gazana">
+      <span class="tab-icon">📋</span>
+      <span class="tab-label">Party Gazana</span>
     </button>
     <button class="bottom-nav-tab" id="tabCashbook" data-tab="cashbook">
       <span class="tab-icon">📒</span>

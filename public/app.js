@@ -20,13 +20,14 @@ const $ = (id) => document.getElementById(id);
 const viewDashboard = $('viewDashboard');
 const viewForm = $('viewForm');
 const viewDetail = $('viewDetail');
+const viewPartyGazanaDashboard = $('viewPartyGazanaDashboard');
 const viewPartyGazanaDetail = $('viewPartyGazanaDetail');
 const viewPartyGazanaForm = $('viewPartyGazanaForm');
 const viewCashbookDashboard = $('viewCashbookDashboard');
 const viewRokerDetail = $('viewRokerDetail');
 const viewKhata = $('viewKhata');
 const viewEntryForm = $('viewEntryForm');
-const views = [viewDashboard, viewForm, viewDetail, viewPartyGazanaDetail, viewPartyGazanaForm, viewYarnDashboard, viewYarnForm, viewYarnHistory, viewCashbookDashboard, viewRokerDetail, viewKhata, viewEntryForm].filter(Boolean);
+const views = [viewDashboard, viewForm, viewDetail, viewPartyGazanaDashboard, viewPartyGazanaDetail, viewPartyGazanaForm, viewCashbookDashboard, viewRokerDetail, viewKhata, viewEntryForm].filter(Boolean);
 
 const invoiceList = $('invoiceList');
 const invoiceCount = $('invoiceCount');
@@ -77,8 +78,8 @@ function showView(view) {
 
   // Update bottom nav active state
   const tabBtns = document.querySelectorAll('.bottom-nav-tab');
-  if (view === viewYarnDashboard || view === viewYarnForm || view === viewYarnHistory) {
-    currentTab = 'yarn';
+  if (view === viewPartyGazanaDashboard || view === viewPartyGazanaDetail || view === viewPartyGazanaForm) {
+    currentTab = 'gazana';
   } else if (view === viewCashbookDashboard || view === viewRokerDetail || view === viewKhata || view === viewEntryForm) {
     currentTab = 'cashbook';
   } else {
@@ -911,17 +912,22 @@ window.deleteInvoice = deleteInvoice;
 //  BOTTOM TAB NAVIGATION
 // ═══════════════════════════════════════════════════════════
 
-$('tabCosting').addEventListener('click', () => {
-  if ($('searchInput')) $('searchInput').value = '';
-  showView(viewDashboard);
-  loadInvoices();
-});
+if ($('tabCosting')) {
+  $('tabCosting').addEventListener('click', () => {
+    if ($('searchInput')) $('searchInput').value = '';
+    showView(viewDashboard);
+    loadInvoices();
+  });
+}
 
-$('tabYarn').addEventListener('click', () => {
-  if ($('yarnSearchInput')) $('yarnSearchInput').value = '';
-  showView(viewYarnDashboard);
-  loadYarnStock();
-});
+const tabGazana = $('tabGazana') || $('tabYarn');
+if (tabGazana) {
+  tabGazana.addEventListener('click', () => {
+    if ($('gazanaSearchInput')) $('gazanaSearchInput').value = '';
+    showView(viewPartyGazanaDashboard);
+    loadGazanaDashboard();
+  });
+}
 
 // ═══════════════════════════════════════════════════════════
 //  YARN STOCK — DASHBOARD (All Parties from Invoices & Yarn)
@@ -1314,29 +1320,34 @@ function openYarnForm(partyNamePreFill = '', editRecord = null) {
   showView(viewYarnForm);
 }
 
-$('btnNewYarnIssue').addEventListener('click', () => openYarnForm(''));
+  if ($('btnNewYarnIssue')) $('btnNewYarnIssue').addEventListener('click', () => openYarnForm(''));
 
-$('btnYarnFormBack').addEventListener('click', () => {
-  editingYarnId = null;
-  if (currentHistoryPartyName && currentHistoryPartyNorm) {
-    openYarnHistory(encodeURIComponent(currentHistoryPartyNorm), currentHistoryPartyName);
-  } else {
-    showView(viewYarnDashboard);
-    loadYarnStock();
+  if ($('btnYarnFormBack')) {
+    $('btnYarnFormBack').addEventListener('click', () => {
+      editingYarnId = null;
+      if (currentHistoryPartyName && currentHistoryPartyNorm) {
+        openYarnHistory(encodeURIComponent(currentHistoryPartyNorm), currentHistoryPartyName);
+      } else if (typeof viewYarnDashboard !== 'undefined' && viewYarnDashboard) {
+        showView(viewYarnDashboard);
+        loadYarnStock();
+      }
+    });
   }
-});
 
-$('btnYarnFormCancel').addEventListener('click', () => {
-  editingYarnId = null;
-  if (currentHistoryPartyName && currentHistoryPartyNorm) {
-    openYarnHistory(encodeURIComponent(currentHistoryPartyNorm), currentHistoryPartyName);
-  } else {
-    showView(viewYarnDashboard);
-    loadYarnStock();
+  if ($('btnYarnFormCancel')) {
+    $('btnYarnFormCancel').addEventListener('click', () => {
+      editingYarnId = null;
+      if (currentHistoryPartyName && currentHistoryPartyNorm) {
+        openYarnHistory(encodeURIComponent(currentHistoryPartyNorm), currentHistoryPartyName);
+      } else if (typeof viewYarnDashboard !== 'undefined' && viewYarnDashboard) {
+        showView(viewYarnDashboard);
+        loadYarnStock();
+      }
+    });
   }
-});
 
-$('yarnForm').addEventListener('submit', async (e) => {
+  if ($('yarnForm')) {
+    $('yarnForm').addEventListener('submit', async (e) => {
   e.preventDefault();
 
   const partyName = $('yarnPartyName').value.trim();
@@ -1384,6 +1395,7 @@ $('yarnForm').addEventListener('submit', async (e) => {
     toast(err.message, 'error');
   }
 });
+}
 
 // ═══════════════════════════════════════════════════════════
 //  YARN STOCK — PARTY HISTORY VIEW
@@ -1520,12 +1532,16 @@ async function deleteYarnRecord(id) {
   }
 }
 
-$('btnYarnHistoryBack').addEventListener('click', () => {
-  currentHistoryPartyName = '';
-  currentHistoryPartyNorm = '';
-  showView(viewYarnDashboard);
-  loadYarnStock();
-});
+if ($('btnYarnHistoryBack')) {
+  $('btnYarnHistoryBack').addEventListener('click', () => {
+    currentHistoryPartyName = '';
+    currentHistoryPartyNorm = '';
+    if (typeof viewYarnDashboard !== 'undefined' && viewYarnDashboard) {
+      showView(viewYarnDashboard);
+      loadYarnStock();
+    }
+  });
+}
 
 if ($('btnIssueYarnFromHistory')) {
   $('btnIssueYarnFromHistory').addEventListener('click', () => {
@@ -4557,23 +4573,12 @@ let gazanaDashboardData = null;
 let currentPartyGazanaEntries = [];
 
 function switchCostingSubtab(subtab) {
-  currentCostingSubtab = subtab;
-  const btnInvoices = $('subtabCostingInvoices');
-  const btnGazana = $('subtabCostingGazana');
-  const secInvoices = $('costingInvoicesSection');
-  const secGazana = $('costingGazanaSection');
-
-  if (btnInvoices) btnInvoices.classList.toggle('active', subtab === 'invoices');
-  if (btnGazana) btnGazana.classList.toggle('active', subtab === 'gazana');
-
-  if (subtab === 'invoices') {
-    if (secInvoices) secInvoices.style.display = 'block';
-    if (secGazana) secGazana.style.display = 'none';
-    loadInvoices(searchInput ? searchInput.value.trim() : '');
-  } else {
-    if (secInvoices) secInvoices.style.display = 'none';
-    if (secGazana) secGazana.style.display = 'block';
+  if (subtab === 'gazana') {
+    showView(viewPartyGazanaDashboard);
     loadGazanaDashboard($('gazanaSearchInput') ? $('gazanaSearchInput').value.trim() : '');
+  } else {
+    showView(viewDashboard);
+    loadInvoices(searchInput ? searchInput.value.trim() : '');
   }
 }
 
@@ -5198,8 +5203,8 @@ async function openPartyGazanaDetail(partyName, resetTab = true) {
 
 if ($('btnPartyGazanaBack')) {
   $('btnPartyGazanaBack').addEventListener('click', () => {
-    showView(viewDashboard);
-    switchCostingSubtab('gazana');
+    showView(viewPartyGazanaDashboard);
+    loadGazanaDashboard($('gazanaSearchInput') ? $('gazanaSearchInput').value.trim() : '');
   });
 }
 
@@ -5435,8 +5440,8 @@ function returnFromGazanaForm() {
     showView(viewPartyGazanaDetail);
     openPartyGazanaDetail(currentGazanaPartyName, false);
   } else {
-    showView(viewDashboard);
-    switchCostingSubtab('gazana');
+    showView(viewPartyGazanaDashboard);
+    loadGazanaDashboard($('gazanaSearchInput') ? $('gazanaSearchInput').value.trim() : '');
   }
 }
 
@@ -5532,8 +5537,7 @@ async function savePartyGazanaForm() {
       showView(viewPartyGazanaDetail);
       openPartyGazanaDetail(currentGazanaPartyName, false);
     } else {
-      showView(viewDashboard);
-      switchCostingSubtab('gazana');
+      showView(viewPartyGazanaDashboard);
       loadGazanaDashboard($('gazanaSearchInput') ? $('gazanaSearchInput').value.trim() : '');
     }
   } catch (err) {
