@@ -4741,7 +4741,6 @@ async function loadGazanaDashboard(search = '') {
                 <th style="text-align:right">Advance<br>(₹)</th>
                 <th style="text-align:right">Received<br>(₹)</th>
                 <th style="text-align:right">Remaining<br>(₹)</th>
-                <th>Contract<br>#</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -4793,7 +4792,6 @@ async function loadGazanaDashboard(search = '') {
                     <td style="text-align:right; font-weight: 800; color: ${displayRemaining > 0 ? '#b91c1c' : '#16a34a'};">
                       ${fmtCurrency(displayRemaining)}
                     </td>
-                    <td>${e.contractNo ? `<span class="badge" style="background: rgba(30,58,138,0.1); color: var(--accent-primary); font-weight: 700; padding: 1px 5px; border-radius: 4px; font-size: 0.72rem;">#${escapeHtml(e.contractNo)}</span>` : '—'}</td>
                     <td>
                       ${!isCompleted ? `
                         <label class="gazana-radio-wrap" title="Click radio button to mark as completed" onclick="event.stopPropagation();">
@@ -5093,7 +5091,6 @@ async function openPartyGazanaDetail(partyName, resetTab = true) {
                   <th style="text-align:right">Advance<br>(₹)</th>
                   <th style="text-align:right">Received<br>(₹)</th>
                   <th style="text-align:right">Remaining<br>(₹)</th>
-                  <th>Contract<br>#</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -5145,7 +5142,6 @@ async function openPartyGazanaDetail(partyName, resetTab = true) {
                       <td style="text-align:right; font-weight: 800; color: ${displayRemaining > 0 ? '#b91c1c' : '#16a34a'};">
                         ${fmtCurrency(displayRemaining)}
                       </td>
-                      <td>${e.contractNo ? `<span class="badge" style="background: rgba(30,58,138,0.1); color: var(--accent-primary); font-weight: 700; padding: 1px 5px; border-radius: 4px; font-size: 0.72rem;">#${escapeHtml(e.contractNo)}</span>` : '—'}</td>
                       <td>
                         ${!isCompleted ? `
                           <label class="gazana-radio-wrap" title="Click radio button to mark as completed" onclick="event.stopPropagation();">
@@ -5960,7 +5956,6 @@ async function sharePartyGazanaPDF(partyName, action = 'share') {
           ${e.purchaser ? `<span style="color: #0369a1; font-size: 8px; display: block;">خریدار: ${escapeHtml(e.purchaser)}</span>` : ''}
           ${e.loomWala ? `<span style="color: #4338ca; font-size: 8px; display: block;">لوم والا: ${escapeHtml(e.loomWala)}</span>` : ''}
           ${e.gudaam ? `<span style="color: #0d9488; font-size: 8px; display: block;">گودام: ${escapeHtml(e.gudaam)}</span>` : ''}
-          ${e.contractNo ? `<span style="color: #2563eb; font-size: 8.5px; display: block;">#${escapeHtml(e.contractNo)}</span>` : ''}
         </td>
         <td style="padding: 6px 4px; font-size: 9.5px; text-align: right;">${e.kachaGazana > 0 ? e.kachaGazana.toLocaleString() : '—'}</td>
         <td style="padding: 6px 4px; font-size: 9.5px; text-align: right; font-weight: 700; color: #1e40af;">${(e.safiGazana || 0).toLocaleString()}</td>

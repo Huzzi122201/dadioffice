@@ -310,13 +310,9 @@
         <div class="form-section">
           <h3 class="section-title">📅 تاریخ و بنام پارٹی</h3>
           <div class="form-grid">
-            <div class="form-group">
+            <div class="form-group" style="grid-column: 1 / -1;">
               <label class="form-label" for="formGazanaDate">تاریخ *</label>
               <input class="form-input" type="date" id="formGazanaDate" required />
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="formGazanaContractNo">معاہدہ نمبر (اختیاری)</label>
-              <input class="form-input" type="text" id="formGazanaContractNo" placeholder="معاہدہ نمبر مثلاً 101" />
             </div>
             <div class="form-group" style="grid-column: 1 / -1;">
               <label class="form-label" for="formGazanaPartyName" style="color: var(--accent-primary); font-weight: 700;">
@@ -543,7 +539,7 @@
             type="text"
             class="search-input"
             id="gazanaSearchInput"
-            placeholder="Search by party, quality, contract #, safi/kacha gazana..."
+            placeholder="Search by party, quality, safi/kacha gazana..."
             autocomplete="off"
           />
         </div>
