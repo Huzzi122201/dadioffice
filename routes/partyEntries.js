@@ -557,6 +557,13 @@ router.post('/:id/payment', async (req, res) => {
     const entry = await PartyEntry.findById(req.params.id);
     if (!entry) return res.status(404).json({ error: 'Party entry not found' });
 
+    const safi = Number(entry.safiGazana) || 0;
+    const rateWO = Number(entry.rate) || (entry.gstRate ? Math.round((Number(entry.gstRate) / 1.18) * 100) / 100 : 0);
+    const rateW = Number(entry.gstRate) || (rateWO ? Math.round(rateWO * 1.18 * 100) / 100 : 0);
+    entry.totalAmountWithoutGst = Math.round(safi * rateWO * 100) / 100;
+    entry.totalAmount = Math.round(safi * rateW * 100) / 100;
+    const billableTotal = entry.rateType === 'kachy' ? entry.totalAmountWithoutGst : entry.totalAmount;
+
     // Append to payment history without changing original advance
     entry.paymentHistory.push({
       date: date ? new Date(date) : new Date(),
@@ -567,7 +574,7 @@ router.post('/:id/payment', async (req, res) => {
 
     const installmentsTotal = entry.paymentHistory.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
     const totalRec = Math.round((entry.advance + installmentsTotal) * 100) / 100;
-    entry.remaining = Math.max(0, Math.round((entry.totalAmount - totalRec) * 100) / 100);
+    entry.remaining = Math.max(0, Math.round((billableTotal - totalRec) * 100) / 100);
 
     if (entry.remaining <= 0) {
       entry.status = 'completed';
@@ -591,9 +598,16 @@ router.delete('/:id/payment/:paymentId', async (req, res) => {
       p => p._id.toString() !== req.params.paymentId
     );
 
+    const safi = Number(entry.safiGazana) || 0;
+    const rateWO = Number(entry.rate) || (entry.gstRate ? Math.round((Number(entry.gstRate) / 1.18) * 100) / 100 : 0);
+    const rateW = Number(entry.gstRate) || (rateWO ? Math.round(rateWO * 1.18 * 100) / 100 : 0);
+    entry.totalAmountWithoutGst = Math.round(safi * rateWO * 100) / 100;
+    entry.totalAmount = Math.round(safi * rateW * 100) / 100;
+    const billableTotal = entry.rateType === 'kachy' ? entry.totalAmountWithoutGst : entry.totalAmount;
+
     const installmentsTotal = entry.paymentHistory.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
     const totalRec = Math.round((entry.advance + installmentsTotal) * 100) / 100;
-    entry.remaining = Math.max(0, Math.round((entry.totalAmount - totalRec) * 100) / 100);
+    entry.remaining = Math.max(0, Math.round((billableTotal - totalRec) * 100) / 100);
 
     if (entry.remaining > 0 && entry.status === 'completed') {
       entry.status = 'active';
@@ -714,11 +728,18 @@ router.patch('/:id/status', async (req, res) => {
 
     entry.status = targetStatus;
 
+    const safi = Number(entry.safiGazana) || 0;
+    const rateWO = Number(entry.rate) || (entry.gstRate ? Math.round((Number(entry.gstRate) / 1.18) * 100) / 100 : 0);
+    const rateW = Number(entry.gstRate) || (rateWO ? Math.round(rateWO * 1.18 * 100) / 100 : 0);
+    entry.totalAmountWithoutGst = Math.round(safi * rateWO * 100) / 100;
+    entry.totalAmount = Math.round(safi * rateW * 100) / 100;
+    const billableTotal = entry.rateType === 'kachy' ? entry.totalAmountWithoutGst : entry.totalAmount;
+
     if (targetStatus === 'completed') {
       const adv = Number(entry.advance) || 0;
       const installmentsTotal = (entry.paymentHistory || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
       const totalRec = Math.round((adv + installmentsTotal) * 100) / 100;
-      const currentRemaining = Math.max(0, Math.round((entry.totalAmount - totalRec) * 100) / 100);
+      const currentRemaining = Math.max(0, Math.round((billableTotal - totalRec) * 100) / 100);
 
       if (currentRemaining > 0) {
         if (!Array.isArray(entry.paymentHistory)) {
@@ -741,7 +762,7 @@ router.patch('/:id/status', async (req, res) => {
       const adv = Number(entry.advance) || 0;
       const installmentsTotal = (entry.paymentHistory || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
       const totalRec = Math.round((adv + installmentsTotal) * 100) / 100;
-      entry.remaining = Math.max(0, Math.round((entry.totalAmount - totalRec) * 100) / 100);
+      entry.remaining = Math.max(0, Math.round((billableTotal - totalRec) * 100) / 100);
       entry.status = 'active';
     }
 

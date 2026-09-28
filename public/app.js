@@ -4901,6 +4901,10 @@ async function openPartyGazanaDetail(partyName, resetTab = true) {
     const entrySpecificPayments = [];
     const advancePayments = [];
     allEntries.forEach(e => {
+      const isCompleted = isGazanaEntryCompleted(e);
+      const calc = calcGazanaAmounts(e);
+      const billableTotal = calc.billableTotal;
+
       if (e.advance > 0) {
         advancePayments.push({
           date: e.date,
@@ -4908,25 +4912,53 @@ async function openPartyGazanaDetail(partyName, resetTab = true) {
           note: 'Booking Advance',
           type: 'advance',
           entryVariety: e.variety || '—',
-          entryDate: e.date
+          entryDate: e.date,
+          entryId: e._id
         });
       }
+
+      let entryHistorySum = 0;
       if (Array.isArray(e.paymentHistory)) {
         e.paymentHistory.forEach(p => {
           // Skip [General] distributed records — we show those from storedGeneralPayments
           if (p.note && p.note.startsWith('[General]')) return;
-          // Skip auto "Paid Amount" settlement records
-          if (p.note && (p.note.includes('Paid Amount') || p.note.includes('Final Settlement'))) return;
+
+          const isSettlement = p.note && (
+            p.note.includes('Paid Amount') || 
+            p.note.includes('Final Settlement') || 
+            p.note.includes('مکمل ادائیگی')
+          );
+
+          entryHistorySum += Number(p.amount) || 0;
+
           entrySpecificPayments.push({
-            date: p.date,
-            amount: p.amount || 0,
-            note: p.note || '',
-            type: 'installment',
+            date: p.date || e.date,
+            amount: Number(p.amount) || 0,
+            note: p.note || (isSettlement ? 'Paid Amount (مکمل ادائیگی)' : ''),
+            type: isSettlement ? 'completed' : 'installment',
             entryVariety: e.variety || '—',
             entryDate: e.date,
-            paymentId: p._id
+            paymentId: p._id,
+            entryId: e._id
           });
         });
+      }
+
+      // If entry is marked as completed but has an unrecorded balance (e.g. legacy completed entry)
+      if (isCompleted && billableTotal > 0) {
+        const totalRecordedForEntry = (e.advance || 0) + entryHistorySum;
+        const unrecordedSettlement = Math.max(0, Math.round((billableTotal - totalRecordedForEntry) * 100) / 100);
+        if (unrecordedSettlement > 0) {
+          entrySpecificPayments.push({
+            date: e.updatedAt || e.date,
+            amount: unrecordedSettlement,
+            note: 'Paid Amount (مکمل ادائیگی)',
+            type: 'completed',
+            entryVariety: e.variety || '—',
+            entryDate: e.date,
+            entryId: e._id
+          });
+        }
       }
     });
 
@@ -5032,13 +5064,18 @@ async function openPartyGazanaDetail(partyName, resetTab = true) {
                       ? '<span style="background: rgba(37,99,235,0.1); color: #2563eb; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">💵 General</span>'
                       : p.type === 'advance'
                         ? '<span style="background: rgba(124,58,237,0.1); color: #7c3aed; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">🔖 Advance</span>'
-                        : '<span style="background: rgba(2,132,199,0.1); color: #0284c7; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">📝 Entry</span>';
+                        : p.type === 'completed'
+                          ? '<span style="background: rgba(22,163,74,0.1); color: #16a34a; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">✅ Completed</span>'
+                          : '<span style="background: rgba(2,132,199,0.1); color: #0284c7; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">📝 Entry</span>';
                     return `
                       <tr>
                         <td>${formatDate(p.date)}</td>
                         <td>${typeLabel}</td>
                         <td style="text-align:right; font-weight: 800; color: #15803d; font-size: 0.85rem;">${fmtCurrency(p.amount)}</td>
-                        <td style="color: var(--text-secondary); font-size: 0.78rem; max-width: 200px; white-space: normal; word-break: break-word;">${escapeHtml(p.note) || '<span style="color: var(--text-muted);">—</span>'}</td>
+                        <td style="color: var(--text-secondary); font-size: 0.78rem; max-width: 260px; white-space: normal; word-break: break-word;">
+                          ${p.entryVariety && p.entryVariety !== '—' ? `<span style="font-weight: 700; color: var(--text-primary); margin-right: 4px;">[${escapeHtml(p.entryVariety)}]</span>` : ''}
+                          ${escapeHtml(p.note) || '<span style="color: var(--text-muted);">—</span>'}
+                        </td>
                       </tr>
                     `;
                   }).join('')}
