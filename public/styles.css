@@ -3402,10 +3402,12 @@ body {
   border: 1.5px solid var(--accent-primary, #2563eb);
   border-radius: var(--radius-sm, 6px);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
-  max-height: 190px;
+  max-height: 220px;
   overflow-y: auto;
   z-index: 99999;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
 }
 
 .party-suggestion-item {
@@ -3419,6 +3421,10 @@ body {
   align-items: center;
   gap: 10px;
   transition: background 0.1s;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .party-suggestion-item:last-child {

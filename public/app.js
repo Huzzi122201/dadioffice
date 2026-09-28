@@ -1091,6 +1091,10 @@ function setupPartyAutocomplete(inputId, dropdownId) {
   let activeIndex = -1;
   let currentMatches = [];
   let originalTypedValue = '';
+  let isInteractingWithDropdown = false;
+  let touchStartY = 0;
+  let touchStartX = 0;
+  let isTouchMoved = false;
 
   const renderSuggestions = (query, showAllIfEmpty = false) => {
     const q = (query || '').trim().toLowerCase();
@@ -1120,9 +1124,9 @@ function setupPartyAutocomplete(inputId, dropdownId) {
 
     const itemIcon = inputId === 'formGazanaGudaam' ? '🏬' : '👤';
     dropdown.innerHTML = currentMatches.map((name, idx) => `
-      <div class="party-suggestion-item" data-index="${idx}" onmousedown="event.preventDefault(); selectPartyForInput('${inputId}', '${dropdownId}', '${escapeHtml(name)}');" ontouchstart="event.preventDefault(); selectPartyForInput('${inputId}', '${dropdownId}', '${escapeHtml(name)}');">
-        <span style="font-size: 1rem;">${itemIcon}</span>
-        <span>${escapeHtml(name)}</span>
+      <div class="party-suggestion-item" data-index="${idx}" data-name="${escapeHtml(name)}">
+        <span style="font-size: 1rem; pointer-events: none;">${itemIcon}</span>
+        <span style="pointer-events: none;">${escapeHtml(name)}</span>
       </div>
     `).join('');
 
@@ -1148,6 +1152,57 @@ function setupPartyAutocomplete(inputId, dropdownId) {
       input.value = originalTypedValue;
     }
   };
+
+  // Touch & Scroll listeners for mobile touchscreens
+  dropdown.addEventListener('touchstart', (e) => {
+    isInteractingWithDropdown = true;
+    if (e.touches && e.touches[0]) {
+      touchStartY = e.touches[0].clientY;
+      touchStartX = e.touches[0].clientX;
+      isTouchMoved = false;
+    }
+  }, { passive: true });
+
+  dropdown.addEventListener('touchmove', (e) => {
+    if (e.touches && e.touches[0]) {
+      const diffY = Math.abs(e.touches[0].clientY - touchStartY);
+      const diffX = Math.abs(e.touches[0].clientX - touchStartX);
+      if (diffY > 6 || diffX > 6) {
+        isTouchMoved = true;
+      }
+    }
+  }, { passive: true });
+
+  dropdown.addEventListener('touchend', (e) => {
+    setTimeout(() => { isInteractingWithDropdown = false; }, 350);
+    if (isTouchMoved) return; // User was scrolling, do not trigger selection
+
+    const item = e.target.closest('.party-suggestion-item');
+    if (item) {
+      const name = item.getAttribute('data-name');
+      if (name) {
+        e.preventDefault();
+        selectPartyForInput(inputId, dropdownId, name);
+      }
+    }
+  });
+
+  // Desktop Mouse click & mousedown
+  dropdown.addEventListener('mousedown', (e) => {
+    isInteractingWithDropdown = true;
+    const item = e.target.closest('.party-suggestion-item');
+    if (item) {
+      e.preventDefault(); // Prevents input blur on desktop
+      const name = item.getAttribute('data-name');
+      if (name) {
+        selectPartyForInput(inputId, dropdownId, name);
+      }
+    }
+  });
+
+  dropdown.addEventListener('mouseup', () => {
+    setTimeout(() => { isInteractingWithDropdown = false; }, 350);
+  });
 
   input.addEventListener('input', (e) => {
     originalTypedValue = e.target.value;
@@ -1210,8 +1265,16 @@ function setupPartyAutocomplete(inputId, dropdownId) {
 
   input.addEventListener('blur', () => {
     setTimeout(() => {
+      if (!isInteractingWithDropdown) {
+        dropdown.style.display = 'none';
+      }
+    }, 250);
+  });
+
+  document.addEventListener('pointerdown', (e) => {
+    if (e.target !== input && !dropdown.contains(e.target)) {
       dropdown.style.display = 'none';
-    }, 200);
+    }
   });
 }
 
