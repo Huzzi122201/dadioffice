@@ -2280,14 +2280,6 @@ async function openRokerDetail(rokerNo) {
             <div class="cb-roker-stat-val" style="color: #15803d;">${fmtCurrency(data.summary.totalJama)}</div>
             <div class="cb-roker-stat-lbl">Total Jama</div>
           </div>
-          <div class="cb-roker-stat-item">
-            <div class="cb-roker-stat-val" style="color: #0284c7;">${fmtCurrency(prevCashInHand)}</div>
-            <div class="cb-roker-stat-lbl">Prev Cash Rokar</div>
-          </div>
-          <div class="cb-roker-stat-item" onclick="openEndRokerModal()" style="cursor: pointer; background: rgba(5, 150, 105, 0.08); border: 1.5px solid rgba(5, 150, 105, 0.35);" title="Click to view Cash Difference breakdown">
-            <div class="cb-roker-stat-val" style="color: #059669; font-size: 1.15rem; font-weight: 800;">${fmtCurrency(cashDifference)}</div>
-            <div class="cb-roker-stat-lbl" style="color: #065f46; font-weight: 700;">💵 Cash Difference</div>
-          </div>
           <div class="cb-roker-stat-item highlight-end-roker" onclick="openEndRokerModal()" title="Click to view End Roker calculation breakdown">
             <div class="cb-roker-stat-val" style="color: #d97706; font-size: 1.25rem;">${fmtCurrency(data.summary.endRokerValue || 0)}</div>
             <div class="cb-roker-stat-lbl" style="color: #d97706;">🏁 End Roker (Jama + Cash)</div>
