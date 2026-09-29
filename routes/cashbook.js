@@ -316,6 +316,16 @@ router.get('/rokers', async (req, res) => {
           entryCount: { $sum: 1 },
           totalNaam: { $sum: '$naam' },
           totalJama: { $sum: '$jama' },
+          totalCashNaam: {
+            $sum: {
+              $cond: [{ $eq: ['$isCash', true] }, '$naam', 0]
+            }
+          },
+          totalCashJama: {
+            $sum: {
+              $cond: [{ $eq: ['$isCash', true] }, '$jama', 0]
+            }
+          },
           totalBags: {
             $sum: {
               $cond: [{ $gt: ['$jama', 0] }, '$bags', 0]
@@ -371,9 +381,18 @@ router.get('/rokers', async (req, res) => {
     const enriched = rokers.map(r => {
       // Use pre-computed CIH: if this rokerNo exists in CIH entries, use its prefix sum; otherwise use total
       const prevCashInHand = cihByRoker[r.rokerNo] !== undefined ? cihByRoker[r.rokerNo] : (cihByRoker._total || cihOpeningNet);
+      const totalCashJama = r.totalCashJama || 0;
+      const totalCashNaam = r.totalCashNaam || 0;
+      const totalJamaCashWithPrev = prevCashInHand + totalCashJama;
+      const cashDifference = totalJamaCashWithPrev - totalCashNaam;
       return {
         ...r,
         cashInHand: prevCashInHand,
+        previousCashRoker: prevCashInHand,
+        totalCashJama,
+        totalCashNaam,
+        totalJamaCashWithPrev,
+        cashDifference,
         endRokerValue: (r.totalJama || 0) + prevCashInHand,
       };
     });
@@ -423,6 +442,41 @@ router.get('/roker/:rokerNo', async (req, res) => {
     const cashInHandBalance = await getCashInHandBalance(rokerNo);
     const endRokerValue = totalJama + cashInHandBalance;
 
+    // Calculate Cash entries on Jama and Naam (Banaam) side
+    const cashEntriesJama = entries.filter(e => e.isCash && (e.jama || 0) > 0);
+    const cashEntriesNaam = entries.filter(e => e.isCash && (e.naam || 0) > 0);
+    const totalCashJama = cashEntriesJama.reduce((s, e) => s + (e.jama || 0), 0);
+    const totalCashNaam = cashEntriesNaam.reduce((s, e) => s + (e.naam || 0), 0);
+    const previousCashRoker = cashInHandBalance;
+    const totalJamaCashWithPrev = previousCashRoker + totalCashJama;
+    const cashDifference = totalJamaCashWithPrev - totalCashNaam;
+
+    const cashSummary = {
+      previousCashRoker,
+      totalCashJama,
+      totalJamaCashWithPrev,
+      totalCashNaam,
+      cashDifference,
+      jamaEntriesCount: cashEntriesJama.length,
+      naamEntriesCount: cashEntriesNaam.length,
+      jamaCashEntries: cashEntriesJama.map(e => ({
+        _id: e._id,
+        date: e.date,
+        partyName: e.partyName,
+        khataNo: e.khataNo,
+        description: e.description,
+        amount: e.jama
+      })),
+      naamCashEntries: cashEntriesNaam.map(e => ({
+        _id: e._id,
+        date: e.date,
+        partyName: e.partyName,
+        khataNo: e.khataNo,
+        description: e.description,
+        amount: e.naam
+      }))
+    };
+
     // Calculate Bag Purchases vs Bag Sells
     const bagPurchases = entries.filter(e => e.isPurchase && (e.bags || 0) > 0);
     const bagSells = entries.filter(e => e.isSell && (e.bags || 0) > 0);
@@ -453,11 +507,17 @@ router.get('/roker/:rokerNo', async (req, res) => {
       summary: {
         totalNaam,
         totalJama,
+        totalCashNaam,
+        totalCashJama,
         totalBags,
         totalMeters,
         cashInHand: cashInHandBalance,
+        previousCashRoker,
+        totalJamaCashWithPrev,
+        cashDifference,
         endRokerValue,
         entryCount: entries.length,
+        cashSummary,
         bagSummary: {
           totalPurchaseBags: totalPurBags,
           totalPurchaseAmount: totalPurBagAmt,

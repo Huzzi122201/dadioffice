@@ -2233,8 +2233,19 @@ async function openRokerDetail(rokerNo) {
         if (cih) cashInHandVal = cih.balance;
       } catch (e) {}
     }
-    data.summary.cashInHand = cashInHandVal || 0;
-    data.summary.endRokerValue = (data.summary.totalJama || 0) + (cashInHandVal || 0);
+    const prevCashInHand = data.summary.previousCashRoker !== undefined ? data.summary.previousCashRoker : (cashInHandVal || 0);
+    const totalCashJama = data.summary.totalCashJama !== undefined ? data.summary.totalCashJama : (data.entries || []).filter(e => e.isCash && (e.jama || 0) > 0).reduce((sum, e) => sum + (e.jama || 0), 0);
+    const totalCashNaam = data.summary.totalCashNaam !== undefined ? data.summary.totalCashNaam : (data.entries || []).filter(e => e.isCash && (e.naam || 0) > 0).reduce((sum, e) => sum + (e.naam || 0), 0);
+    const totalJamaCashWithPrev = prevCashInHand + totalCashJama;
+    const cashDifference = totalJamaCashWithPrev - totalCashNaam;
+
+    data.summary.cashInHand = prevCashInHand;
+    data.summary.previousCashRoker = prevCashInHand;
+    data.summary.totalCashJama = totalCashJama;
+    data.summary.totalCashNaam = totalCashNaam;
+    data.summary.totalJamaCashWithPrev = totalJamaCashWithPrev;
+    data.summary.cashDifference = cashDifference;
+    data.summary.endRokerValue = (data.summary.totalJama || 0) + (prevCashInHand || 0);
     currentRokerData = data;
 
     $('rokerDetailTitle').textContent = `📜 Roker #${rokerNo} (${formatDate(data.date)})`;
@@ -2270,8 +2281,12 @@ async function openRokerDetail(rokerNo) {
             <div class="cb-roker-stat-lbl">Total Jama</div>
           </div>
           <div class="cb-roker-stat-item">
-            <div class="cb-roker-stat-val" style="color: #0284c7;">${fmtCurrency(data.summary.cashInHand || 0)}</div>
-            <div class="cb-roker-stat-lbl">Cash in Hand</div>
+            <div class="cb-roker-stat-val" style="color: #0284c7;">${fmtCurrency(prevCashInHand)}</div>
+            <div class="cb-roker-stat-lbl">Prev Cash Rokar</div>
+          </div>
+          <div class="cb-roker-stat-item" onclick="openEndRokerModal()" style="cursor: pointer; background: rgba(5, 150, 105, 0.08); border: 1.5px solid rgba(5, 150, 105, 0.35);" title="Click to view Cash Difference breakdown">
+            <div class="cb-roker-stat-val" style="color: #059669; font-size: 1.15rem; font-weight: 800;">${fmtCurrency(cashDifference)}</div>
+            <div class="cb-roker-stat-lbl" style="color: #065f46; font-weight: 700;">💵 Cash Difference</div>
           </div>
           <div class="cb-roker-stat-item highlight-end-roker" onclick="openEndRokerModal()" title="Click to view End Roker calculation breakdown">
             <div class="cb-roker-stat-val" style="color: #d97706; font-size: 1.25rem;">${fmtCurrency(data.summary.endRokerValue || 0)}</div>
@@ -4270,13 +4285,86 @@ function openEndRokerModal() {
     return;
   }
   const s = currentRokerData.summary;
+  const entries = currentRokerData.entries || [];
   const rokerNo = currentRokerNo;
   const rokerDate = formatDate(currentRokerData.date);
 
   const totalNaam = s.totalNaam || 0;
   const totalJama = s.totalJama || 0;
-  const cashInHand = s.cashInHand || 0;
+  const cashInHand = s.previousCashRoker !== undefined ? s.previousCashRoker : (s.cashInHand || 0);
   const endRokerValue = s.endRokerValue || (totalJama + cashInHand);
+
+  // Cash Entries & Cash Difference calculations
+  const cs = s.cashSummary || {};
+  const previousCashRoker = (cs.previousCashRoker !== undefined) ? cs.previousCashRoker : cashInHand;
+
+  const cashEntriesJama = (cs.jamaCashEntries && cs.jamaCashEntries.length > 0)
+    ? cs.jamaCashEntries
+    : entries.filter(e => e.isCash && (e.jama || 0) > 0).map(e => ({
+        partyName: e.partyName,
+        khataNo: e.khataNo,
+        description: e.description,
+        amount: e.jama
+      }));
+
+  const cashEntriesNaam = (cs.naamCashEntries && cs.naamCashEntries.length > 0)
+    ? cs.naamCashEntries
+    : entries.filter(e => e.isCash && (e.naam || 0) > 0).map(e => ({
+        partyName: e.partyName,
+        khataNo: e.khataNo,
+        description: e.description,
+        amount: e.naam
+      }));
+
+  const totalCashJama = cs.totalCashJama !== undefined ? cs.totalCashJama : cashEntriesJama.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const totalCashNaam = cs.totalCashNaam !== undefined ? cs.totalCashNaam : cashEntriesNaam.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const totalJamaCashWithPrev = previousCashRoker + totalCashJama;
+  const cashDifference = totalJamaCashWithPrev - totalCashNaam;
+
+  const cashJamaListHtml = cashEntriesJama.map(p => `
+    <tr>
+      <td><strong>${escapeHtml(p.partyName)}</strong> <small style="color:var(--text-muted);">${p.khataNo ? '#' + p.khataNo : ''}</small></td>
+      <td>${escapeHtml(p.description || '—')}</td>
+      <td style="text-align:right; font-weight:700; color:#15803d;">${fmtCurrency(p.amount)}</td>
+    </tr>
+  `).join('');
+
+  const cashNaamListHtml = cashEntriesNaam.map(p => `
+    <tr>
+      <td><strong>${escapeHtml(p.partyName)}</strong> <small style="color:var(--text-muted);">${p.khataNo ? '#' + p.khataNo : ''}</small></td>
+      <td>${escapeHtml(p.description || '—')}</td>
+      <td style="text-align:right; font-weight:700; color:#b91c1c;">${fmtCurrency(p.amount)}</td>
+    </tr>
+  `).join('');
+
+  const cashDetailsHtml = `
+    <details style="margin-top: 0.4rem; font-size: 0.72rem; color: var(--text-muted);">
+      <summary style="cursor: pointer; font-weight: 700; color: #047857; padding: 2px 0;">
+        📜 View Cash Entries Breakdown (${cashEntriesJama.length} Jama, ${cashEntriesNaam.length} Banaam)
+      </summary>
+      <div style="margin-top: 0.35rem; border-top: 1px dashed #a7f3d0; padding-top: 0.35rem;">
+        <div style="font-weight: 700; color: #15803d; margin-bottom: 2px; font-size: 0.72rem;">
+          📥 Jama Cash Entries (${fmtCurrency(totalCashJama)}):
+        </div>
+        <table class="cb-khata-table" style="font-size: 0.7rem; margin-bottom: 0.35rem;">
+          <thead><tr><th>Party</th><th>Description</th><th style="text-align:right">Amount</th></tr></thead>
+          <tbody>${cashJamaListHtml || '<tr><td colspan="3" style="text-align:center; color:var(--text-muted);">No cash entries in Jama</td></tr>'}</tbody>
+        </table>
+
+        <div style="font-weight: 700; color: #b91c1c; margin-bottom: 2px; font-size: 0.72rem;">
+          📤 Banaam Cash Entries (${fmtCurrency(totalCashNaam)}):
+        </div>
+        <table class="cb-khata-table" style="font-size: 0.7rem;">
+          <thead><tr><th>Party</th><th>Description</th><th style="text-align:right">Amount</th></tr></thead>
+          <tbody>${cashNaamListHtml || '<tr><td colspan="3" style="text-align:center; color:var(--text-muted);">No cash entries in Banaam</td></tr>'}</tbody>
+        </table>
+
+        <div style="font-size: 0.7rem; margin-top: 0.3rem; font-weight: 700; text-align: right; color: #065f46; background: rgba(16, 185, 129, 0.08); padding: 4px 6px; border-radius: 4px;">
+          Formula: (Previous: ${fmtCurrency(previousCashRoker)} + Jama Cash: ${fmtCurrency(totalCashJama)}) - Banaam Cash: ${fmtCurrency(totalCashNaam)} = Net Cash: ${fmtCurrency(cashDifference)}
+        </div>
+      </div>
+    </details>
+  `;
 
   const bs = s.bagSummary || {};
   const ms = s.meterSummary || {};
@@ -4399,27 +4487,70 @@ function openEndRokerModal() {
 
   $('endRokerModalTitle').textContent = `🏁 End Roker Summary (Roker #${rokerNo})`;
   $('endRokerModalBody').innerHTML = `
+    <!-- Top Overall Journal Summary -->
     <div class="end-roker-calc-box">
       <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.35rem;">
         📅 Date: <strong>${rokerDate}</strong> · Roker #${rokerNo}
       </div>
       <div class="end-roker-row">
-        <span style="color: var(--text-secondary);">🟢 Total Jama (جمع):</span>
+        <span style="color: var(--text-secondary);">🟢 Total Jama (کل جمع):</span>
         <strong style="color: #15803d; font-size: 0.9rem;">${fmtCurrency(totalJama)}</strong>
       </div>
       <div class="end-roker-row">
-        <span style="color: var(--text-secondary);">🔴 Total Naam (بنام):</span>
+        <span style="color: var(--text-secondary);">🔴 Total Naam (کل بنام):</span>
         <strong style="color: #b91c1c; font-size: 0.9rem;">${fmtCurrency(totalNaam)}</strong>
       </div>
       <div class="end-roker-row" style="background: rgba(2, 132, 199, 0.05); padding: 0.25rem 0.35rem; border-radius: 4px; margin: 0.15rem 0;">
-        <span style="color: #0284c7; font-weight: 600;">💵 Cash in Hand:</span>
-        <strong style="color: #0284c7; font-size: 0.9rem;">+ ${fmtCurrency(cashInHand)}</strong>
+        <span style="color: #0284c7; font-weight: 600;">🏛️ Previous Cash Rokar (گزشتہ کیش روکڑ):</span>
+        <strong style="color: #0284c7; font-size: 0.9rem;">+ ${fmtCurrency(previousCashRoker)}</strong>
       </div>
       <div class="end-roker-row total">
-        <span style="color: #d97706;">🏁 End Roker Total:</span>
+        <span style="color: #d97706;">🏁 End Roker Total (Jama + Cash):</span>
         <strong style="color: #d97706; font-size: 1.1rem;">${fmtCurrency(endRokerValue)}</strong>
       </div>
     </div>
+
+    <!-- 💵 Cash Difference of Jama and Banaam (with Previous Cash Rokar added to Jama) -->
+    <div class="end-roker-calc-box" style="margin-top: 0.45rem; border: 1.5px solid #059669; background: #f0fdf4;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; border-bottom: 1px solid #bbf7d0; padding-bottom: 0.25rem;">
+        <div style="font-weight: 800; color: #065f46; font-size: 0.82rem; display: flex; align-items: center; gap: 5px;">
+          <span>💵</span> Cash Difference (کیش فرق / روکڑ کیش حساب)
+        </div>
+        <span style="font-size: 0.68rem; font-weight: 700; color: #047857; background: #d1fae5; padding: 1px 6px; border-radius: 4px;">
+          Cash Rokar
+        </span>
+      </div>
+
+      <div class="end-roker-row" style="font-size: 0.78rem;">
+        <span style="color: #047857;">🏛️ Previous Cash Rokar (گزشتہ کیش روکڑ):</span>
+        <strong style="color: #047857;">${fmtCurrency(previousCashRoker)}</strong>
+      </div>
+
+      <div class="end-roker-row" style="font-size: 0.78rem;">
+        <span style="color: #15803d;">📥 Jama Cash Entries (جمع کیش انٹریز - ${cashEntriesJama.length}):</span>
+        <strong style="color: #15803d;">+ ${fmtCurrency(totalCashJama)}</strong>
+      </div>
+
+      <div class="end-roker-row" style="font-size: 0.82rem; padding: 3px 6px; background: rgba(16, 185, 129, 0.12); border-radius: 4px; margin: 2px 0; font-weight: 700;">
+        <span style="color: #065f46;">🟢 Total Jama Cash (کل جمع کیش مع گزشتہ):</span>
+        <strong style="color: #065f46; font-size: 0.9rem;">${fmtCurrency(totalJamaCashWithPrev)}</strong>
+      </div>
+
+      <div class="end-roker-row" style="font-size: 0.78rem;">
+        <span style="color: #b91c1c;">📤 Banaam Cash Entries (بنام کیش انٹریز - ${cashEntriesNaam.length}):</span>
+        <strong style="color: #b91c1c;">- ${fmtCurrency(totalCashNaam)}</strong>
+      </div>
+
+      <div class="end-roker-row total" style="border-top: 1.5px solid #059669; padding-top: 0.35rem; margin-top: 0.25rem;">
+        <span style="color: #065f46; font-weight: 800; font-size: 0.88rem;">💰 Cash Difference (کیش فرق / باقی کیش):</span>
+        <strong style="color: ${cashDifference >= 0 ? '#047857' : '#b91c1c'}; font-size: 1.15rem; font-weight: 900;">
+          ${fmtCurrency(cashDifference)}
+        </strong>
+      </div>
+
+      ${cashDetailsHtml}
+    </div>
+
     ${tradeSummaryHtml}
   `;
 
