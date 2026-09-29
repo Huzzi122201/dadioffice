@@ -2280,8 +2280,16 @@ async function openRokerDetail(rokerNo) {
             <div class="cb-roker-stat-val" style="color: #15803d;">${fmtCurrency(data.summary.totalJama)}</div>
             <div class="cb-roker-stat-lbl">Total Jama</div>
           </div>
+          <div class="cb-roker-stat-item">
+            <div class="cb-roker-stat-val" style="color: #0284c7;">${fmtCurrency(prevCashInHand)}</div>
+            <div class="cb-roker-stat-lbl">Cash in Hand</div>
+          </div>
+          <div class="cb-roker-stat-item" style="background: rgba(5, 150, 105, 0.08); border: 1.5px solid rgba(5, 150, 105, 0.35);">
+            <div class="cb-roker-stat-val" style="color: #059669; font-weight: 800;">${fmtCurrency(cashDifference)}</div>
+            <div class="cb-roker-stat-lbl" style="color: #065f46; font-weight: 700;">💵 Cash Difference</div>
+          </div>
           <div class="cb-roker-stat-item highlight-end-roker" onclick="openEndRokerModal()" title="Click to view End Roker calculation breakdown">
-            <div class="cb-roker-stat-val" style="color: #d97706; font-size: 1.25rem;">${fmtCurrency(data.summary.endRokerValue || 0)}</div>
+            <div class="cb-roker-stat-val" style="color: #d97706; font-size: 1.15rem;">${fmtCurrency(data.summary.endRokerValue || 0)}</div>
             <div class="cb-roker-stat-lbl" style="color: #d97706;">🏁 End Roker (Jama + Cash)</div>
           </div>
         </div>
@@ -4516,54 +4524,13 @@ function openEndRokerModal() {
         <strong style="color: #b91c1c; font-size: 0.9rem;">${fmtCurrency(totalNaam)}</strong>
       </div>
       <div class="end-roker-row" style="background: rgba(2, 132, 199, 0.05); padding: 0.25rem 0.35rem; border-radius: 4px; margin: 0.15rem 0;">
-        <span style="color: #0284c7; font-weight: 600;">🏛️ Previous Cash Rokar (گزشتہ کیش روکڑ):</span>
+        <span style="color: #0284c7; font-weight: 600;">🏛️ Cash in Hand (Previous Rokar):</span>
         <strong style="color: #0284c7; font-size: 0.9rem;">+ ${fmtCurrency(previousCashRoker)}</strong>
       </div>
       <div class="end-roker-row total">
         <span style="color: #d97706;">🏁 End Roker Total (Jama + Cash):</span>
         <strong style="color: #d97706; font-size: 1.1rem;">${fmtCurrency(endRokerValue)}</strong>
       </div>
-    </div>
-
-    <!-- 💵 Cash Difference of Jama and Banaam (with Previous Cash Rokar added to Jama) -->
-    <div class="end-roker-calc-box" style="margin-top: 0.45rem; border: 1.5px solid #059669; background: #f0fdf4;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; border-bottom: 1px solid #bbf7d0; padding-bottom: 0.25rem;">
-        <div style="font-weight: 800; color: #065f46; font-size: 0.82rem; display: flex; align-items: center; gap: 5px;">
-          <span>💵</span> Cash Difference (کیش فرق / روکڑ کیش حساب)
-        </div>
-        <span style="font-size: 0.68rem; font-weight: 700; color: #047857; background: #d1fae5; padding: 1px 6px; border-radius: 4px;">
-          Cash Rokar
-        </span>
-      </div>
-
-      <div class="end-roker-row" style="font-size: 0.78rem;">
-        <span style="color: #047857;">🏛️ Previous Cash Rokar (گزشتہ کیش روکڑ):</span>
-        <strong style="color: #047857;">${fmtCurrency(previousCashRoker)}</strong>
-      </div>
-
-      <div class="end-roker-row" style="font-size: 0.78rem;">
-        <span style="color: #15803d;">📥 Jama Cash Entries (جمع کیش انٹریز - ${cashEntriesJama.length}):</span>
-        <strong style="color: #15803d;">+ ${fmtCurrency(totalCashJama)}</strong>
-      </div>
-
-      <div class="end-roker-row" style="font-size: 0.82rem; padding: 3px 6px; background: rgba(16, 185, 129, 0.12); border-radius: 4px; margin: 2px 0; font-weight: 700;">
-        <span style="color: #065f46;">🟢 Total Jama Cash (کل جمع کیش مع گزشتہ):</span>
-        <strong style="color: #065f46; font-size: 0.9rem;">${fmtCurrency(totalJamaCashWithPrev)}</strong>
-      </div>
-
-      <div class="end-roker-row" style="font-size: 0.78rem;">
-        <span style="color: #b91c1c;">📤 Banaam Cash Entries (بنام کیش انٹریز - ${cashEntriesNaam.length}):</span>
-        <strong style="color: #b91c1c;">- ${fmtCurrency(totalCashNaam)}</strong>
-      </div>
-
-      <div class="end-roker-row total" style="border-top: 1.5px solid #059669; padding-top: 0.35rem; margin-top: 0.25rem;">
-        <span style="color: #065f46; font-weight: 800; font-size: 0.88rem;">💰 Cash Difference (کیش فرق / باقی کیش):</span>
-        <strong style="color: ${cashDifference >= 0 ? '#047857' : '#b91c1c'}; font-size: 1.15rem; font-weight: 900;">
-          ${fmtCurrency(cashDifference)}
-        </strong>
-      </div>
-
-      ${cashDetailsHtml}
     </div>
 
     ${tradeSummaryHtml}
