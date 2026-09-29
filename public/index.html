@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Textile Costing Sheet</title>
   <link rel="manifest" href="/manifest.json" />
-  <link rel="stylesheet" href="/styles.css?v=2.4.4" />
+  <link rel="stylesheet" href="/styles.css?v=2.4.5" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
@@ -845,15 +845,18 @@
 
   <!-- ═══ End Roker Modal ═══ -->
   <div class="modal-overlay hidden" id="endRokerModal">
-    <div class="modal" style="max-width: 380px; padding: 1rem;">
-      <h3 class="modal-title" id="endRokerModalTitle" style="color: #d97706; display: flex; align-items: center; gap: 0.4rem; font-size: 1rem;">
-        🏁 End Roker Summary (اختتام روکر)
-      </h3>
-      <div id="endRokerModalBody" style="margin: 0.65rem 0;">
+    <div class="modal end-roker-modal-card">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border, #e2e8f0); padding-bottom: 0.45rem; margin-bottom: 0.45rem;">
+        <h3 class="modal-title" id="endRokerModalTitle" style="color: #d97706; display: flex; align-items: center; gap: 0.4rem; font-size: 0.95rem; margin: 0;">
+          🏁 End Roker Summary (اختتام روکر)
+        </h3>
+        <button type="button" class="btn-close" id="btnHeaderCloseEndRoker" onclick="closeEndRokerModal()" style="background: none; border: none; font-size: 1.3rem; line-height: 1; cursor: pointer; color: var(--text-secondary); padding: 2px 6px; border-radius: 4px;" aria-label="Close">✕</button>
+      </div>
+      <div id="endRokerModalBody">
         <!-- populated by JS -->
       </div>
-      <div class="modal-actions">
-        <button class="btn btn-primary" id="btnCloseEndRokerModal" style="background: var(--accent-primary);">Close</button>
+      <div class="modal-actions" style="margin-top: 0.45rem; padding-top: 0.45rem; border-top: 1px solid var(--border, #e2e8f0); display: flex; justify-content: flex-end;">
+        <button class="btn btn-primary" id="btnCloseEndRokerModal" style="background: var(--accent-primary); width: 100%; font-weight: 700;">✕ Close</button>
       </div>
     </div>
   </div>
@@ -1161,7 +1164,7 @@
   <!-- ═══ Toast Container ═══ -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <script src="/app.js?v=2.4.4"></script>
+  <script src="/app.js?v=2.4.5"></script>
 </body>
 </html>
 

@@ -4271,6 +4271,29 @@ if ($('btnCloseEndRokerModal')) {
   });
 }
 
+if ($('btnHeaderCloseEndRoker')) {
+  $('btnHeaderCloseEndRoker').addEventListener('click', () => {
+    closeEndRokerModal();
+  });
+}
+
+if ($('endRokerModal')) {
+  $('endRokerModal').addEventListener('click', (e) => {
+    if (e.target === $('endRokerModal')) {
+      closeEndRokerModal();
+    }
+  });
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const erm = $('endRokerModal');
+    if (erm && !erm.classList.contains('hidden')) {
+      closeEndRokerModal();
+    }
+  }
+});
+
 function openEndRokerModal() {
   if (!currentRokerData || !currentRokerData.summary) {
     toast('No roker data available', 'error');
