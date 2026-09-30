@@ -814,15 +814,34 @@ router.put('/party/:partyName/rename', async (req, res) => {
       return res.status(409).json({ error: `A party with the name "${newNameTrimmed}" already exists. Please choose a different name.` });
     }
 
+    const escapedOld = req.params.partyName.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const oldRegex = new RegExp(`^${escapedOld}$`, 'i');
+
     // Update all PartyEntry documents with the old name
     const entryResult = await PartyEntry.updateMany(
-      { partyNameNorm: { $in: queryNorms } },
+      { $or: [{ partyNameNorm: { $in: queryNorms } }, { partyName: oldRegex }] },
       { $set: { partyName: newNameTrimmed, partyNameNorm: newNorm } }
     );
 
+    // Update purchaser, gudaam, and loomWala fields where old name was used
+    await Promise.all([
+      PartyEntry.updateMany(
+        { purchaser: oldRegex },
+        { $set: { purchaser: newNameTrimmed } }
+      ),
+      PartyEntry.updateMany(
+        { gudaam: oldRegex },
+        { $set: { gudaam: newNameTrimmed } }
+      ),
+      PartyEntry.updateMany(
+        { loomWala: oldRegex },
+        { $set: { loomWala: newNameTrimmed } }
+      )
+    ]);
+
     // Update all GeneralPayment documents with the old name
     const paymentResult = await GeneralPayment.updateMany(
-      { partyNameNorm: { $in: queryNorms } },
+      { $or: [{ partyNameNorm: { $in: queryNorms } }, { partyName: oldRegex }] },
       { $set: { partyName: newNameTrimmed, partyNameNorm: newNorm } }
     );
 
