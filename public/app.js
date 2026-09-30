@@ -4874,6 +4874,9 @@ async function loadGazanaDashboard(search = '') {
                 </div>
 
                 <div class="gazana-party-card-right" style="display: flex; align-items: center; gap: 6px;">
+                  <button class="btn btn-secondary" title="Edit Party Name" onclick="event.stopPropagation(); renameParty('${escapeHtml(p.partyName)}');" style="font-size: 0.78rem; padding: 4px 9px; font-weight: 700; color: #7c3aed; border: 1px solid #ddd6fe; background: #f5f3ff; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                    ✏️
+                  </button>
                   <button class="btn btn-secondary" title="Generate Receipt" onclick="event.stopPropagation(); openPartyReceiptModal('${escapeHtml(p.partyName)}');" style="font-size: 0.78rem; padding: 4px 9px; font-weight: 700; color: #0284c7; border: 1px solid #bae6fd; background: #f0f9ff; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
                     🧾 Receipt
                   </button>
@@ -5046,6 +5049,32 @@ function setPartyGazanaDetailFilter(filter) {
   }
 }
 
+// ── Rename Party (update all entries with old name) ──────────
+async function renameParty(oldName) {
+  if (!oldName) return;
+  const newName = prompt(`Rename party "${oldName}" to:`, oldName);
+  if (!newName || !newName.trim() || newName.trim() === oldName) return;
+
+  const trimmedNew = newName.trim();
+  try {
+    const result = await apiPut(
+      `${PARTY_ENTRIES_API}/party/${encodeURIComponent(oldName)}/rename`,
+      { newName: trimmedNew }
+    );
+    toast(`✅ Party renamed to "${trimmedNew}" — ${result.entriesUpdated} entries updated`, 'success');
+    if (currentGazanaPartyName && currentGazanaPartyName.toLowerCase() === oldName.toLowerCase()) {
+      currentGazanaPartyName = trimmedNew;
+      openPartyGazanaDetail(trimmedNew, false);
+    }
+    loadGazanaDashboard('');
+    if (typeof loadAllPartiesSuggestions === 'function') {
+      loadAllPartiesSuggestions();
+    }
+  } catch (err) {
+    toast(err.message || 'Failed to rename party', 'error');
+  }
+}
+
 // ── Open Single Party Gazana Ledger Detail ──────────────────
 async function openPartyGazanaDetail(partyName, resetTab = true) {
   if (!partyName) return;
@@ -5155,7 +5184,12 @@ async function openPartyGazanaDetail(partyName, resetTab = true) {
           <div class="cb-khata-info-left">
             <span class="cb-khata-info-icon" style="background: linear-gradient(135deg, #1e40af, #0284c7);">👤</span>
             <div>
-              <div class="cb-khata-info-name">${escapeHtml(res.partyName)}</div>
+              <div class="cb-khata-info-name" style="display: flex; align-items: center; gap: 8px;">
+                <span>${escapeHtml(res.partyName)}</span>
+                <button class="btn btn-secondary" title="Edit Party Name" onclick="renameParty('${escapeHtml(res.partyName)}');" style="font-size: 0.75rem; padding: 2px 7px; font-weight: 700; color: #7c3aed; border: 1px solid #ddd6fe; background: #f5f3ff; border-radius: 5px; cursor: pointer;">
+                  ✏️ Edit
+                </button>
+              </div>
               <div class="cb-khata-info-details">
                 <span>${allEntries.length} Orders (${activeEntries.length} active, ${completedEntries.length} paid)</span>
                 <span> · 📦 <strong>${(summary.totalSafiGazana || 0).toLocaleString()}</strong> Safi Gazana</span>
@@ -6409,6 +6443,7 @@ window.addEventListener('resize', () => closeAllGazanaMenus(), { passive: true }
 window.switchCostingSubtab = switchCostingSubtab;
 window.setGazanaViewMode = setGazanaViewMode;
 window.setPartyGazanaDetailFilter = setPartyGazanaDetailFilter;
+window.renameParty = renameParty;
 window.openPartyGazanaDetail = openPartyGazanaDetail;
 window.openPartyGazanaForm = openPartyGazanaForm;
 window.openEditPartyEntry = openEditPartyEntry;

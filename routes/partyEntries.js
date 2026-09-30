@@ -786,4 +786,56 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+
+// ── PUT /api/party-entries/party/:partyName/rename ── Rename a party across all entries
+router.put('/party/:partyName/rename', async (req, res) => {
+  try {
+    const oldNorm = req.params.partyName.trim().toLowerCase();
+    const { newName } = req.body;
+
+    if (!newName || !newName.trim()) {
+      return res.status(400).json({ error: 'New party name is required.' });
+    }
+
+    const newNameTrimmed = newName.trim();
+    const newNorm = newNameTrimmed.toLowerCase();
+
+    if (oldNorm === newNorm) {
+      return res.status(400).json({ error: 'New name is the same as the old name.' });
+    }
+
+    const queryNorms = (oldNorm === 'default party' || oldNorm === 'daily entries')
+      ? ['default party', 'daily entries']
+      : [oldNorm];
+
+    // Check if a party with the new name already exists
+    const existingParty = await PartyEntry.findOne({ partyNameNorm: newNorm });
+    if (existingParty && !queryNorms.includes(newNorm)) {
+      return res.status(409).json({ error: `A party with the name "${newNameTrimmed}" already exists. Please choose a different name.` });
+    }
+
+    // Update all PartyEntry documents with the old name
+    const entryResult = await PartyEntry.updateMany(
+      { partyNameNorm: { $in: queryNorms } },
+      { $set: { partyName: newNameTrimmed, partyNameNorm: newNorm } }
+    );
+
+    // Update all GeneralPayment documents with the old name
+    const paymentResult = await GeneralPayment.updateMany(
+      { partyNameNorm: { $in: queryNorms } },
+      { $set: { partyName: newNameTrimmed, partyNameNorm: newNorm } }
+    );
+
+    res.json({
+      message: `Party renamed successfully.`,
+      entriesUpdated: entryResult.modifiedCount,
+      paymentsUpdated: paymentResult.modifiedCount
+    });
+  } catch (err) {
+    console.error('Error renaming party:', err);
+    res.status(500).json({ error: 'Failed to rename party', details: err.message });
+  }
+});
+
 module.exports = router;
+
