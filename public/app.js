@@ -4874,12 +4874,6 @@ async function loadGazanaDashboard(search = '') {
                 </div>
 
                 <div class="gazana-party-card-right" style="display: flex; align-items: center; gap: 6px;">
-                  <button class="btn btn-secondary" title="Edit Party Name" onclick="event.stopPropagation(); renameParty('${escapeHtml(p.partyName)}');" style="font-size: 0.78rem; padding: 4px 9px; font-weight: 700; color: #7c3aed; border: 1px solid #ddd6fe; background: #f5f3ff; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
-                    ✏️
-                  </button>
-                  <button class="btn btn-secondary" title="Generate Receipt" onclick="event.stopPropagation(); openPartyReceiptModal('${escapeHtml(p.partyName)}');" style="font-size: 0.78rem; padding: 4px 9px; font-weight: 700; color: #0284c7; border: 1px solid #bae6fd; background: #f0f9ff; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
-                    🧾 Receipt
-                  </button>
                   <button class="btn btn-ghost btn-icon" title="Add entry for this party" onclick="event.stopPropagation(); openNewPartyEntryModal('${escapeHtml(p.partyName)}');" style="color: var(--accent-primary); font-size: 1.15rem; padding: 4px 8px; border-radius: var(--radius-sm);">
                     ＋
                   </button>
