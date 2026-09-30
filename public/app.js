@@ -2660,7 +2660,7 @@ async function generateChathaPDF(action = 'download') {
     }
 
     const container = document.createElement('div');
-    container.style.cssText = 'position: absolute; left: 0px; top: 0px; width: 700px; z-index: -99999; opacity: 1; pointer-events: none;';
+    container.style.cssText = 'position: absolute; left: 0px; top: 0px; width: 700px; z-index: -99999; opacity: 0; pointer-events: none;';
 
     const dateStr = new Date().toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' });
 
