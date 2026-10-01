@@ -1023,6 +1023,122 @@ function toTitleCase(str) {
   return str.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
 }
 
+function escapeRegex(str) {
+  return (str || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function highlightMatches(text, query) {
+  if (!text) return '';
+  if (!query || !query.trim()) return escapeHtml(text);
+  const tokens = query.trim().split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return escapeHtml(text);
+
+  const pattern = new RegExp(`(${tokens.map(t => escapeRegex(t)).join('|')})`, 'gi');
+  return text.split(pattern).map(chunk => {
+    if (!chunk) return '';
+    const isMatch = tokens.some(t => chunk.toLowerCase() === t.toLowerCase());
+    if (isMatch) {
+      return `<strong style="color: #2563eb; font-weight: 800; text-decoration: underline;">${escapeHtml(chunk)}</strong>`;
+    }
+    return escapeHtml(chunk);
+  }).join('');
+}
+
+// ── Multi-Tier Ranking Search for Party Autocomplete ─────────
+function rankPartyMatches(partiesList, query) {
+  if (!query) return [];
+  const rawQ = query.trim();
+  if (!rawQ) return [];
+  const q = rawQ.toLowerCase();
+  const qTokens = q.split(/\s+/).filter(Boolean);
+
+  const exactMatches = [];
+  const startsWithMatches = [];
+  const wordStartsWithMatches = [];
+  const multiTokenMatches = [];
+  const khataMatches = [];
+  const substringMatches = [];
+
+  for (const party of partiesList) {
+    const name = typeof party === 'string' ? party : (party.name || '');
+    if (!name) continue;
+    const lower = name.toLowerCase();
+
+    // 1. Exact match (e.g. user typed "N" and party name is "N")
+    if (lower === q) {
+      exactMatches.push({ party, name, score: 1000 });
+      continue;
+    }
+
+    // 2. Starts with entire query (e.g. "N" -> "N.A", "Nadia", "Nabeel", "Nadeem")
+    if (lower.startsWith(q)) {
+      startsWithMatches.push({ party, name, score: 800 - name.length });
+      continue;
+    }
+
+    // 3. Word starts with entire query (word boundary: after space, hyphen, slash, dot, bracket, #)
+    const wordBoundaryRegex = new RegExp(`(?:^|[\\s\\-_/.#(])${escapeRegex(q)}`, 'i');
+    const wordMatch = lower.search(wordBoundaryRegex);
+    if (wordMatch !== -1) {
+      wordStartsWithMatches.push({ party, name, score: 500 - wordMatch * 5 - name.length });
+      continue;
+    }
+
+    // 4. Multi-token match (e.g. "kusar p" -> matches "Kusar Print")
+    if (qTokens.length > 1) {
+      const allTokensMatch = qTokens.every(token => {
+        const tokenRegex = new RegExp(`(?:^|[\\s\\-_/.#(])${escapeRegex(token)}`, 'i');
+        return tokenRegex.test(lower) || lower.includes(token);
+      });
+      if (allTokensMatch) {
+        multiTokenMatches.push({ party, name, score: 400 - name.length });
+        continue;
+      }
+    }
+
+    // 5. Khata number match if applicable (e.g. typing "17" finds Khata #17)
+    const khataStr = (party && party.khataNo) ? String(party.khataNo) : '';
+    const cleanNum = rawQ.replace(/^#/, '');
+    if (khataStr && (khataStr === cleanNum || khataStr.startsWith(cleanNum))) {
+      khataMatches.push({ party, name, score: 350 - name.length });
+      continue;
+    }
+
+    // 6. General substring match
+    const subIdx = lower.indexOf(q);
+    if (subIdx !== -1) {
+      substringMatches.push({ party, name, score: 200 - subIdx * 5 - name.length });
+      continue;
+    }
+  }
+
+  // Sort each bucket:
+  // Starts with query: shorter names first, then alphabetical
+  startsWithMatches.sort((a, b) => a.name.length - b.name.length || a.name.localeCompare(b.name));
+  wordStartsWithMatches.sort((a, b) => b.score - a.score || a.name.length - b.name.length || a.name.localeCompare(b.name));
+  multiTokenMatches.sort((a, b) => a.name.length - b.name.length || a.name.localeCompare(b.name));
+  khataMatches.sort((a, b) => b.score - a.score || a.name.length - b.name.length);
+  substringMatches.sort((a, b) => b.score - a.score || a.name.length - b.name.length || a.name.localeCompare(b.name));
+
+  return [
+    ...exactMatches,
+    ...startsWithMatches,
+    ...wordStartsWithMatches,
+    ...multiTokenMatches,
+    ...khataMatches,
+    ...substringMatches
+  ].map(r => r.party);
+}
+
+// ── Mobile & Desktop Live Party Suggestion Controller ───────
+let allKnownPartiesList = [];
+try {
+  const cachedParties = localStorage.getItem('cached_known_parties');
+  if (cachedParties) {
+    allKnownPartiesList = JSON.parse(cachedParties);
+  }
+} catch (e) {}
+
 async function populatePartyNamesDatalist() {
   try {
     const datalist = $('partyNamesDatalist');
@@ -1040,19 +1156,25 @@ async function populatePartyNamesDatalist() {
     ]);
 
     const partyMap = new Map();
-    const addParty = (rawName) => {
+    const addParty = (rawName, khataNo = null) => {
       if (!rawName || !rawName.trim()) return;
-      const cleanName = toTitleCase(rawName);
+      const cleanName = rawName.trim();
       const norm = cleanName.toLowerCase();
       if (!partyMap.has(norm)) {
-        partyMap.set(norm, cleanName);
+        partyMap.set(norm, { name: cleanName, khataNo: khataNo || null });
+      } else if (khataNo && !partyMap.get(norm).khataNo) {
+        partyMap.get(norm).khataNo = khataNo;
       }
     };
 
+    if (Array.isArray(cbParties)) {
+      cbParties.forEach(p => addParty(p.name, p.khataNo));
+    }
+    if (Array.isArray(gazanaParties)) {
+      gazanaParties.forEach(p => addParty(p.partyName));
+    }
     if (Array.isArray(stock)) stock.forEach(s => addParty(s.partyName));
     if (Array.isArray(invoices)) invoices.forEach(i => addParty(i.partyName));
-    if (Array.isArray(cbParties)) cbParties.forEach(p => addParty(p.name));
-    if (Array.isArray(gazanaParties)) gazanaParties.forEach(p => addParty(p.partyName));
     if (Array.isArray(gazanaEntriesRes?.entries)) {
       gazanaEntriesRes.entries.forEach(e => {
         if (e.gudaam) addParty(e.gudaam);
@@ -1062,16 +1184,19 @@ async function populatePartyNamesDatalist() {
     }
 
     addParty('Daily Entries');
-    const sortedParties = Array.from(partyMap.values()).sort((a, b) => a.localeCompare(b));
+    const sortedParties = Array.from(partyMap.values()).sort((a, b) => a.name.localeCompare(b.name));
     allKnownPartiesList = sortedParties;
+    try {
+      localStorage.setItem('cached_known_parties', JSON.stringify(sortedParties));
+    } catch (e) {}
 
-    const optionsHtml = sortedParties.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
+    const optionsHtml = sortedParties.map(p => `<option value="${escapeHtml(p.name)}">${p.khataNo ? `Khata #${p.khataNo} · ` : ''}${escapeHtml(p.name)}</option>`).join('');
 
     if (datalist) datalist.innerHTML = optionsHtml;
     if (cbDatalist) cbDatalist.innerHTML = optionsHtml;
 
     const selectOptionsHtml = '<option value="">-- Choose Party from Cashbook --</option>' +
-      sortedParties.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
+      sortedParties.map(p => `<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}${p.khataNo ? ` (Khata #${p.khataNo})` : ''}</option>`).join('');
 
     if (yarnFormPartySelect) yarnFormPartySelect.innerHTML = selectOptionsHtml;
     if (contractFormPartySelect) contractFormPartySelect.innerHTML = selectOptionsHtml;
@@ -1079,9 +1204,7 @@ async function populatePartyNamesDatalist() {
     // silent fallback
   }
 }
-
-// ── Mobile & Desktop Live Party Suggestion Controller ───────
-let allKnownPartiesList = [];
+window.loadAllPartiesSuggestions = populatePartyNamesDatalist;
 
 function setupPartyAutocomplete(inputId, dropdownId) {
   const input = $(inputId);
@@ -1096,24 +1219,27 @@ function setupPartyAutocomplete(inputId, dropdownId) {
   let touchStartX = 0;
   let isTouchMoved = false;
 
-  const renderSuggestions = (query, showAllIfEmpty = false) => {
-    const q = (query || '').trim().toLowerCase();
+  const renderSuggestions = async (query, showAllIfEmpty = false) => {
+    const rawQ = (query || '').trim();
     activeIndex = -1;
 
     // Do NOT show popup if empty unless showAllIfEmpty is true (e.g. user pressed ArrowDown)
-    if (!q && !showAllIfEmpty) {
+    if (!rawQ && !showAllIfEmpty) {
       currentMatches = [];
       dropdown.style.display = 'none';
       dropdown.innerHTML = '';
       return;
     }
 
-    if (!q && showAllIfEmpty) {
-      currentMatches = (allKnownPartiesList || []).slice(0, 30);
+    // If cache not loaded yet, fetch immediately
+    if (!allKnownPartiesList || allKnownPartiesList.length === 0) {
+      await populatePartyNamesDatalist();
+    }
+
+    if (!rawQ && showAllIfEmpty) {
+      currentMatches = (allKnownPartiesList || []).slice(0, 40);
     } else {
-      currentMatches = (allKnownPartiesList || []).filter(name =>
-        name.toLowerCase().includes(q)
-      ).slice(0, 30);
+      currentMatches = rankPartyMatches(allKnownPartiesList || [], rawQ).slice(0, 40);
     }
 
     if (currentMatches.length === 0) {
@@ -1123,12 +1249,20 @@ function setupPartyAutocomplete(inputId, dropdownId) {
     }
 
     const itemIcon = inputId === 'formGazanaGudaam' ? '🏬' : '👤';
-    dropdown.innerHTML = currentMatches.map((name, idx) => `
-      <div class="party-suggestion-item" data-index="${idx}" data-name="${escapeHtml(name)}">
-        <span style="font-size: 1rem; pointer-events: none;">${itemIcon}</span>
-        <span style="pointer-events: none;">${escapeHtml(name)}</span>
-      </div>
-    `).join('');
+    dropdown.innerHTML = currentMatches.map((item, idx) => {
+      const name = typeof item === 'string' ? item : item.name;
+      const khataNo = (item && item.khataNo) ? item.khataNo : null;
+      const khataBadge = khataNo ? `<span class="party-khata-badge" style="font-size: 0.72rem; font-weight: 700; color: #475569; background: #e2e8f0; padding: 2px 7px; border-radius: 4px; flex-shrink: 0;">#${khataNo}</span>` : '';
+      return `
+        <div class="party-suggestion-item" data-index="${idx}" data-name="${escapeHtml(name)}" style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; overflow: hidden; pointer-events: none;">
+            <span style="font-size: 1rem; flex-shrink: 0;">${itemIcon}</span>
+            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${highlightMatches(name, rawQ)}</span>
+          </div>
+          ${khataBadge}
+        </div>
+      `;
+    }).join('');
 
     dropdown.style.display = 'block';
   };
@@ -1145,7 +1279,8 @@ function setupPartyAutocomplete(inputId, dropdownId) {
 
       // Put the selected party name directly into the input
       if (currentMatches[newIndex]) {
-        input.value = currentMatches[newIndex];
+        const item = currentMatches[newIndex];
+        input.value = typeof item === 'string' ? item : item.name;
       }
     } else if (newIndex === -1) {
       activeIndex = -1;
@@ -1223,7 +1358,6 @@ function setupPartyAutocomplete(inputId, dropdownId) {
       e.preventDefault();
       e.stopPropagation();
       if (!isVisible) {
-        // Open list on ArrowDown if not open yet
         renderSuggestions(input.value, true);
         if (currentMatches.length > 0) {
           updateActiveItem(0);
@@ -1250,7 +1384,9 @@ function setupPartyAutocomplete(inputId, dropdownId) {
         if (activeIndex >= 0 && currentMatches[activeIndex]) {
           e.preventDefault();
           e.stopPropagation();
-          selectPartyForInput(inputId, dropdownId, currentMatches[activeIndex]);
+          const selected = currentMatches[activeIndex];
+          const name = typeof selected === 'string' ? selected : selected.name;
+          selectPartyForInput(inputId, dropdownId, name);
           return;
         }
       } else if (e.key === 'Escape') {
@@ -1281,8 +1417,9 @@ function setupPartyAutocomplete(inputId, dropdownId) {
 function selectPartyForInput(inputId, dropdownId, name) {
   const input = $(inputId);
   const dropdown = $(dropdownId);
+  const actualName = (typeof name === 'object' && name) ? name.name : name;
   if (input) {
-    input.value = name;
+    input.value = actualName;
     input.dispatchEvent(new Event('input', { bubbles: true }));
     input.dispatchEvent(new Event('change', { bubbles: true }));
   }

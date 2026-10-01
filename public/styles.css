@@ -3430,8 +3430,8 @@ body {
   background: var(--bg-primary, #ffffff);
   border: 1.5px solid var(--accent-primary, #2563eb);
   border-radius: var(--radius-sm, 6px);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
-  max-height: 220px;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.22);
+  max-height: 270px;
   overflow-y: auto;
   z-index: 99999;
   -webkit-overflow-scrolling: touch;
@@ -3440,15 +3440,16 @@ body {
 }
 
 .party-suggestion-item {
-  padding: 12px 16px;
-  font-size: 1.05rem;
+  padding: 10px 14px;
+  font-size: 0.98rem;
   font-weight: 650;
   color: var(--text-primary, #0f172a);
   cursor: pointer;
   border-bottom: 1px solid var(--border, #f1f5f9);
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 8px;
   transition: background 0.1s;
   touch-action: pan-y;
   user-select: none;
@@ -3464,6 +3465,16 @@ body {
 .party-suggestion-item.active {
   background: #eff6ff;
   color: #1d4ed8;
+}
+
+.party-khata-badge {
+  font-size: 0.72rem;
+  font-weight: 750;
+  color: #475569;
+  background: #e2e8f0;
+  padding: 2px 7px;
+  border-radius: 4px;
+  flex-shrink: 0;
 }
 
 #partyGazanaFullForm .form-grid {
