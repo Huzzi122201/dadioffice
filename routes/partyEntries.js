@@ -252,6 +252,41 @@ router.get('/parties', async (req, res) => {
       }
     });
 
+    if (q && q.trim()) {
+      const qLower = q.trim().toLowerCase();
+      const wordRegex = new RegExp(`(?:^|[\\s\\-_/.#(])${q.trim().replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}`, 'i');
+      aggregation.sort((a, b) => {
+        const aName = (a.partyName || '').toLowerCase();
+        const bName = (b.partyName || '').toLowerCase();
+
+        // 1. Exact match
+        const aExact = aName === qLower;
+        const bExact = bName === qLower;
+        if (aExact && !bExact) return -1;
+        if (!aExact && bExact) return 1;
+
+        // 2. Starts with query
+        const aStarts = aName.startsWith(qLower);
+        const bStarts = bName.startsWith(qLower);
+        if (aStarts && !bStarts) return -1;
+        if (!aStarts && bStarts) return 1;
+        if (aStarts && bStarts) {
+          return aName.length - bName.length || aName.localeCompare(bName);
+        }
+
+        // 3. Word starts with query
+        const aWord = wordRegex.test(aName);
+        const bWord = wordRegex.test(bName);
+        if (aWord && !bWord) return -1;
+        if (!aWord && bWord) return 1;
+        if (aWord && bWord) {
+          return aName.length - bName.length || aName.localeCompare(bName);
+        }
+
+        return aName.localeCompare(bName);
+      });
+    }
+
     res.json(aggregation);
   } catch (err) {
     console.error('Error fetching party summaries:', err);

@@ -1060,7 +1060,7 @@ function rankPartyMatches(partiesList, query) {
   const substringMatches = [];
 
   for (const party of partiesList) {
-    const name = typeof party === 'string' ? party : (party.name || '');
+    const name = typeof party === 'string' ? party : (party.name || party.partyName || '');
     if (!name) continue;
     const lower = name.toLowerCase();
 
@@ -1953,7 +1953,10 @@ async function loadCashbookDashboard() {
       if ($('btnNewParty')) $('btnNewParty').style.display = 'none';
 
       const url = `${CB_API}/parties${search ? '?search=' + encodeURIComponent(search) : ''}`;
-      const parties = await apiGet(url);
+      let parties = await apiGet(url);
+      if (search) {
+        parties = rankPartyMatches(parties, search);
+      }
 
       $('cbCount').textContent = `(${parties.length} Khatas)`;
 
@@ -1976,7 +1979,7 @@ async function loadCashbookDashboard() {
                 <div class="cb-party-card-left">
                   <div class="cb-party-info">
                     <div class="cb-party-name-row">
-                      <span class="cb-party-name">${escapeHtml(p.name)}</span>
+                      <span class="cb-party-name">${search ? highlightMatches(p.name, search) : escapeHtml(p.name)}</span>
                       <span class="cb-party-khata-no">Khata #${p.khataNo}</span>
                     </div>
                     <div class="cb-party-meta">
@@ -2174,7 +2177,10 @@ async function loadCashbookDashboard() {
       if ($('btnNewParty')) $('btnNewParty').style.display = '';
 
       const url = `${CB_API}/parties${search ? '?search=' + encodeURIComponent(search) : ''}`;
-      const parties = await apiGet(url);
+      let parties = await apiGet(url);
+      if (search) {
+        parties = rankPartyMatches(parties, search);
+      }
 
       const cashParties = parties.filter(p => p.balanceType === 'cash' || (p.nameNorm && p.nameNorm === 'cash in hand'));
       const nonCashParties = parties.filter(p => !cashParties.some(cp => cp._id === p._id));
@@ -2209,7 +2215,7 @@ async function loadCashbookDashboard() {
             <div class="cb-party-card-left">
               <div class="cb-party-info">
                 <div class="cb-party-name-row">
-                  <span class="cb-party-name">${escapeHtml(p.name)}</span>
+                  <span class="cb-party-name">${search ? highlightMatches(p.name, search) : escapeHtml(p.name)}</span>
                   <span class="cb-party-khata-no">#${p.khataNo}</span>
                   ${isCashP ? '<span class="badge" style="background: #e0f2fe; color: #0284c7; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 700;">💵 Cash Party</span>' : ''}
                 </div>
@@ -4948,6 +4954,9 @@ async function loadGazanaDashboard(search = '') {
     if (viewMode === 'parties') {
       // Parties view only needs the parties aggregation
       partiesRes = await apiGet(`${PARTY_ENTRIES_API}/parties${search ? '?q=' + encodeURIComponent(search) : ''}`).catch(() => []);
+      if (search) {
+        partiesRes = rankPartyMatches(partiesRes, search);
+      }
     } else {
       // Entries view only needs the entries list
       entriesRes = await apiGet(`${PARTY_ENTRIES_API}?${queryParams.toString()}`).catch(() => ({ entries: [], summary: {} }));
@@ -4999,7 +5008,7 @@ async function loadGazanaDashboard(search = '') {
                 <div class="gazana-party-card-left">
                   <div class="gazana-party-avatar">👤</div>
                   <div class="gazana-party-info">
-                    <div class="gazana-party-name">${escapeHtml(p.partyName)}</div>
+                    <div class="gazana-party-name">${search ? highlightMatches(p.partyName, search) : escapeHtml(p.partyName)}</div>
                     <div class="gazana-party-meta">
                       <span>${p.totalEntries} ${p.totalEntries === 1 ? 'order' : 'orders'}</span>
                       <span>·</span>

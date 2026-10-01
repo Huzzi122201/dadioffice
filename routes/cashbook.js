@@ -45,7 +45,14 @@ router.get('/parties', async (req, res) => {
     let query = {};
 
     if (search && search.trim()) {
-      query.nameNorm = new RegExp(search.trim().toLowerCase(), 'i');
+      const qTrim = search.trim();
+      const num = parseInt(qTrim.replace(/^#/, ''), 10);
+      const searchRegex = new RegExp(qTrim.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      const orConditions = [{ nameNorm: searchRegex }, { name: searchRegex }];
+      if (!isNaN(num) && num > 0) {
+        orConditions.push({ khataNo: num });
+      }
+      query.$or = orConditions;
     }
     if (type && type !== 'all') {
       query.type = type;
@@ -102,6 +109,52 @@ router.get('/parties', async (req, res) => {
         txnCount: s.txnCount,
       };
     });
+
+    if (search && search.trim()) {
+      const q = search.trim().toLowerCase();
+      const cleanNum = parseInt(search.trim().replace(/^#/, ''), 10);
+
+      enriched.sort((a, b) => {
+        const aName = (a.name || '').toLowerCase();
+        const bName = (b.name || '').toLowerCase();
+
+        // 1. Exact match on name (e.g. "N" -> #1)
+        const aExact = aName === q;
+        const bExact = bName === q;
+        if (aExact && !bExact) return -1;
+        if (!aExact && bExact) return 1;
+
+        // 2. Exact match on Khata number
+        if (!isNaN(cleanNum) && cleanNum > 0) {
+          const aKhataExact = a.khataNo === cleanNum;
+          const bKhataExact = b.khataNo === cleanNum;
+          if (aKhataExact && !bKhataExact) return -1;
+          if (!aKhataExact && bKhataExact) return 1;
+        }
+
+        // 3. Name starts with query
+        const aStarts = aName.startsWith(q);
+        const bStarts = bName.startsWith(q);
+        if (aStarts && !bStarts) return -1;
+        if (!aStarts && bStarts) return 1;
+        if (aStarts && bStarts) {
+          return aName.length - bName.length || aName.localeCompare(bName);
+        }
+
+        // 4. Word boundary match
+        const wordRegex = new RegExp(`(?:^|[\\s\\-_/.#(])${q.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}`, 'i');
+        const aWord = wordRegex.test(aName);
+        const bWord = wordRegex.test(bName);
+        if (aWord && !bWord) return -1;
+        if (!aWord && bWord) return 1;
+        if (aWord && bWord) {
+          return aName.length - bName.length || aName.localeCompare(bName);
+        }
+
+        // 5. Default by khataNo
+        return (a.khataNo || 0) - (b.khataNo || 0);
+      });
+    }
 
     res.json(enriched);
   } catch (err) {
