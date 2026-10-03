@@ -5082,7 +5082,11 @@ async function loadGazanaDashboard(search = '') {
                       ${e.loomWala ? `<div style="font-size: 0.82rem; color: #4338ca; margin-top: 2px;"><strong>لوم والا:</strong> ${escapeHtml(e.loomWala)}</div>` : ''}
                       ${e.gudaam ? `<div style="font-size: 0.82rem; color: #0d9488; margin-top: 2px;"><strong>گودام:</strong> ${escapeHtml(e.gudaam)}</div>` : ''}
                     </td>
-                    <td>${escapeHtml(e.variety || '—')}</td>
+                    <td>
+                      <div style="font-weight: 600;">${escapeHtml(e.variety || '—')}</div>
+                      ${e.contractNo ? `<div style="font-size: 0.75rem; color: #2563eb; margin-top: 2px; font-weight: 600;">#${escapeHtml(e.contractNo)}</div>` : ''}
+                      ${e.note ? `<div style="font-size: 0.78rem; color: #64748b; margin-top: 3px; word-break: break-word;"><span style="color: #94a3b8;">📝</span> ${escapeHtml(e.note)}</div>` : ''}
+                    </td>
                     <td style="text-align:right">${e.kachaGazana > 0 ? e.kachaGazana.toLocaleString() : '—'}</td>
                     <td style="text-align:right; font-weight: 700; color: #1e40af;">${(e.safiGazana || 0).toLocaleString()}</td>
                     <td style="text-align:right">
@@ -5494,10 +5498,11 @@ async function openPartyGazanaDetail(partyName, resetTab = true) {
                       <td>${formatDate(e.date)}</td>
                       <td>
                         <strong>${escapeHtml(e.variety || '—')}</strong>
+                        ${e.contractNo ? `<div style="font-size: 0.75rem; color: #2563eb; margin-top: 2px; font-weight: 600;">#${escapeHtml(e.contractNo)}</div>` : ''}
                         ${e.purchaser ? `<div style="font-size: 0.82rem; color: #0369a1; margin-top: 3px;"><strong>خریدار:</strong> ${escapeHtml(e.purchaser)}</div>` : ''}
                         ${e.loomWala ? `<div style="font-size: 0.82rem; color: #4338ca; margin-top: 2px;"><strong>لوم والا:</strong> ${escapeHtml(e.loomWala)}</div>` : ''}
                         ${e.gudaam ? `<div style="font-size: 0.82rem; color: #0d9488; margin-top: 2px;"><strong>گودام:</strong> ${escapeHtml(e.gudaam)}</div>` : ''}
-                        ${e.note ? `<div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">${escapeHtml(e.note)}</div>` : ''}
+                        ${e.note ? `<div style="font-size: 0.78rem; color: #64748b; margin-top: 3px; word-break: break-word;"><span style="color: #94a3b8;">📝</span> ${escapeHtml(e.note)}</div>` : ''}
                       </td>
                       <td style="text-align:right">${e.kachaGazana > 0 ? e.kachaGazana.toLocaleString() : '—'}</td>
                       <td style="text-align:right; font-weight: 700; color: #1e40af;">${(e.safiGazana || 0).toLocaleString()}</td>
@@ -6118,6 +6123,18 @@ async function openPaymentHistoryModal(entryId) {
             <span style="color: #0d9488; font-weight: 600;">${escapeHtml(entry.gudaam)}</span>
           </div>
         ` : ''}
+        ${entry.contractNo ? `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+            <span style="color: var(--text-muted);">Contract #:</span>
+            <span style="color: #2563eb; font-weight: 600;">#${escapeHtml(entry.contractNo)}</span>
+          </div>
+        ` : ''}
+        ${entry.note ? `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+            <span style="color: var(--text-muted);">Note / Description:</span>
+            <span style="color: #64748b; font-style: italic;">📝 ${escapeHtml(entry.note)}</span>
+          </div>
+        ` : ''}
         <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
           <span style="color: var(--text-muted);">GST Rate:</span>
           <span style="color: #0284c7; font-weight: 700;">
@@ -6339,9 +6356,11 @@ async function sharePartyGazanaPDF(partyName, action = 'share') {
         <td style="padding: 6px 4px; font-size: 9.5px;">${formatDate(e.date)}</td>
         <td style="padding: 6px 4px; font-size: 9.5px; font-weight: 700; color: #0f172a;">
           ${escapeHtml(e.variety || '—')}
+          ${e.contractNo ? `<span style="color: #2563eb; font-size: 8.5px; display: block; font-weight: 600;">#${escapeHtml(e.contractNo)}</span>` : ''}
           ${e.purchaser ? `<span style="color: #0369a1; font-size: 8px; display: block;">خریدار: ${escapeHtml(e.purchaser)}</span>` : ''}
           ${e.loomWala ? `<span style="color: #4338ca; font-size: 8px; display: block;">لوم والا: ${escapeHtml(e.loomWala)}</span>` : ''}
           ${e.gudaam ? `<span style="color: #0d9488; font-size: 8px; display: block;">گودام: ${escapeHtml(e.gudaam)}</span>` : ''}
+          ${e.note ? `<span style="color: #64748b; font-size: 8px; display: block; font-weight: normal; margin-top: 1px;">📝 ${escapeHtml(e.note)}</span>` : ''}
         </td>
         <td style="padding: 6px 4px; font-size: 9.5px; text-align: right;">${e.kachaGazana > 0 ? e.kachaGazana.toLocaleString() : '—'}</td>
         <td style="padding: 6px 4px; font-size: 9.5px; text-align: right; font-weight: 700; color: #1e40af;">${(e.safiGazana || 0).toLocaleString()}</td>
@@ -6677,6 +6696,9 @@ async function openPartyReceiptModal(partyName) {
           <td style="padding: 6px 6px; text-align: center; font-weight: 700; color: #64748b; font-size: 10.5px; width: 30px;">${idx + 1}</td>
           <td style="padding: 6px 10px; font-size: 11.5px; font-weight: 700; color: #0f172a;">
             ${escapeHtml(e.variety || '—')}
+            ${e.contractNo ? `<div style="font-size: 9px; color: #2563eb; font-weight: 600;">#${escapeHtml(e.contractNo)}</div>` : ''}
+            ${e.purchaser ? `<div style="font-size: 9px; color: #0369a1; font-weight: 600;">خریدار: ${escapeHtml(e.purchaser)}</div>` : ''}
+            ${e.note ? `<div style="font-size: 9px; color: #64748b; font-weight: normal; margin-top: 1px;">📝 ${escapeHtml(e.note)}</div>` : ''}
           </td>
           <td style="padding: 6px 10px; text-align: right; font-weight: 800; font-size: 12px; color: #b91c1c; white-space: nowrap;">
             ₹ ${truncatedRem.toLocaleString('en-IN')}
