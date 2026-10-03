@@ -65,6 +65,7 @@ let currentCostingSubtab = 'invoices'; // 'invoices' or 'gazana'
 let gazanaViewMode = 'all'; // 'all' (recent entries) or 'parties' (grouped by party)
 let gazanaStatusFilter = 'active'; // 'all', 'active', 'completed'
 let partyGazanaDetailFilter = 'active'; // 'active', 'completed', 'all'
+let currentGazanaAllPayments = [];
 let currentGazanaPartyName = '';
 let currentGazanaPartyData = null;
 let currentHistoryPartyName = '';
@@ -5266,8 +5267,11 @@ async function openPartyGazanaDetail(partyName, resetTab = true) {
       }
 
       let entryHistorySum = 0;
+      let totalAllHistorySum = 0;
       if (Array.isArray(e.paymentHistory)) {
         e.paymentHistory.forEach(p => {
+          totalAllHistorySum += Number(p.amount) || 0;
+
           // Skip [General] distributed records — we show those from storedGeneralPayments
           if (p.note && p.note.startsWith('[General]')) return;
 
@@ -5294,7 +5298,7 @@ async function openPartyGazanaDetail(partyName, resetTab = true) {
 
       // If entry is marked as completed but has an unrecorded balance (e.g. legacy completed entry)
       if (isCompleted && billableTotal > 0) {
-        const totalRecordedForEntry = (e.advance || 0) + entryHistorySum;
+        const totalRecordedForEntry = (e.advance || 0) + totalAllHistorySum;
         const unrecordedSettlement = Math.max(0, Math.round((billableTotal - totalRecordedForEntry) * 100) / 100);
         if (unrecordedSettlement > 0) {
           entrySpecificPayments.push({
@@ -5312,6 +5316,7 @@ async function openPartyGazanaDetail(partyName, resetTab = true) {
 
     const allPayments = [...storedGeneralPayments, ...entrySpecificPayments, ...advancePayments];
     allPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
+    currentGazanaAllPayments = allPayments;
 
     let displayedEntries = allEntries;
     if (partyGazanaDetailFilter === 'active') {
@@ -5409,10 +5414,11 @@ async function openPartyGazanaDetail(partyName, resetTab = true) {
                     <th>Type</th>
                     <th style="text-align:right">Amount (₹)</th>
                     <th>Note / Details</th>
+                    <th style="text-align:center; width: 110px;">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  ${allPayments.map(p => {
+                  ${allPayments.map((p, idx) => {
                     const typeLabel = p.type === 'general'
                       ? '<span style="background: rgba(37,99,235,0.1); color: #2563eb; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">💵 General</span>'
                       : p.type === 'advance'
@@ -5429,6 +5435,16 @@ async function openPartyGazanaDetail(partyName, resetTab = true) {
                           ${p.entryVariety && p.entryVariety !== '—' ? `<span style="font-weight: 700; color: var(--text-primary); margin-right: 4px;">[${escapeHtml(p.entryVariety)}]</span>` : ''}
                           ${escapeHtml(p.note) || '<span style="color: var(--text-muted);">—</span>'}
                         </td>
+                        <td style="text-align:center; white-space: nowrap;">
+                          <div style="display: flex; gap: 4px; justify-content: center; align-items: center;">
+                            <button class="btn btn-ghost" style="padding: 2px 7px; font-size: 0.72rem; color: #7c3aed; background: rgba(124,58,237,0.08); border-radius: 4px; font-weight: 700;" onclick="handleEditPaymentItem(${idx})" title="Edit payment">
+                              ✏️ Edit
+                            </button>
+                            <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.72rem; color: #dc2626; background: rgba(220,38,38,0.08); border-radius: 4px; font-weight: 700;" onclick="handleDeletePaymentItem(${idx})" title="Delete payment">
+                              🗑️
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     `;
                   }).join('')}
@@ -5437,6 +5453,7 @@ async function openPartyGazanaDetail(partyName, resetTab = true) {
                   <tr>
                     <td colspan="2" style="text-align: right; font-weight: 800;">Grand Total:</td>
                     <td style="text-align: right; font-weight: 800; color: #15803d; font-size: 0.9rem;">${fmtCurrency(grandTotal)}</td>
+                    <td></td>
                     <td></td>
                   </tr>
                 </tfoot>
@@ -7026,6 +7043,180 @@ async function apiPatch(url, data) {
   }
   return res.json();
 }
+
+// ── Generic API PUT helper ────────────────────────────────
+async function apiPut(url, data) {
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(err.error || err.message || 'Request failed');
+  }
+  return res.json();
+}
+
+// ── Payment Record Edit & Delete Controller ───────────────
+function handleEditPaymentItem(idx) {
+  const p = currentGazanaAllPayments[idx];
+  if (!p) return;
+
+  $('editPaymentRecordType').value = p.type;
+  $('editPaymentRecordId').value = p._id || p.paymentId || '';
+  $('editPaymentRecordEntryId').value = p.entryId || '';
+
+  // Format date for date input (YYYY-MM-DD)
+  const dt = new Date(p.date || Date.now());
+  const yyyy = dt.getFullYear();
+  const mm = String(dt.getMonth() + 1).padStart(2, '0');
+  const dd = String(dt.getDate()).padStart(2, '0');
+  $('editPaymentRecordDate').value = `${yyyy}-${mm}-${dd}`;
+
+  $('editPaymentRecordAmount').value = p.amount || 0;
+  $('editPaymentRecordNote').value = p.note || '';
+
+  let summaryText = '';
+  if (p.type === 'general') {
+    $('editPaymentRecordModalTitle').textContent = '✏️ Edit General Payment (عمومی رقم)';
+    summaryText = `General payment for <strong>${escapeHtml(currentGazanaPartyName)}</strong>. Updating amount will automatically recalculate balances across active orders.`;
+  } else if (p.type === 'advance') {
+    $('editPaymentRecordModalTitle').textContent = '✏️ Edit Booking Advance';
+    summaryText = `Booking advance for order <strong>${escapeHtml(p.entryVariety || 'Entry')}</strong>.`;
+  } else {
+    $('editPaymentRecordModalTitle').textContent = '✏️ Edit Payment Record (قسط / ادائیگی)';
+    summaryText = `Payment record for order <strong>${escapeHtml(p.entryVariety || 'Entry')}</strong>.`;
+  }
+
+  $('editPaymentRecordModalSummary').innerHTML = summaryText;
+  $('editPaymentRecordModal').classList.remove('hidden');
+}
+
+function closeEditPaymentRecordModal() {
+  if ($('editPaymentRecordModal')) {
+    $('editPaymentRecordModal').classList.add('hidden');
+  }
+}
+
+async function submitEditPaymentRecord() {
+  try {
+    const type = $('editPaymentRecordType').value;
+    const id = $('editPaymentRecordId').value;
+    const entryId = $('editPaymentRecordEntryId').value;
+    const date = $('editPaymentRecordDate').value;
+    const amount = parseFloat($('editPaymentRecordAmount').value);
+    const note = $('editPaymentRecordNote').value;
+
+    if (!amount || amount <= 0) {
+      toast('Please enter a valid payment amount', 'error');
+      return;
+    }
+
+    if (type === 'general') {
+      await apiPut(`${PARTY_ENTRIES_API}/general-payment/${id}`, { amount, date, note });
+      toast('General payment updated successfully!', 'success');
+    } else if (type === 'advance') {
+      await apiPatch(`${PARTY_ENTRIES_API}/${entryId}`, { advance: amount });
+      toast('Booking advance updated successfully!', 'success');
+    } else {
+      // installment or completed with paymentId
+      if (id && entryId) {
+        await apiPut(`${PARTY_ENTRIES_API}/${entryId}/payment/${id}`, { amount, date, note });
+        toast('Payment record updated successfully!', 'success');
+      } else if (entryId) {
+        // legacy entry
+        await apiPatch(`${PARTY_ENTRIES_API}/${entryId}`, { note });
+        toast('Payment note updated successfully!', 'success');
+      }
+    }
+
+    closeEditPaymentRecordModal();
+    if (currentGazanaPartyName) {
+      openPartyGazanaDetail(currentGazanaPartyName, false);
+    }
+  } catch (err) {
+    toast('Failed to update payment: ' + err.message, 'error');
+  }
+}
+
+async function handleDeletePaymentItem(idx) {
+  const p = currentGazanaAllPayments[idx];
+  if (!p) return;
+
+  if (p.type === 'general') {
+    showConfirm(
+      'Delete General Payment',
+      `Are you sure you want to delete this General Payment of ${fmtCurrency(p.amount)} (${p.note || 'no note'})? This will restore the balance on all affected entries.`,
+      async () => {
+        try {
+          await apiDelete(`${PARTY_ENTRIES_API}/general-payment/${p._id}`);
+          toast('General payment deleted successfully!', 'success');
+          if (currentGazanaPartyName) {
+            openPartyGazanaDetail(currentGazanaPartyName, false);
+          }
+        } catch (err) {
+          toast('Failed to delete general payment: ' + err.message, 'error');
+        }
+      }
+    );
+  } else if (p.type === 'advance') {
+    showConfirm(
+      'Remove Booking Advance',
+      `Are you sure you want to remove the booking advance of ${fmtCurrency(p.amount)} for ${p.entryVariety || 'this entry'}? This will increase the remaining balance by ${fmtCurrency(p.amount)}.`,
+      async () => {
+        try {
+          await apiPatch(`${PARTY_ENTRIES_API}/${p.entryId}`, { advance: 0 });
+          toast('Booking advance removed!', 'success');
+          if (currentGazanaPartyName) {
+            openPartyGazanaDetail(currentGazanaPartyName, false);
+          }
+        } catch (err) {
+          toast('Failed to remove advance: ' + err.message, 'error');
+        }
+      }
+    );
+  } else if (p.paymentId && p.entryId) {
+    showConfirm(
+      'Delete Payment Record',
+      `Are you sure you want to delete this payment of ${fmtCurrency(p.amount)}? This will restore the balance on order ${p.entryVariety || ''}.`,
+      async () => {
+        try {
+          await apiDelete(`${PARTY_ENTRIES_API}/${p.entryId}/payment/${p.paymentId}`);
+          toast('Payment record deleted!', 'success');
+          if (currentGazanaPartyName) {
+            openPartyGazanaDetail(currentGazanaPartyName, false);
+          }
+        } catch (err) {
+          toast('Failed to delete payment: ' + err.message, 'error');
+        }
+      }
+    );
+  } else if (p.entryId) {
+    // Legacy completed entry
+    showConfirm(
+      'Reopen Order',
+      `This order was marked as completed with full settlement. Do you want to reopen it as active?`,
+      async () => {
+        try {
+          await toggleEntryStatus(p.entryId, 'completed');
+          toast('Order reopened as active!', 'success');
+          if (currentGazanaPartyName) {
+            openPartyGazanaDetail(currentGazanaPartyName, false);
+          }
+        } catch (err) {
+          toast('Failed to update status: ' + err.message, 'error');
+        }
+      }
+    );
+  }
+}
+
+window.handleEditPaymentItem = handleEditPaymentItem;
+window.closeEditPaymentRecordModal = closeEditPaymentRecordModal;
+window.submitEditPaymentRecord = submitEditPaymentRecord;
+window.handleDeletePaymentItem = handleDeletePaymentItem;
+window.apiPut = apiPut;
 
 // ═══════════════════════════════════════════════════════════
 //  INIT

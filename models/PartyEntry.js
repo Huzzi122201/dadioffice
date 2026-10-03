@@ -5,7 +5,8 @@ const paymentHistorySchema = new mongoose.Schema(
     date: { type: Date, default: Date.now },
     amount: { type: Number, required: true },
     note: { type: String, trim: true, default: '' },
-    receivedBy: { type: String, trim: true, default: '' }
+    receivedBy: { type: String, trim: true, default: '' },
+    generalPaymentId: { type: mongoose.Schema.Types.ObjectId, ref: 'GeneralPayment', default: null }
   },
   { _id: true, timestamps: true }
 );

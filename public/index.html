@@ -13,7 +13,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>Textile Costing Sheet</title>
   <link rel="manifest" href="/manifest.json" />
-  <link rel="stylesheet" href="/styles.css?v=2.5.6" />
+  <link rel="stylesheet" href="/styles.css?v=2.5.7" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
@@ -1131,6 +1131,39 @@
     </div>
   </div>
 
+  <!-- ═══ Edit Payment Record Modal (General or Installment) ═══ -->
+  <div class="modal-overlay hidden" id="editPaymentRecordModal">
+    <div class="modal" style="max-width: 440px;">
+      <h3 class="modal-title" id="editPaymentRecordModalTitle" style="color: #7c3aed; font-size: 1.1rem;">
+        ✏️ Edit Payment Record (ادائیگی میں ترمیم)
+      </h3>
+      <div id="editPaymentRecordModalSummary" style="font-size: 0.8125rem; color: var(--text-secondary); margin: 6px 0 12px; padding: 8px; background: var(--bg-surface-secondary, rgba(255,255,255,0.03)); border-radius: 6px;">
+        <!-- populated by JS -->
+      </div>
+      <form id="editPaymentRecordForm" onsubmit="event.preventDefault(); submitEditPaymentRecord();">
+        <input type="hidden" id="editPaymentRecordType" />
+        <input type="hidden" id="editPaymentRecordId" />
+        <input type="hidden" id="editPaymentRecordEntryId" />
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label class="form-label" for="editPaymentRecordDate">Payment Date (تاریخ) *</label>
+          <input type="date" class="form-input" id="editPaymentRecordDate" required />
+        </div>
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label class="form-label" for="editPaymentRecordAmount" style="color: #7c3aed; font-weight: 700;">Payment Amount (وصول شدہ رقم ₹) *</label>
+          <input type="number" step="any" min="0.01" class="form-input" id="editPaymentRecordAmount" required placeholder="Enter amount..." style="font-size: 1.1rem; font-weight: 800; color: #7c3aed;" />
+        </div>
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+          <label class="form-label" for="editPaymentRecordNote">Note / Details (تفصیل)</label>
+          <input type="text" class="form-input" id="editPaymentRecordNote" placeholder="e.g. Received via Bank / Cash / Cheque" />
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeEditPaymentRecordModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" style="background: linear-gradient(135deg, #7c3aed, #6366f1); color: #fff; font-weight: 700;">💾 Update Payment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- ═══ Party Due Payment Receipt Modal ═══ -->
   <div class="modal-overlay hidden" id="partyReceiptModal">
     <div class="modal" style="max-width: 540px; width: 96%; max-height: 90vh; display: flex; flex-direction: column; padding: 1rem;">
@@ -1167,7 +1200,7 @@
   <!-- ═══ Toast Container ═══ -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <script src="/app.js?v=2.5.6"></script>
+  <script src="/app.js?v=2.5.7"></script>
 </body>
 </html>
 

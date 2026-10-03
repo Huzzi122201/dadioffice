@@ -656,6 +656,54 @@ router.delete('/:id/payment/:paymentId', async (req, res) => {
   }
 });
 
+// ── PUT /api/party-entries/:id/payment/:paymentId ── Edit installment payment
+router.put('/:id/payment/:paymentId', async (req, res) => {
+  try {
+    const { amount, date, note, receivedBy } = req.body;
+    const entry = await PartyEntry.findById(req.params.id);
+    if (!entry) return res.status(404).json({ error: 'Party entry not found' });
+
+    const payItem = (entry.paymentHistory || []).find(
+      p => p._id.toString() === req.params.paymentId
+    );
+    if (!payItem) return res.status(404).json({ error: 'Payment record not found' });
+
+    if (amount !== undefined) {
+      const payAmt = Number(amount);
+      if (!payAmt || payAmt <= 0) {
+        return res.status(400).json({ error: 'Valid payment amount is required.' });
+      }
+      payItem.amount = payAmt;
+    }
+    if (date) payItem.date = new Date(date);
+    if (note !== undefined) payItem.note = (note || '').trim();
+    if (receivedBy !== undefined) payItem.receivedBy = (receivedBy || '').trim();
+
+    const safi = Number(entry.safiGazana) || 0;
+    const rateWO = Number(entry.rate) || (entry.gstRate ? Math.round((Number(entry.gstRate) / 1.18) * 100) / 100 : 0);
+    const rateW = Number(entry.gstRate) || (rateWO ? Math.round(rateWO * 1.18 * 100) / 100 : 0);
+    entry.totalAmountWithoutGst = Math.round(safi * rateWO * 100) / 100;
+    entry.totalAmount = Math.round(safi * rateW * 100) / 100;
+    const billableTotal = entry.rateType === 'kachy' ? entry.totalAmountWithoutGst : entry.totalAmount;
+
+    const installmentsTotal = entry.paymentHistory.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const totalRec = Math.round(((entry.advance || 0) + installmentsTotal) * 100) / 100;
+    entry.remaining = Math.max(0, Math.round((billableTotal - totalRec) * 100) / 100);
+
+    if (entry.remaining <= 0) {
+      entry.status = 'completed';
+    } else {
+      entry.status = 'active';
+    }
+
+    const updated = await entry.save();
+    res.json(updated);
+  } catch (err) {
+    console.error('Error updating payment:', err);
+    res.status(500).json({ error: 'Failed to update payment', details: err.message });
+  }
+});
+
 // ── POST /api/party-entries/party/:partyName/general-payment ── General party-level payment (distributed across entries)
 router.post('/party/:partyName/general-payment', async (req, res) => {
   try {
@@ -713,12 +761,20 @@ router.post('/party/:partyName/general-payment', async (req, res) => {
         date: date ? new Date(date) : new Date(),
         amount: deduction,
         note: payNote,
-        receivedBy: ''
+        receivedBy: '',
+        generalPaymentId: savedPayment._id
       });
 
+      const safi = Number(entry.safiGazana) || 0;
+      const rateWO = Number(entry.rate) || (entry.gstRate ? Math.round((Number(entry.gstRate) / 1.18) * 100) / 100 : 0);
+      const rateW = Number(entry.gstRate) || (rateWO ? Math.round(rateWO * 1.18 * 100) / 100 : 0);
+      entry.totalAmountWithoutGst = Math.round(safi * rateWO * 100) / 100;
+      entry.totalAmount = Math.round(safi * rateW * 100) / 100;
+      const billableTotal = entry.rateType === 'kachy' ? entry.totalAmountWithoutGst : entry.totalAmount;
+
       const installmentsTotal = entry.paymentHistory.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-      const totalRec = Math.round((entry.advance + installmentsTotal) * 100) / 100;
-      entry.remaining = Math.max(0, Math.round((entry.totalAmount - totalRec) * 100) / 100);
+      const totalRec = Math.round(((entry.advance || 0) + installmentsTotal) * 100) / 100;
+      entry.remaining = Math.max(0, Math.round((billableTotal - totalRec) * 100) / 100);
 
       if (entry.remaining <= 0) {
         entry.status = 'completed';
@@ -743,6 +799,222 @@ router.post('/party/:partyName/general-payment', async (req, res) => {
   } catch (err) {
     console.error('Error recording general party payment:', err);
     res.status(500).json({ error: 'Failed to record general payment', details: err.message });
+  }
+});
+
+// ── DELETE /api/party-entries/general-payment/:id ── Delete a general payment & restore entry balances
+router.delete('/general-payment/:id', async (req, res) => {
+  try {
+    const gp = await GeneralPayment.findById(req.params.id);
+    if (!gp) return res.status(404).json({ error: 'General payment not found' });
+
+    let norm = gp.partyNameNorm || (gp.partyName || '').trim().toLowerCase();
+    const queryNorms = (norm === 'default party' || norm === 'daily entries')
+      ? ['default party', 'daily entries']
+      : [norm];
+
+    const entries = await PartyEntry.find({
+      partyNameNorm: { $in: queryNorms },
+      'paymentHistory.0': { $exists: true }
+    });
+
+    const gpIdStr = gp._id.toString();
+    const cleanNote = gp.note ? `[General] ${gp.note.trim()}` : '[General] Party Payment';
+    const gpTime = new Date(gp.createdAt || gp.date).getTime();
+
+    let totalRestored = 0;
+    for (const entry of entries) {
+      let modified = false;
+      const initialLen = entry.paymentHistory.length;
+
+      entry.paymentHistory = entry.paymentHistory.filter(p => {
+        // Direct link match
+        if (p.generalPaymentId && p.generalPaymentId.toString() === gpIdStr) {
+          totalRestored += p.amount || 0;
+          modified = true;
+          return false;
+        }
+        // Fallback match for legacy items without generalPaymentId
+        if (!p.generalPaymentId && p.note === cleanNote) {
+          const pTime = new Date(p.createdAt || p.date).getTime();
+          if (Math.abs(pTime - gpTime) < 60000) {
+            totalRestored += p.amount || 0;
+            modified = true;
+            return false;
+          }
+        }
+        return true;
+      });
+
+      if (modified || entry.paymentHistory.length !== initialLen) {
+        const safi = Number(entry.safiGazana) || 0;
+        const rateWO = Number(entry.rate) || (entry.gstRate ? Math.round((Number(entry.gstRate) / 1.18) * 100) / 100 : 0);
+        const rateW = Number(entry.gstRate) || (rateWO ? Math.round(rateWO * 1.18 * 100) / 100 : 0);
+        entry.totalAmountWithoutGst = Math.round(safi * rateWO * 100) / 100;
+        entry.totalAmount = Math.round(safi * rateW * 100) / 100;
+        const billableTotal = entry.rateType === 'kachy' ? entry.totalAmountWithoutGst : entry.totalAmount;
+
+        const installmentsTotal = entry.paymentHistory.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+        const totalRec = Math.round(((entry.advance || 0) + installmentsTotal) * 100) / 100;
+        entry.remaining = Math.max(0, Math.round((billableTotal - totalRec) * 100) / 100);
+
+        if (entry.remaining > 0 && entry.status === 'completed') {
+          entry.status = 'active';
+        }
+
+        await entry.save();
+      }
+    }
+
+    await GeneralPayment.findByIdAndDelete(req.params.id);
+
+    res.json({
+      success: true,
+      message: `Deleted general payment of ₹${gp.amount.toLocaleString()} and restored ₹${totalRestored.toLocaleString()} balance.`,
+      removedAmount: gp.amount
+    });
+  } catch (err) {
+    console.error('Error deleting general payment:', err);
+    res.status(500).json({ error: 'Failed to delete general payment', details: err.message });
+  }
+});
+
+// ── PUT /api/party-entries/general-payment/:id ── Edit a general payment (date, note, amount)
+router.put('/general-payment/:id', async (req, res) => {
+  try {
+    const { amount, date, note } = req.body;
+    const gp = await GeneralPayment.findById(req.params.id);
+    if (!gp) return res.status(404).json({ error: 'General payment not found' });
+
+    const newAmt = amount !== undefined ? Number(amount) : gp.amount;
+    const newDate = date ? new Date(date) : gp.date;
+    const newNote = note !== undefined ? note.trim() : gp.note;
+
+    if (!newAmt || newAmt <= 0) {
+      return res.status(400).json({ error: 'Valid payment amount is required.' });
+    }
+
+    const gpIdStr = gp._id.toString();
+    const oldCleanNote = gp.note ? `[General] ${gp.note.trim()}` : '[General] Party Payment';
+    const newCleanNote = newNote ? `[General] ${newNote.trim()}` : '[General] Party Payment';
+    const gpTime = new Date(gp.createdAt || gp.date).getTime();
+
+    let norm = gp.partyNameNorm || (gp.partyName || '').trim().toLowerCase();
+    const queryNorms = (norm === 'default party' || norm === 'daily entries')
+      ? ['default party', 'daily entries']
+      : [norm];
+
+    // If amount is unchanged, simply update date and note in GeneralPayment and linked history items
+    if (Math.abs(newAmt - gp.amount) < 0.01) {
+      gp.date = newDate;
+      gp.note = newNote;
+      await gp.save();
+
+      const entries = await PartyEntry.find({
+        partyNameNorm: { $in: queryNorms },
+        'paymentHistory.0': { $exists: true }
+      });
+
+      for (const entry of entries) {
+        let modified = false;
+        entry.paymentHistory.forEach(p => {
+          if ((p.generalPaymentId && p.generalPaymentId.toString() === gpIdStr) ||
+              (!p.generalPaymentId && p.note === oldCleanNote && Math.abs(new Date(p.createdAt || p.date).getTime() - gpTime) < 60000)) {
+            p.date = newDate;
+            p.note = newCleanNote;
+            p.generalPaymentId = gp._id;
+            modified = true;
+          }
+        });
+        if (modified) await entry.save();
+      }
+
+      return res.json({ success: true, generalPayment: gp });
+    }
+
+    // If amount is changed:
+    // 1. Remove previous distribution from paymentHistory
+    const entries = await PartyEntry.find({
+      partyNameNorm: { $in: queryNorms }
+    });
+
+    for (const entry of entries) {
+      let modified = false;
+      const initialLen = (entry.paymentHistory || []).length;
+      entry.paymentHistory = (entry.paymentHistory || []).filter(p => {
+        if (p.generalPaymentId && p.generalPaymentId.toString() === gpIdStr) {
+          modified = true;
+          return false;
+        }
+        if (!p.generalPaymentId && p.note === oldCleanNote && Math.abs(new Date(p.createdAt || p.date).getTime() - gpTime) < 60000) {
+          modified = true;
+          return false;
+        }
+        return true;
+      });
+
+      if (modified || entry.paymentHistory.length !== initialLen) {
+        const safi = Number(entry.safiGazana) || 0;
+        const rateWO = Number(entry.rate) || (entry.gstRate ? Math.round((Number(entry.gstRate) / 1.18) * 100) / 100 : 0);
+        const rateW = Number(entry.gstRate) || (rateWO ? Math.round(rateWO * 1.18 * 100) / 100 : 0);
+        entry.totalAmountWithoutGst = Math.round(safi * rateWO * 100) / 100;
+        entry.totalAmount = Math.round(safi * rateW * 100) / 100;
+        const billableTotal = entry.rateType === 'kachy' ? entry.totalAmountWithoutGst : entry.totalAmount;
+        const installmentsTotal = entry.paymentHistory.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+        const totalRec = Math.round(((entry.advance || 0) + installmentsTotal) * 100) / 100;
+        entry.remaining = Math.max(0, Math.round((billableTotal - totalRec) * 100) / 100);
+        if (entry.remaining > 0 && entry.status === 'completed') {
+          entry.status = 'active';
+        }
+        await entry.save();
+      }
+    }
+
+    // 2. Redistribute new amount across active entries with remaining > 0 (oldest first)
+    const activeEntries = await PartyEntry.find({
+      partyNameNorm: { $in: queryNorms },
+      status: 'active',
+      remaining: { $gt: 0 }
+    }).sort({ date: 1, createdAt: 1 });
+
+    let remainingPayment = newAmt;
+    for (const entry of activeEntries) {
+      if (remainingPayment <= 0) break;
+      const deduction = Math.min(remainingPayment, entry.remaining);
+      remainingPayment = Math.round((remainingPayment - deduction) * 100) / 100;
+
+      entry.paymentHistory.push({
+        date: newDate,
+        amount: deduction,
+        note: newCleanNote,
+        receivedBy: '',
+        generalPaymentId: gp._id
+      });
+
+      const safi = Number(entry.safiGazana) || 0;
+      const rateWO = Number(entry.rate) || (entry.gstRate ? Math.round((Number(entry.gstRate) / 1.18) * 100) / 100 : 0);
+      const rateW = Number(entry.gstRate) || (rateWO ? Math.round(rateWO * 1.18 * 100) / 100 : 0);
+      entry.totalAmountWithoutGst = Math.round(safi * rateWO * 100) / 100;
+      entry.totalAmount = Math.round(safi * rateW * 100) / 100;
+      const billableTotal = entry.rateType === 'kachy' ? entry.totalAmountWithoutGst : entry.totalAmount;
+      const installmentsTotal = entry.paymentHistory.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+      const totalRec = Math.round(((entry.advance || 0) + installmentsTotal) * 100) / 100;
+      entry.remaining = Math.max(0, Math.round((billableTotal - totalRec) * 100) / 100);
+      if (entry.remaining <= 0) {
+        entry.status = 'completed';
+      }
+      await entry.save();
+    }
+
+    gp.amount = newAmt;
+    gp.date = newDate;
+    gp.note = newNote;
+    await gp.save();
+
+    res.json({ success: true, generalPayment: gp });
+  } catch (err) {
+    console.error('Error updating general payment:', err);
+    res.status(500).json({ error: 'Failed to update general payment', details: err.message });
   }
 });
 
