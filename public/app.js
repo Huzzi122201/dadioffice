@@ -3447,13 +3447,12 @@ async function generateContractPDF(c, action = 'download') {
         <div style="border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end;">
           <div>
             <h1 style="margin: 0; font-size: 24px; font-weight: 900; color: #0f172a; letter-spacing: 1px; text-transform: uppercase;">
-              📝 FABRIC CONTRACT / معاہدہ نامہ
+              📝 FABRIC CONTRACT
             </h1>
             <p style="margin: 4px 0 0 0; font-size: 12px; color: #64748b; font-weight: 600;">Textile Costing & Cashbook System</p>
           </div>
           <div style="text-align: right;">
-            <div style="font-size: 16px; font-weight: 900; color: #2563eb;">CONTRACT #${c.contractNo}</div>
-            <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Date: <strong>${dateStr}</strong></div>
+            <div style="font-size: 12px; color: #64748b;">Date: <strong>${dateStr}</strong></div>
           </div>
         </div>
 
