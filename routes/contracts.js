@@ -68,6 +68,7 @@ router.post('/', async (req, res) => {
       weftRate,
       conversion,
       rate,
+      rateLabel,
       rateType,
       gudamMuqam,
       note,
@@ -82,8 +83,25 @@ router.post('/', async (req, res) => {
     const lastContract = await Contract.findOne().sort({ contractNo: -1 }).lean();
     const nextNo = lastContract && lastContract.contractNo ? lastContract.contractNo + 1 : 1;
 
-    // Optional calculation if rate not provided or auto-calc requested
+    // Parse rateLabel (e.g. "291+" means 291 × 1.18 GST)
     let finalRate = Number(rate) || 0;
+    let finalRateLabel = (rateLabel || '').trim();
+
+    // If rateLabel is provided and has "+" suffix, calculate rate from it
+    if (finalRateLabel && finalRateLabel.endsWith('+')) {
+      const baseVal = parseFloat(finalRateLabel.replace(/\+$/, ''));
+      if (!isNaN(baseVal) && baseVal > 0) {
+        finalRate = Math.round(baseVal * 1.18 * 100) / 100;
+      }
+    } else if (finalRateLabel && !isNaN(parseFloat(finalRateLabel))) {
+      // Plain number label without "+", use as-is
+      const baseVal = parseFloat(finalRateLabel);
+      if (baseVal > 0 && finalRate === 0) {
+        finalRate = baseVal;
+      }
+    }
+
+    // Optional calculation if rate not provided or auto-calc requested
     if ((!finalRate || rateType === 'calculated') && warpCount > 0 && weftCount > 0) {
       const calcResult = calculate({
         warpCount: Number(warpCount),
@@ -127,6 +145,7 @@ router.post('/', async (req, res) => {
       weftRate: Number(weftRate) || 0,
       conversion: Number(conversion) || 0,
       rate: finalRate,
+      rateLabel: finalRateLabel,
       rateType: rateType || 'manual',
       gudamMuqam: (gudamMuqam || '').trim(),
       note: (note || '').trim(),
@@ -163,6 +182,7 @@ router.put('/:id', async (req, res) => {
       weftRate,
       conversion,
       rate,
+      rateLabel,
       rateType,
       gudamMuqam,
       note,
@@ -197,7 +217,20 @@ router.put('/:id', async (req, res) => {
     if (warpRate !== undefined) contract.warpRate = Number(warpRate) || 0;
     if (weftRate !== undefined) contract.weftRate = Number(weftRate) || 0;
     if (conversion !== undefined) contract.conversion = Number(conversion) || 0;
-    if (rate !== undefined) contract.rate = Number(rate) || 0;
+    if (rateLabel !== undefined) {
+      contract.rateLabel = (rateLabel || '').trim();
+      // Re-calculate rate from label if it has "+" suffix
+      const lbl = contract.rateLabel;
+      if (lbl && lbl.endsWith('+')) {
+        const baseVal = parseFloat(lbl.replace(/\+$/, ''));
+        if (!isNaN(baseVal) && baseVal > 0) {
+          contract.rate = Math.round(baseVal * 1.18 * 100) / 100;
+        }
+      }
+    }
+    if (rate !== undefined && !(rateLabel && rateLabel.trim().endsWith('+'))) {
+      contract.rate = Number(rate) || 0;
+    }
     if (rateType !== undefined) contract.rateType = rateType;
     if (gudamMuqam !== undefined) contract.gudamMuqam = gudamMuqam.trim();
     if (note !== undefined) contract.note = note.trim();

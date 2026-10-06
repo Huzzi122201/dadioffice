@@ -3015,6 +3015,7 @@ async function loadContractsDashboard(search = '') {
               </div>
               <div class="cb-party-card-right" style="flex: 1; text-align: right; display: flex; flex-direction: column; justify-content: center; align-items: flex-end;">
                 <div>
+                  ${c.rateLabel ? `<div style="font-size: 0.75rem; font-weight: 800; color: #f59e0b; margin-bottom: 2px;">💰 ${escapeHtml(c.rateLabel)}${c.rateLabel.endsWith('+') ? ' (GST)' : ''}</div>` : ''}
                   <div style="font-size: 1.15rem; font-weight: 800; color: #10b981;">₹ ${c.rate ? c.rate.toFixed(2) : '0.00'} <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);">/ ${escapeHtml(c.quantityUnit || 'Meter')}</span></div>
                 </div>
                 <div style="margin-top: 6px; display: flex; gap: 6px;" onclick="event.stopPropagation();">
@@ -3083,8 +3084,13 @@ async function openEditContractModal(id) {
     $('contractWarpRate').value = c.warpRate || '';
     $('contractWeftRate').value = c.weftRate || '';
     $('contractConversion').value = c.conversion || '';
+    $('contractRateLabel').value = c.rateLabel || '';
     $('contractRate').value = c.rate || '';
     $('contractNote').value = c.note || '';
+    // Show hint if rateLabel exists
+    if (c.rateLabel && c.rateLabel.trim()) {
+      parseAndApplyRateLabel(c.rateLabel.trim(), false);
+    }
 
     populatePartyDatalist();
     $('contractModal').classList.remove('hidden');
@@ -3153,6 +3159,53 @@ function autoCalculateContractRate() {
   }
 }
 
+// ── Quick Rate Label Parser (e.g. "291+" = 291 × 1.18 GST) ──
+function parseAndApplyRateLabel(label, applyToRate = true) {
+  const hint = $('rateLabelHint');
+  if (!label || !label.trim()) {
+    if (hint) hint.style.display = 'none';
+    return;
+  }
+  label = label.trim();
+
+  if (label.endsWith('+')) {
+    const base = parseFloat(label.replace(/\+$/, ''));
+    if (!isNaN(base) && base > 0) {
+      const gstRate = Math.round(base * 1.18 * 100) / 100;
+      if (applyToRate && $('contractRate')) {
+        $('contractRate').value = gstRate.toFixed(2);
+      }
+      if (hint) {
+        hint.style.display = 'block';
+        hint.innerHTML = `✅ <strong>${base}</strong> × 1.18 (GST) = <strong>₹ ${gstRate.toFixed(2)}</strong> final rate`;
+      }
+    }
+  } else {
+    const base = parseFloat(label);
+    if (!isNaN(base) && base > 0) {
+      if (applyToRate && $('contractRate')) {
+        $('contractRate').value = base;
+      }
+      if (hint) {
+        hint.style.display = 'block';
+        hint.innerHTML = `✅ Direct rate: <strong>₹ ${base}</strong> (no GST)`;
+      }
+    } else {
+      if (hint) hint.style.display = 'none';
+    }
+  }
+}
+
+// Bind rateLabel live input
+if ($('contractRateLabel')) {
+  $('contractRateLabel').addEventListener('input', function () {
+    parseAndApplyRateLabel(this.value, true);
+  });
+  $('contractRateLabel').addEventListener('change', function () {
+    parseAndApplyRateLabel(this.value, true);
+  });
+}
+
 // Bind live auto-calculation listeners
 [
   'contractWarpCount',
@@ -3207,6 +3260,7 @@ async function saveContractForm() {
     const warpRate = parseFloat($('contractWarpRate').value) || 0;
     const weftRate = parseFloat($('contractWeftRate').value) || 0;
     const conversion = parseFloat($('contractConversion').value) || 0;
+    const rateLabel = ($('contractRateLabel')?.value || '').trim();
     const rate = parseFloat($('contractRate').value) || 0;
     const gudamMuqam = $('contractGudam').value.trim();
     const note = $('contractNote').value.trim();
@@ -3239,6 +3293,7 @@ async function saveContractForm() {
       warpRate,
       weftRate,
       conversion,
+      rateLabel,
       rate,
       gudamMuqam,
       status: 'active',
@@ -3311,7 +3366,7 @@ async function openContractDetailModal(id) {
           <tr style="border-bottom: 1px solid var(--border-color, #334155);"><td style="padding: 6px 4px; color: var(--text-secondary); width: 40%;">Quality / Description</td><td style="padding: 6px 4px; font-weight: 700; text-align: right;">${escapeHtml(c.quality || '—')}</td></tr>
           <tr style="border-bottom: 1px solid var(--border-color, #334155);"><td style="padding: 6px 4px; color: var(--text-secondary);">Construction (Specs)</td><td style="padding: 6px 4px; font-weight: 700; text-align: right;">${escapeHtml(specsText)}</td></tr>
           <tr style="border-bottom: 1px solid var(--border-color, #334155);"><td style="padding: 6px 4px; color: var(--text-secondary);">Quantity</td><td style="padding: 6px 4px; font-weight: 800; text-align: right; color: #60a5fa;">${(c.quantity || 0).toLocaleString()} ${escapeHtml(c.quantityUnit || 'Meters')}</td></tr>
-          <tr style="border-bottom: 1px solid var(--border-color, #334155);"><td style="padding: 6px 4px; color: var(--text-secondary);">Fabric Rate</td><td style="padding: 6px 4px; font-weight: 800; text-align: right; color: #10b981;">₹ ${c.rate ? c.rate.toFixed(2) : '0.00'} / ${escapeHtml(c.quantityUnit || 'Meter')}</td></tr>
+          <tr style="border-bottom: 1px solid var(--border-color, #334155);"><td style="padding: 6px 4px; color: var(--text-secondary);">Fabric Rate</td><td style="padding: 6px 4px; font-weight: 800; text-align: right; color: #10b981;">₹ ${c.rate ? c.rate.toFixed(2) : '0.00'} / ${escapeHtml(c.quantityUnit || 'Meter')}${c.rateLabel ? ` <span style="font-size: 0.8rem; font-weight: 700; color: #f59e0b; margin-left: 6px;">(${escapeHtml(c.rateLabel)}${c.rateLabel.endsWith('+') ? ' GST' : ''})</span>` : ''}</td></tr>
           ${c.gudamMuqam ? `<tr style="border-bottom: 1px solid var(--border-color, #334155);"><td style="padding: 6px 4px; color: var(--text-secondary);">Gudam / Muqam (گودام / مقام)</td><td style="padding: 6px 4px; font-weight: 700; text-align: right;">${escapeHtml(c.gudamMuqam)}</td></tr>` : ''}
         </table>
 
@@ -3458,6 +3513,7 @@ async function generateContractPDF(c, action = 'download') {
               </td>
               <td style="padding: 12px 10px; text-align: right; font-size: 14px; font-weight: 900; color: #16a34a;">
                 ₹ ${c.rate ? c.rate.toFixed(2) : '0.00'}
+                ${c.rateLabel ? `<div style="font-size: 10px; font-weight: 700; color: #b45309; margin-top: 2px;">(${escapeHtml(c.rateLabel)}${c.rateLabel.endsWith('+') ? ' GST' : ''})</div>` : ''}
               </td>
             </tr>
           </tbody>
@@ -3469,24 +3525,6 @@ async function generateContractPDF(c, action = 'download') {
           <div>${escapeHtml(c.note || 'Delivery subject to standard mill quality inspection and agreed payment terms.')}</div>
         </div>
 
-        <!-- Signatures Row -->
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: center; margin-top: 30px; font-size: 12px;">
-          <div>
-            <div style="border-bottom: 1.5px dashed #64748b; height: 35px; margin-bottom: 6px;"></div>
-            <strong style="color: #0f172a;">Purchaser Signature</strong><br>
-            <span style="font-size: 10px; color: #64748b;">(دستخط خریدار)</span>
-          </div>
-          <div>
-            <div style="border-bottom: 1.5px dashed #64748b; height: 35px; margin-bottom: 6px;"></div>
-            <strong style="color: #0f172a;">Broker Signature</strong><br>
-            <span style="font-size: 10px; color: #64748b;">(دستخط بروکر)</span>
-          </div>
-          <div>
-            <div style="border-bottom: 1.5px dashed #64748b; height: 35px; margin-bottom: 6px;"></div>
-            <strong style="color: #0f172a;">Seller Signature</strong><br>
-            <span style="font-size: 10px; color: #64748b;">(دستخط بیچنے والا)</span>
-          </div>
-        </div>
 
         <!-- Footer -->
         <div style="margin-top: 24px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 8px; font-size: 10px; color: #94a3b8;">
@@ -4217,7 +4255,7 @@ async function fetchContractRateForSeller(partyName, overwrite = false) {
         if ($('entryContractBadge')) $('entryContractBadge').style.display = 'inline-block';
         if ($('entryContractHint')) {
           $('entryContractHint').style.display = 'block';
-          $('entryContractHint').textContent = `Contract #${match.contractNo}: Rate ₹ ${match.rate.toFixed(2)}${match.quality ? ' (' + match.quality + ')' : ''}`;
+          $('entryContractHint').textContent = `Contract #${match.contractNo}: Rate ₹ ${match.rate.toFixed(2)}${match.rateLabel ? ' (' + match.rateLabel + (match.rateLabel.endsWith('+') ? ' GST' : '') + ')' : ''}${match.quality ? ' — ' + match.quality : ''}`;
         }
         return;
       }

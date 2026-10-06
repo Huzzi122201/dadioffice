@@ -21,6 +21,7 @@ const contractSchema = new mongoose.Schema(
     weftRate: { type: Number, default: 0 },
     conversion: { type: Number, default: 0 },
     rate: { type: Number, required: true, default: 0 },
+    rateLabel: { type: String, trim: true, default: '' },
     rateType: { type: String, enum: ['manual', 'calculated'], default: 'manual' },
     gudamMuqam: { type: String, trim: true, default: '' },
     note: { type: String, trim: true, default: '' },
