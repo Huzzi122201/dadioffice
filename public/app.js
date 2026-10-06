@@ -3450,7 +3450,7 @@ async function generateContractPDF(c, action = 'download') {
               NA TRADERS
             </div>
             <h1 style="margin: 4px 0 0 0; font-size: 16px; font-weight: 800; color: #0f172a; letter-spacing: 0.5px; text-transform: uppercase;">
-              📝 FABRIC CONTRACT
+              FABRIC CONTRACT
             </h1>
             <p style="margin: 2px 0 0 0; font-size: 11px; color: #64748b; font-weight: 600;">Textile Costing & Cashbook System</p>
           </div>
@@ -3463,13 +3463,13 @@ async function generateContractPDF(c, action = 'download') {
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
           <div style="border: 1.5px solid #2563eb; border-radius: 6px; padding: 12px; background: #f8fafc;">
             <div style="font-size: 11px; font-weight: 800; color: #2563eb; margin-bottom: 4px;">
-              <span style="text-transform: uppercase;">🛒 PURCHASER</span> / <span dir="rtl" style="direction: rtl; unicode-bidi: embed; font-family: 'Noto Sans Arabic', 'Segoe UI', Tahoma, sans-serif;">خریدار</span>
+              <span style="text-transform: uppercase;">PURCHASER</span> / <span dir="rtl" style="direction: rtl; unicode-bidi: embed; font-family: 'Noto Sans Arabic', 'Segoe UI', Tahoma, sans-serif;">خریدار</span>
             </div>
             <div style="font-size: 16px; font-weight: 800; color: #0f172a;">${escapeHtml(c.purchaserName)}</div>
           </div>
           <div style="border: 1.5px solid #16a34a; border-radius: 6px; padding: 12px; background: #f8fafc;">
             <div style="font-size: 11px; font-weight: 800; color: #16a34a; margin-bottom: 4px;">
-              <span style="text-transform: uppercase;">🏭 SELLER</span> / <span dir="rtl" style="direction: rtl; unicode-bidi: embed; font-family: 'Noto Sans Arabic', 'Segoe UI', Tahoma, sans-serif;">بیچنے والا</span>
+              <span style="text-transform: uppercase;">SELLER</span> / <span dir="rtl" style="direction: rtl; unicode-bidi: embed; font-family: 'Noto Sans Arabic', 'Segoe UI', Tahoma, sans-serif;">بیچنے والا</span>
             </div>
             <div style="font-size: 16px; font-weight: 800; color: #0f172a;">${escapeHtml(c.sellerName)}</div>
           </div>
@@ -3479,7 +3479,7 @@ async function generateContractPDF(c, action = 'download') {
         <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; display: grid; grid-template-columns: ${c.broker && c.broker.trim() ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)'}; gap: 10px; font-size: 12px;">
           <div>
             <span style="color: #64748b; font-weight: 600;">Delivery Mode:</span><br>
-            <strong style="color: ${isHazar ? '#2563eb' : '#d97706'}; font-size: 13px;">${isHazar ? '⚡ <span dir="rtl" style="direction: rtl; unicode-bidi: embed;">حاضر</span>' : '📅 <span dir="rtl" style="direction: rtl; unicode-bidi: embed;">آمدن</span>'}</strong>
+            <strong style="color: ${isHazar ? '#2563eb' : '#d97706'}; font-size: 14px;">${isHazar ? '<span dir="rtl" style="direction: rtl; unicode-bidi: embed;">حاضر</span>' : '<span dir="rtl" style="direction: rtl; unicode-bidi: embed;">آمدن</span>'}</strong>
           </div>
           <div>
             <span style="color: #64748b; font-weight: 600;">Delivery Date:</span><br>
@@ -3507,7 +3507,12 @@ async function generateContractPDF(c, action = 'download') {
             <tr>
               <td style="padding: 12px 10px; font-size: 13px; font-weight: 800; color: #0f172a; border-right: 1px solid #cbd5e1;">
                 ${escapeHtml(c.quality || 'Standard Cotton Fabric')}
-                ${c.gudamMuqam ? `<div style="font-size: 11px; font-weight: 600; color: #64748b; margin-top: 4px;">📍 <span dir="rtl" style="direction: rtl; unicode-bidi: embed; font-family: 'Noto Sans Arabic', 'Segoe UI', Tahoma, sans-serif; font-weight: 700;">گودام</span>: ${escapeHtml(c.gudamMuqam)}</div>` : ''}
+                ${c.gudamMuqam ? `
+                  <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-top: 8px; padding-top: 6px; border-top: 1px dashed #cbd5e1; display: flex; align-items: center; gap: 6px;">
+                    <span dir="rtl" style="direction: rtl; unicode-bidi: embed; font-family: 'Noto Sans Arabic', 'Segoe UI', Tahoma, sans-serif; font-size: 15px; font-weight: 900; color: #1e40af;">گودام:</span>
+                    <span style="font-size: 13.5px; font-weight: 800; color: #0f172a;">${escapeHtml(c.gudamMuqam)}</span>
+                  </div>
+                ` : ''}
               </td>
               <td style="padding: 12px 10px; text-align: center; font-size: 12px; font-weight: 700; border-right: 1px solid #cbd5e1;">
                 ${escapeHtml(specsText)}
