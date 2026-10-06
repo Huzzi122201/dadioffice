@@ -3463,32 +3463,34 @@ async function generateContractPDF(c, action = 'download') {
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
           <div style="border: 1.5px solid #2563eb; border-radius: 6px; padding: 12px; background: #f8fafc;">
             <div style="font-size: 11px; font-weight: 800; color: #2563eb; margin-bottom: 4px;">
-              <span style="text-transform: uppercase;">🛒 PURCHASER</span> / <span dir="rtl" style="direction: rtl; unicode-bidi: embed; font-family: 'Noto Sans Arabic', 'Segoe UI', Tahoma, sans-serif;">خریدار (بنام)</span>
+              <span style="text-transform: uppercase;">🛒 PURCHASER</span> / <span dir="rtl" style="direction: rtl; unicode-bidi: embed; font-family: 'Noto Sans Arabic', 'Segoe UI', Tahoma, sans-serif;">خریدار</span>
             </div>
             <div style="font-size: 16px; font-weight: 800; color: #0f172a;">${escapeHtml(c.purchaserName)}</div>
           </div>
           <div style="border: 1.5px solid #16a34a; border-radius: 6px; padding: 12px; background: #f8fafc;">
             <div style="font-size: 11px; font-weight: 800; color: #16a34a; margin-bottom: 4px;">
-              <span style="text-transform: uppercase;">🏭 SELLER</span> / <span dir="rtl" style="direction: rtl; unicode-bidi: embed; font-family: 'Noto Sans Arabic', 'Segoe UI', Tahoma, sans-serif;">بیچنے والا (جمع)</span>
+              <span style="text-transform: uppercase;">🏭 SELLER</span> / <span dir="rtl" style="direction: rtl; unicode-bidi: embed; font-family: 'Noto Sans Arabic', 'Segoe UI', Tahoma, sans-serif;">بیچنے والا</span>
             </div>
             <div style="font-size: 16px; font-weight: 800; color: #0f172a;">${escapeHtml(c.sellerName)}</div>
           </div>
         </div>
 
         <!-- Delivery & Broker Meta -->
-        <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 12px;">
+        <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; display: grid; grid-template-columns: ${c.broker && c.broker.trim() ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)'}; gap: 10px; font-size: 12px;">
           <div>
             <span style="color: #64748b; font-weight: 600;">Delivery Mode:</span><br>
-            <strong style="color: ${isHazar ? '#2563eb' : '#d97706'}; font-size: 13px;">${isHazar ? '⚡ Hazar (<span dir="rtl" style="direction: rtl; unicode-bidi: embed;">حاضر</span> - Ready)' : '📅 Amdan (<span dir="rtl" style="direction: rtl; unicode-bidi: embed;">آمدن</span> - Delivery)'}</strong>
+            <strong style="color: ${isHazar ? '#2563eb' : '#d97706'}; font-size: 13px;">${isHazar ? '⚡ <span dir="rtl" style="direction: rtl; unicode-bidi: embed;">حاضر</span>' : '📅 <span dir="rtl" style="direction: rtl; unicode-bidi: embed;">آمدن</span>'}</strong>
           </div>
           <div>
             <span style="color: #64748b; font-weight: 600;">Delivery Date:</span><br>
             <strong style="font-size: 13px;">${deliveryDateStr}</strong>
           </div>
+          ${c.broker && c.broker.trim() ? `
           <div>
             <span style="color: #64748b; font-weight: 600;">Broker / <span dir="rtl" style="direction: rtl; unicode-bidi: embed;">ایجنٹ</span>:</span><br>
-            <strong style="font-size: 13px;">${escapeHtml(c.broker || 'Direct')}</strong>
+            <strong style="font-size: 13px;">${escapeHtml(c.broker.trim())}</strong>
           </div>
+          ` : ''}
         </div>
 
         <!-- Fabric Specifications Table -->
