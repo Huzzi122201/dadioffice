@@ -3444,17 +3444,17 @@ async function generateContractPDF(c, action = 'download') {
       <div id="contractPdfRoot" style="padding: 24px; font-family: 'Inter', 'Noto Sans Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, Arial, sans-serif; color: #0f172a; background: #ffffff; width: 720px; max-width: 720px; box-sizing: border-box; margin: 0 auto; text-rendering: optimizeLegibility;">
         
         <!-- Header -->
-        <div style="border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end;">
-          <div>
-            <div style="font-size: 24px; font-weight: 900; color: #1e40af; letter-spacing: 1.5px; text-transform: uppercase; line-height: 1.2;">
+        <div style="border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px;">
+          <div style="text-align: center; margin-bottom: 8px;">
+            <div style="font-size: 26px; font-weight: 900; color: #1e40af; letter-spacing: 2px; text-transform: uppercase; line-height: 1.2;">
               NA TRADERS
             </div>
-            <h1 style="margin: 4px 0 0 0; font-size: 16px; font-weight: 800; color: #0f172a; letter-spacing: 0.5px; text-transform: uppercase;">
+            <p style="margin: 2px 0 0 0; font-size: 11px; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Textile Costing & Cashbook System</p>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 8px;">
+            <h1 style="margin: 0; font-size: 15px; font-weight: 800; color: #0f172a; letter-spacing: 0.5px; text-transform: uppercase;">
               FABRIC CONTRACT
             </h1>
-            <p style="margin: 2px 0 0 0; font-size: 11px; color: #64748b; font-weight: 600;">Textile Costing & Cashbook System</p>
-          </div>
-          <div style="text-align: right;">
             <div style="font-size: 12px; color: #64748b;">Date: <strong>${dateStr}</strong></div>
           </div>
         </div>
