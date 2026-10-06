@@ -3385,7 +3385,7 @@ async function openContractDetailModal(id) {
         <!-- Notes / Remarks -->
         ${c.note ? `
           <div style="background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.25); border-radius: 6px; padding: 8px 12px; font-size: 0.8125rem; color: var(--text-primary);">
-            <strong style="color: #fbbf24;">Note / Terms (نوٹ):</strong> ${escapeHtml(c.note)}
+            <strong style="color: #fbbf24;">Note / Terms:</strong> ${escapeHtml(c.note)}
           </div>
         ` : ''}
       </div>
@@ -3520,7 +3520,7 @@ async function generateContractPDF(c, action = 'download') {
 
         <!-- Notes / Special Terms -->
         <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin-bottom: 28px; background: #fafafa; font-size: 11.5px;">
-          <div style="font-weight: 800; color: #0f172a; margin-bottom: 4px; text-transform: uppercase;">Terms & Conditions / شرائط و نوٹ:</div>
+          <div style="font-weight: 800; color: #0f172a; margin-bottom: 4px; text-transform: uppercase;">Terms & Conditions:</div>
           <div>${escapeHtml(c.note || 'Delivery subject to standard mill quality inspection and agreed payment terms.')}</div>
         </div>
 
