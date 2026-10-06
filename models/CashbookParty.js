@@ -9,6 +9,13 @@ const cashbookPartySchema = new mongoose.Schema(
       required: true,
     },
 
+    // ── Party Code (e.g. A12, B15) ───────────────────────
+    code: {
+      type: String,
+      index: true,
+      default: '',
+    },
+
     // ── Party Info ───────────────────────────────────────
     name: {
       type: String,
@@ -60,12 +67,28 @@ const cashbookPartySchema = new mongoose.Schema(
   }
 );
 
-// Auto-generate nameNorm before save
+// Helper to compute party code (e.g. "Ali Nadeem" #12 -> "A12", "786 Mills" #15 -> "B15")
+function computePartyCode(name, khataNo) {
+  const clean = (name || '').trim();
+  const first = clean.charAt(0);
+  const prefix = /^[a-zA-Z]$/.test(first) ? first.toUpperCase() : 'B';
+  return `${prefix}${khataNo || ''}`;
+}
+
+// Auto-generate nameNorm and code before save
 cashbookPartySchema.pre('save', function (next) {
   if (this.name) {
     this.nameNorm = this.name.trim().toLowerCase();
   }
+  if (this.name && this.khataNo) {
+    this.code = computePartyCode(this.name, this.khataNo);
+  }
   next();
 });
 
-module.exports = mongoose.model('CashbookParty', cashbookPartySchema);
+cashbookPartySchema.statics.computePartyCode = computePartyCode;
+
+const CashbookParty = mongoose.model('CashbookParty', cashbookPartySchema);
+CashbookParty.computePartyCode = computePartyCode;
+
+module.exports = CashbookParty;

@@ -1045,6 +1045,22 @@ function highlightMatches(text, query) {
   }).join('');
 }
 
+// ── Party Code Helper (e.g. "Ali Nadeem" Khata #12 -> "A12", "786 Mills" Khata #15 -> "B15")
+function generatePartyCode(name, khataNo) {
+  const clean = (name || '').trim();
+  const first = clean.charAt(0);
+  const prefix = /^[a-zA-Z]$/.test(first) ? first.toUpperCase() : 'B';
+  return `${prefix}${khataNo || ''}`;
+}
+
+function getPartyCode(party, khataNo) {
+  if (party && typeof party === 'object') {
+    if (party.code) return party.code;
+    return generatePartyCode(party.name || party.partyName, party.khataNo);
+  }
+  return generatePartyCode(party, khataNo);
+}
+
 // ── Multi-Tier Ranking Search for Party Autocomplete ─────────
 function rankPartyMatches(partiesList, query) {
   if (!query) return [];
@@ -1064,6 +1080,17 @@ function rankPartyMatches(partiesList, query) {
     const name = typeof party === 'string' ? party : (party.name || party.partyName || '');
     if (!name) continue;
     const lower = name.toLowerCase();
+
+    // 0. Exact or partial party code match (e.g. typing "A12", "B15")
+    const pCode = (party && party.code) ? String(party.code).toLowerCase() : (party && party.khataNo ? generatePartyCode(name, party.khataNo).toLowerCase() : '');
+    if (pCode && pCode === q) {
+      exactMatches.push({ party, name, score: 1200 });
+      continue;
+    }
+    if (pCode && pCode.startsWith(q) && q.length >= 2) {
+      startsWithMatches.push({ party, name, score: 950 - pCode.length });
+      continue;
+    }
 
     // 1. Exact match (e.g. user typed "N" and party name is "N")
     if (lower === q) {
@@ -1157,19 +1184,22 @@ async function populatePartyNamesDatalist() {
     ]);
 
     const partyMap = new Map();
-    const addParty = (rawName, khataNo = null) => {
+    const addParty = (rawName, khataNo = null, code = '') => {
       if (!rawName || !rawName.trim()) return;
       const cleanName = rawName.trim();
       const norm = cleanName.toLowerCase();
+      const partyCode = code || (khataNo ? generatePartyCode(cleanName, khataNo) : '');
       if (!partyMap.has(norm)) {
-        partyMap.set(norm, { name: cleanName, khataNo: khataNo || null });
-      } else if (khataNo && !partyMap.get(norm).khataNo) {
-        partyMap.get(norm).khataNo = khataNo;
+        partyMap.set(norm, { name: cleanName, khataNo: khataNo || null, code: partyCode });
+      } else {
+        const item = partyMap.get(norm);
+        if (khataNo && !item.khataNo) item.khataNo = khataNo;
+        if (partyCode && !item.code) item.code = partyCode;
       }
     };
 
     if (Array.isArray(cbParties)) {
-      cbParties.forEach(p => addParty(p.name, p.khataNo));
+      cbParties.forEach(p => addParty(p.name, p.khataNo, p.code));
     }
     if (Array.isArray(gazanaParties)) {
       gazanaParties.forEach(p => addParty(p.partyName));
@@ -1191,13 +1221,13 @@ async function populatePartyNamesDatalist() {
       localStorage.setItem('cached_known_parties', JSON.stringify(sortedParties));
     } catch (e) {}
 
-    const optionsHtml = sortedParties.map(p => `<option value="${escapeHtml(p.name)}">${p.khataNo ? `Khata #${p.khataNo} · ` : ''}${escapeHtml(p.name)}</option>`).join('');
+    const optionsHtml = sortedParties.map(p => `<option value="${escapeHtml(p.name)}">${p.code ? `[${p.code}] ` : (p.khataNo ? `Khata #${p.khataNo} · ` : '')}${escapeHtml(p.name)}</option>`).join('');
 
     if (datalist) datalist.innerHTML = optionsHtml;
     if (cbDatalist) cbDatalist.innerHTML = optionsHtml;
 
     const selectOptionsHtml = '<option value="">-- Choose Party from Cashbook --</option>' +
-      sortedParties.map(p => `<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}${p.khataNo ? ` (Khata #${p.khataNo})` : ''}</option>`).join('');
+      sortedParties.map(p => `<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}${p.code ? ` (${p.code})` : (p.khataNo ? ` (Khata #${p.khataNo})` : '')}</option>`).join('');
 
     if (yarnFormPartySelect) yarnFormPartySelect.innerHTML = selectOptionsHtml;
     if (contractFormPartySelect) contractFormPartySelect.innerHTML = selectOptionsHtml;
@@ -1253,6 +1283,8 @@ function setupPartyAutocomplete(inputId, dropdownId) {
     dropdown.innerHTML = currentMatches.map((item, idx) => {
       const name = typeof item === 'string' ? item : item.name;
       const khataNo = (item && item.khataNo) ? item.khataNo : null;
+      const pCode = (item && item.code) ? item.code : (khataNo ? generatePartyCode(name, khataNo) : null);
+      const codeBadge = pCode ? `<span class="party-code-badge" style="font-size: 0.72rem; font-weight: 800; color: #1e40af; background: #dbeafe; padding: 2px 6px; border-radius: 4px; flex-shrink: 0;">${pCode}</span>` : '';
       const khataBadge = khataNo ? `<span class="party-khata-badge" style="font-size: 0.72rem; font-weight: 700; color: #475569; background: #e2e8f0; padding: 2px 7px; border-radius: 4px; flex-shrink: 0;">#${khataNo}</span>` : '';
       return `
         <div class="party-suggestion-item" data-index="${idx}" data-name="${escapeHtml(name)}" style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
@@ -1260,7 +1292,10 @@ function setupPartyAutocomplete(inputId, dropdownId) {
             <span style="font-size: 1rem; flex-shrink: 0;">${itemIcon}</span>
             <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${highlightMatches(name, rawQ)}</span>
           </div>
-          ${khataBadge}
+          <div style="display: flex; gap: 4px; align-items: center;">
+            ${codeBadge}
+            ${khataBadge}
+          </div>
         </div>
       `;
     }).join('');
@@ -1979,8 +2014,9 @@ async function loadCashbookDashboard() {
               <div class="cb-party-card" onclick="openKhata(${p.khataNo})">
                 <div class="cb-party-card-left">
                   <div class="cb-party-info">
-                    <div class="cb-party-name-row">
+                    <div class="cb-party-name-row" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                       <span class="cb-party-name">${search ? highlightMatches(p.name, search) : escapeHtml(p.name)}</span>
+                      <span class="cb-party-code" style="background: rgba(30, 64, 175, 0.12); color: #1e40af; border: 1px solid rgba(30, 64, 175, 0.3); font-weight: 800; font-size: 0.75rem; padding: 2px 7px; border-radius: 4px;">${getPartyCode(p)}</span>
                       <span class="cb-party-khata-no">Khata #${p.khataNo}</span>
                     </div>
                     <div class="cb-party-meta">
@@ -2215,8 +2251,9 @@ async function loadCashbookDashboard() {
           <div class="cb-party-card" onclick="openKhata(${p.khataNo})">
             <div class="cb-party-card-left">
               <div class="cb-party-info">
-                <div class="cb-party-name-row">
+                <div class="cb-party-name-row" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                   <span class="cb-party-name">${search ? highlightMatches(p.name, search) : escapeHtml(p.name)}</span>
+                  <span class="cb-party-code" style="background: rgba(30, 64, 175, 0.12); color: #1e40af; border: 1px solid rgba(30, 64, 175, 0.3); font-weight: 800; font-size: 0.75rem; padding: 2px 7px; border-radius: 4px;">${getPartyCode(p)}</span>
                   <span class="cb-party-khata-no">#${p.khataNo}</span>
                   ${isCashP ? '<span class="badge" style="background: #e0f2fe; color: #0284c7; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 700;">💵 Cash Party</span>' : ''}
                 </div>
@@ -2778,7 +2815,7 @@ async function generateChathaPDF(action = 'download') {
       // LEFT: Banam (بنام) party
       if (bp) {
         rowsHtml += `
-          <td style="padding: 5.5px 3px; font-size: 11.5px; text-align: center; color: #64748b; font-weight: 700;">${i + 1}</td>
+          <td style="padding: 5.5px 3px; font-size: 11px; text-align: center; color: #1e40af; font-weight: 800; white-space: nowrap;">${getPartyCode(bp)}</td>
           <td style="padding: 5.5px 6px; font-size: 12px; font-weight: 700; color: #0f172a; word-break: break-word;">${escapeHtml(bp.name)}</td>
           <td style="padding: 5.5px 6px; font-size: 12px; text-align: right; font-weight: 800; color: #b91c1c; white-space: nowrap;">${fmtCurrency(Math.abs(bp.balance))}</td>
         `;
@@ -2792,7 +2829,7 @@ async function generateChathaPDF(action = 'download') {
       // RIGHT: Jama (جمع) party
       if (jp) {
         rowsHtml += `
-          <td style="padding: 5.5px 3px; font-size: 11.5px; text-align: center; color: #64748b; font-weight: 700;">${i + 1}</td>
+          <td style="padding: 5.5px 3px; font-size: 11px; text-align: center; color: #1e40af; font-weight: 800; white-space: nowrap;">${getPartyCode(jp)}</td>
           <td style="padding: 5.5px 6px; font-size: 12px; font-weight: 700; color: #0f172a; word-break: break-word;">${escapeHtml(jp.name)}</td>
           <td style="padding: 5.5px 6px; font-size: 12px; text-align: right; font-weight: 800; color: #15803d; white-space: nowrap;">${fmtCurrency(jp.balance)}</td>
         `;
@@ -2831,15 +2868,15 @@ async function generateChathaPDF(action = 'download') {
         <table style="width: 100%; table-layout: fixed; border-collapse: collapse; border: 1.5px solid #0f172a; border-radius: 4px; overflow: hidden; margin: 0; page-break-inside: auto;">
           <colgroup>
             <!-- Left: Banam -->
-            <col style="width: 28px;">
-            <col style="width: 202px;">
-            <col style="width: 108px;">
+            <col style="width: 44px;">
+            <col style="width: 194px;">
+            <col style="width: 100px;">
             <!-- Divider -->
             <col style="width: 4px;">
             <!-- Right: Jama -->
-            <col style="width: 28px;">
-            <col style="width: 202px;">
-            <col style="width: 108px;">
+            <col style="width: 44px;">
+            <col style="width: 194px;">
+            <col style="width: 100px;">
           </colgroup>
           <thead style="display: table-header-group; page-break-inside: avoid;">
             <tr style="background: #0f172a; color: #ffffff; font-size: 11.5px; page-break-inside: avoid;">
@@ -2848,11 +2885,11 @@ async function generateChathaPDF(action = 'download') {
               <th colspan="3" style="padding: 8px 6px; text-align: center; border-left: 2px solid #fbbf24; font-weight: 800;"><span style="text-transform: uppercase;">JAMA</span> / <span dir="rtl" style="direction: rtl; unicode-bidi: embed; font-family: 'Noto Sans Arabic', 'Segoe UI', Tahoma, sans-serif; letter-spacing: normal;">جمع</span> (Credit) — ${jamaParties.length} Parties</th>
             </tr>
             <tr style="background: #1e293b; color: #cbd5e1; font-size: 10.5px; page-break-inside: avoid;">
-              <th style="padding: 6px 3px; text-align: center;">#</th>
+              <th style="padding: 6px 3px; text-align: center;">Code</th>
               <th style="padding: 6px 6px; text-align: left;">Party Name</th>
               <th style="padding: 6px 6px; text-align: right;">Amount</th>
               <th style="padding: 0; width: 4px; background: #334155;"></th>
-              <th style="padding: 6px 3px; text-align: center;">#</th>
+              <th style="padding: 6px 3px; text-align: center;">Code</th>
               <th style="padding: 6px 6px; text-align: left;">Party Name</th>
               <th style="padding: 6px 6px; text-align: right;">Amount</th>
             </tr>

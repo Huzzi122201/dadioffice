@@ -48,9 +48,14 @@ router.get('/parties', async (req, res) => {
       const qTrim = search.trim();
       const num = parseInt(qTrim.replace(/^#/, ''), 10);
       const searchRegex = new RegExp(qTrim.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-      const orConditions = [{ nameNorm: searchRegex }, { name: searchRegex }];
+      const orConditions = [{ nameNorm: searchRegex }, { name: searchRegex }, { code: searchRegex }];
       if (!isNaN(num) && num > 0) {
         orConditions.push({ khataNo: num });
+      }
+      // Also match code pattern like A12, B15
+      const codeMatch = qTrim.match(/^([a-zA-Z])(\d+)$/);
+      if (codeMatch) {
+        orConditions.push({ khataNo: parseInt(codeMatch[2], 10) });
       }
       query.$or = orConditions;
     }
@@ -101,6 +106,7 @@ router.get('/parties', async (req, res) => {
       const balance = openingNet + s.totalJama - s.totalNaam;
       return {
         ...p,
+        code: p.code || CashbookParty.computePartyCode(p.name, p.khataNo),
         totalNaam: s.totalNaam,
         totalJama: s.totalJama,
         balance,
@@ -117,6 +123,14 @@ router.get('/parties', async (req, res) => {
       enriched.sort((a, b) => {
         const aName = (a.name || '').toLowerCase();
         const bName = (b.name || '').toLowerCase();
+        const aCode = (a.code || '').toLowerCase();
+        const bCode = (b.code || '').toLowerCase();
+
+        // 0. Exact match on party code (e.g. "a12", "b15")
+        const aCodeExact = aCode === q;
+        const bCodeExact = bCode === q;
+        if (aCodeExact && !bCodeExact) return -1;
+        if (!aCodeExact && bCodeExact) return 1;
 
         // 1. Exact match on name (e.g. "N" -> #1)
         const aExact = aName === q;
@@ -1528,5 +1542,21 @@ router.get('/chatha', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// Automatic one-time backfill for existing parties missing a code
+(async function backfillPartyCodes() {
+  try {
+    const unassigned = await CashbookParty.find({ $or: [{ code: { $exists: false } }, { code: '' }, { code: null }] });
+    if (unassigned && unassigned.length > 0) {
+      for (const p of unassigned) {
+        p.code = CashbookParty.computePartyCode(p.name, p.khataNo);
+        await p.save();
+      }
+      console.log(`[Cashbook] Backfilled codes for ${unassigned.length} parties.`);
+    }
+  } catch (err) {
+    // Non-blocking on startup
+  }
+})();
 
 module.exports = router;
