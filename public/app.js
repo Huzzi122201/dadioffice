@@ -3434,14 +3434,14 @@ async function generateContractPDF(c, action = 'download') {
     const deliveryDateStr = formatDate(c.deliveryDate || c.date);
 
     const container = document.createElement('div');
-    container.style.cssText = 'position: absolute; left: 0; top: 0; width: 720px; z-index: -99999; opacity: 0; pointer-events: none;';
+    container.style.cssText = 'position: fixed; left: -9999px; top: 0; width: 720px; z-index: -99999; pointer-events: none;';
 
     const specsText = (c.warpCount || c.weftCount || c.reed || c.pick)
       ? `${c.warpCount}x${c.weftCount} / ${c.reed}x${c.pick} / ${c.width}"`
       : '—';
 
     container.innerHTML = `
-      <div id="contractPdfRoot" style="padding: 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #0f172a; background: #ffffff; width: 720px; max-width: 720px; box-sizing: border-box; margin: 0 auto;">
+      <div id="contractPdfRoot" style="padding: 24px; font-family: 'Inter', 'Noto Sans Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, Arial, sans-serif; color: #0f172a; background: #ffffff; width: 720px; max-width: 720px; box-sizing: border-box; margin: 0 auto; text-rendering: optimizeLegibility;">
         
         <!-- Header -->
         <div style="border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end;">
@@ -3459,14 +3459,14 @@ async function generateContractPDF(c, action = 'download') {
         <!-- Parties Box -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
           <div style="border: 1.5px solid #2563eb; border-radius: 6px; padding: 12px; background: #f8fafc;">
-            <div style="font-size: 11px; font-weight: 800; color: #2563eb; text-transform: uppercase; margin-bottom: 4px;">
-              🛒 PURCHASER / خریدار (بنام)
+            <div style="font-size: 11px; font-weight: 800; color: #2563eb; margin-bottom: 4px;">
+              <span style="text-transform: uppercase;">🛒 PURCHASER</span> / <span dir="rtl" style="direction: rtl; unicode-bidi: embed; font-family: 'Noto Sans Arabic', 'Segoe UI', Tahoma, sans-serif;">خریدار (بنام)</span>
             </div>
             <div style="font-size: 16px; font-weight: 800; color: #0f172a;">${escapeHtml(c.purchaserName)}</div>
           </div>
           <div style="border: 1.5px solid #16a34a; border-radius: 6px; padding: 12px; background: #f8fafc;">
-            <div style="font-size: 11px; font-weight: 800; color: #16a34a; text-transform: uppercase; margin-bottom: 4px;">
-              🏭 SELLER / بیچنے والا (جمع)
+            <div style="font-size: 11px; font-weight: 800; color: #16a34a; margin-bottom: 4px;">
+              <span style="text-transform: uppercase;">🏭 SELLER</span> / <span dir="rtl" style="direction: rtl; unicode-bidi: embed; font-family: 'Noto Sans Arabic', 'Segoe UI', Tahoma, sans-serif;">بیچنے والا (جمع)</span>
             </div>
             <div style="font-size: 16px; font-weight: 800; color: #0f172a;">${escapeHtml(c.sellerName)}</div>
           </div>
@@ -3476,14 +3476,14 @@ async function generateContractPDF(c, action = 'download') {
         <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 12px;">
           <div>
             <span style="color: #64748b; font-weight: 600;">Delivery Mode:</span><br>
-            <strong style="color: ${isHazar ? '#2563eb' : '#d97706'}; font-size: 13px;">${isHazar ? '⚡ Hazar (حاضر - Ready)' : '📅 Amdan (آمدن - Delivery)'}</strong>
+            <strong style="color: ${isHazar ? '#2563eb' : '#d97706'}; font-size: 13px;">${isHazar ? '⚡ Hazar (<span dir="rtl" style="direction: rtl; unicode-bidi: embed;">حاضر</span> - Ready)' : '📅 Amdan (<span dir="rtl" style="direction: rtl; unicode-bidi: embed;">آمدن</span> - Delivery)'}</strong>
           </div>
           <div>
             <span style="color: #64748b; font-weight: 600;">Delivery Date:</span><br>
             <strong style="font-size: 13px;">${deliveryDateStr}</strong>
           </div>
           <div>
-            <span style="color: #64748b; font-weight: 600;">Broker / ایجنٹ:</span><br>
+            <span style="color: #64748b; font-weight: 600;">Broker / <span dir="rtl" style="direction: rtl; unicode-bidi: embed;">ایجنٹ</span>:</span><br>
             <strong style="font-size: 13px;">${escapeHtml(c.broker || 'Direct')}</strong>
           </div>
         </div>
@@ -3502,7 +3502,7 @@ async function generateContractPDF(c, action = 'download') {
             <tr>
               <td style="padding: 12px 10px; font-size: 13px; font-weight: 800; color: #0f172a; border-right: 1px solid #cbd5e1;">
                 ${escapeHtml(c.quality || 'Standard Cotton Fabric')}
-                ${c.gudamMuqam ? `<div style="font-size: 11px; font-weight: 600; color: #64748b; margin-top: 4px;">📍 Warehouse: ${escapeHtml(c.gudamMuqam)}</div>` : ''}
+                ${c.gudamMuqam ? `<div style="font-size: 11px; font-weight: 600; color: #64748b; margin-top: 4px;">📍 <span dir="rtl" style="direction: rtl; unicode-bidi: embed; font-family: 'Noto Sans Arabic', 'Segoe UI', Tahoma, sans-serif; font-weight: 700;">گودام</span>: ${escapeHtml(c.gudamMuqam)}</div>` : ''}
               </td>
               <td style="padding: 12px 10px; text-align: center; font-size: 12px; font-weight: 700; border-right: 1px solid #cbd5e1;">
                 ${escapeHtml(specsText)}
