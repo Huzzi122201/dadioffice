@@ -13,7 +13,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>Textile Costing Sheet</title>
   <link rel="manifest" href="/manifest.json" />
-  <link rel="stylesheet" href="/styles.css?v=2.6.2" />
+  <link rel="stylesheet" href="/styles.css?v=2.6.4" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -788,7 +788,7 @@
       <div class="ti-toolbar">
         <div class="ti-toolbar-title-wrap">
           <h2 class="ti-toolbar-title">🧾 Editable Temp Invoice</h2>
-          <span class="ti-badge">Live Interactive Slip</span>
+          <span class="ti-badge" id="tiAutoSaveBadge" style="transition: all 0.2s ease; background: #dcfce7; color: #15803d; border-color: #bbf7d0;">✓ Auto-Saved</span>
         </div>
         <div class="ti-toolbar-actions">
           <button class="btn btn-primary" id="btnTiAddRow">＋ Add Item</button>
@@ -827,15 +827,26 @@
             </div>
           </div>
 
-          <!-- Buyer Detail & Invoice Meta Grid -->
+          <!-- Buyer Detail, Seller Detail & Invoice Meta Grid -->
           <div class="ti-meta-grid">
-            <!-- Left: Buyer Detail -->
-            <div class="ti-buyer-col">
-              <div class="ti-buyer-banner">BUYER DETAIL</div>
-              <div class="ti-buyer-body">
-                <div contenteditable="true" class="ti-editable ti-buyer-name" id="tiBuyerName">Yarana Textile Mills</div>
-                <div contenteditable="true" class="ti-editable ti-buyer-addr" id="tiBuyerAddr">Suite No. 304, 3rd Floor,<br>Uni Tower, I.I Chundrigar Road,<br>Karachi - 74000, Pakistan</div>
-                <div contenteditable="true" class="ti-editable ti-buyer-ntn" id="tiBuyerNtn">NTN. 8057750-5</div>
+            <!-- Left: Parties Column (Buyer details, then Seller details) -->
+            <div class="ti-parties-col" id="tiPartiesCol">
+              <!-- Buyer Detail -->
+              <div class="ti-party-section" id="tiBuyerSection">
+                <div class="ti-party-banner">BUYER DETAIL</div>
+                <div class="ti-party-lines">
+                  <div contenteditable="true" class="ti-editable ti-party-line" id="tiBuyerName">Mian Muzamil Shb</div>
+                  <div contenteditable="true" class="ti-editable ti-party-line" id="tiBuyerLine2"></div>
+                </div>
+              </div>
+
+              <!-- Seller Detail -->
+              <div class="ti-party-section" id="tiSellerSection">
+                <div class="ti-party-banner">SELLER DETAIL</div>
+                <div class="ti-party-lines">
+                  <div contenteditable="true" class="ti-editable ti-party-line" id="tiSellerName"></div>
+                  <div contenteditable="true" class="ti-editable ti-party-line" id="tiSellerLine2"></div>
+                </div>
               </div>
             </div>
 
@@ -843,9 +854,27 @@
             <div class="ti-inv-col">
               <div class="ti-inv-heading">SALE INVOICE</div>
               <table class="ti-inv-meta-table">
-                <tr>
+                <tr id="tiInvDateRow" class="ti-date-row">
                   <td class="ti-meta-lbl">DATE</td>
-                  <td class="ti-meta-val"><span contenteditable="true" class="ti-editable" id="tiInvDate">6-Oct-26</span></td>
+                  <td class="ti-meta-val"><span contenteditable="true" class="ti-editable" id="tiInvDate">7-Oct-26</span></td>
+                </tr>
+                <tr id="tiKpDateRow" class="ti-date-row">
+                  <td class="ti-meta-lbl">
+                    <span class="ti-date-lbl-wrap">
+                      K.P DATE
+                      <button type="button" class="ti-remove-date-btn" title="Remove K.P Date" onclick="removeTempInvoiceBlock('tiKpDateRow')">✕</button>
+                    </span>
+                  </td>
+                  <td class="ti-meta-val"><span contenteditable="true" class="ti-editable" id="tiKpDate">7-Oct-26</span></td>
+                </tr>
+                <tr id="tiPpDateRow" class="ti-date-row">
+                  <td class="ti-meta-lbl">
+                    <span class="ti-date-lbl-wrap">
+                      P.P DATE
+                      <button type="button" class="ti-remove-date-btn" title="Remove P.P Date" onclick="removeTempInvoiceBlock('tiPpDateRow')">✕</button>
+                    </span>
+                  </td>
+                  <td class="ti-meta-val"><span contenteditable="true" class="ti-editable" id="tiPpDate">7-Oct-26</span></td>
                 </tr>
               </table>
             </div>
@@ -1330,7 +1359,7 @@
   <!-- ═══ Toast Container ═══ -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <script src="/app.js?v=2.6.2"></script>
+  <script src="/app.js?v=2.6.4"></script>
 </body>
 </html>
 

@@ -92,6 +92,9 @@ function showView(view) {
   tabBtns.forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === currentTab);
   });
+  try {
+    localStorage.setItem('active_tab', currentTab);
+  } catch (e) {}
 }
 
 // ── Calculator (client-side replica) ───────────────────────
@@ -7326,10 +7329,13 @@ const DEFAULT_TEMP_INVOICE_DATA = {
   compName: "MUTAHIR TEXTILES",
   compAddress: "P16, AL-HAMAD INDUSTRIAL ESTATE,<br>CHAK NO. 8/JB, DAEWOO ROAD, FAISALABAD",
   compTax: "NTN. A0973067. STRN. 32-77-8762-286-30",
-  buyerName: "Yarana Textile Mills",
-  buyerAddr: "Suite No. 304, 3rd Floor,<br>Uni Tower, I.I Chundrigar Road,<br>Karachi - 74000, Pakistan",
-  buyerNtn: "NTN. 8057750-5",
+  buyerName: "Mian Muzamil Shb",
+  buyerLine2: "",
+  sellerName: "",
+  sellerLine2: "",
   invDate: getTodayDateFormatted(),
+  kpDate: getTodayDateFormatted(),
+  ppDate: getTodayDateFormatted(),
   invNo: "",
   gstHeader: "GST # 18%",
   items: [
@@ -7381,14 +7387,34 @@ function getGstPercentage() {
   return match ? parseFloat(match[1]) : 18;
 }
 
+function updateAutoSaveIndicator(status = 'saved') {
+  const badge = $('tiAutoSaveBadge');
+  if (!badge) return;
+  if (status === 'saving') {
+    badge.innerText = '💾 Saving...';
+    badge.style.color = '#d97706';
+    badge.style.background = '#fef3c7';
+    badge.style.borderColor = '#fde68a';
+  } else {
+    badge.innerText = '✓ Auto-Saved';
+    badge.style.color = '#15803d';
+    badge.style.background = '#dcfce7';
+    badge.style.borderColor = '#bbf7d0';
+  }
+}
+
 function initTempInvoice(forceDefault = false) {
   if (forceDefault) {
     currentTempInvoice = JSON.parse(JSON.stringify(DEFAULT_TEMP_INVOICE_DATA));
-  } else if (!currentTempInvoice) {
+  } else {
     const saved = localStorage.getItem('temp_invoice_draft');
     if (saved) {
       try {
-        currentTempInvoice = JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        currentTempInvoice = Object.assign({}, JSON.parse(JSON.stringify(DEFAULT_TEMP_INVOICE_DATA)), parsed);
+        if (parsed.buyerName === 'Yarana Textile Mills') {
+          currentTempInvoice.buyerName = 'Mian Muzamil Shb';
+        }
       } catch (e) {
         currentTempInvoice = JSON.parse(JSON.stringify(DEFAULT_TEMP_INVOICE_DATA));
       }
@@ -7397,42 +7423,72 @@ function initTempInvoice(forceDefault = false) {
     }
   }
 
-  // Ensure current date and clean invoice no if unset or legacy
-  if (!currentTempInvoice.invDate || currentTempInvoice.invDate === '5-Oct-26') {
-    currentTempInvoice.invDate = getTodayDateFormatted();
-  }
-  if (currentTempInvoice.invNo === 'MT-39-27') {
-    currentTempInvoice.invNo = '';
-  }
-
-  // Restore any hidden blocks
-  if ($('tiLogoWrap')) $('tiLogoWrap').style.display = '';
-  if ($('tiCompAddress')) {
-    $('tiCompAddress').style.display = '';
-    const parentLine = $('tiCompAddress').closest('.ti-removable-line');
-    if (parentLine) parentLine.style.display = '';
-  }
-  if ($('tiCompTax')) {
-    $('tiCompTax').style.display = '';
-    const parentLine = $('tiCompTax').closest('.ti-removable-line');
-    if (parentLine) parentLine.style.display = '';
-  }
+  // Restore or hide blocks
+  ['tiLogoWrap', 'tiCompAddress', 'tiCompTax', 'tiKpDateRow', 'tiPpDateRow'].forEach(id => {
+    const el = $(id);
+    if (el) {
+      const isHidden = (currentTempInvoice.hiddenBlocks && currentTempInvoice.hiddenBlocks.includes(id));
+      el.style.display = isHidden ? 'none' : '';
+    }
+  });
 
   // Populate Header Fields
-  if ($('tiCompName')) $('tiCompName').innerHTML = currentTempInvoice.compName || '';
-  if ($('tiCompAddress')) $('tiCompAddress').innerHTML = currentTempInvoice.compAddress || '';
-  if ($('tiCompTax')) $('tiCompTax').innerHTML = currentTempInvoice.compTax || '';
-  if ($('tiBuyerName')) $('tiBuyerName').innerHTML = currentTempInvoice.buyerName || '';
-  if ($('tiBuyerAddr')) $('tiBuyerAddr').innerHTML = currentTempInvoice.buyerAddr || '';
-  if ($('tiBuyerNtn')) $('tiBuyerNtn').innerHTML = currentTempInvoice.buyerNtn || '';
+  if ($('tiCompName')) $('tiCompName').innerHTML = currentTempInvoice.compName != null ? currentTempInvoice.compName : '';
+  if ($('tiCompAddress')) $('tiCompAddress').innerHTML = currentTempInvoice.compAddress != null ? currentTempInvoice.compAddress : '';
+  if ($('tiCompTax')) $('tiCompTax').innerHTML = currentTempInvoice.compTax != null ? currentTempInvoice.compTax : '';
+  if ($('tiBuyerName')) $('tiBuyerName').innerHTML = currentTempInvoice.buyerName != null ? currentTempInvoice.buyerName : '';
+  if ($('tiBuyerLine2')) $('tiBuyerLine2').innerHTML = currentTempInvoice.buyerLine2 != null ? currentTempInvoice.buyerLine2 : '';
+  if ($('tiSellerName')) $('tiSellerName').innerHTML = currentTempInvoice.sellerName != null ? currentTempInvoice.sellerName : '';
+  if ($('tiSellerLine2')) $('tiSellerLine2').innerHTML = currentTempInvoice.sellerLine2 != null ? currentTempInvoice.sellerLine2 : '';
   if ($('tiInvDate')) $('tiInvDate').innerHTML = currentTempInvoice.invDate || getTodayDateFormatted();
+  if ($('tiKpDate')) $('tiKpDate').innerHTML = currentTempInvoice.kpDate || getTodayDateFormatted();
+  if ($('tiPpDate')) $('tiPpDate').innerHTML = currentTempInvoice.ppDate || getTodayDateFormatted();
   if ($('tiInvNo')) $('tiInvNo').innerHTML = currentTempInvoice.invNo || '';
   if ($('tiGstHeader')) $('tiGstHeader').innerHTML = currentTempInvoice.gstHeader || 'GST # 18%';
 
-  renderTempInvoiceItems();
+  bindTempInvoiceHeaderEvents();
+  renderTempInvoiceItems(false);
+  updateAutoSaveIndicator('saved');
 }
 
-function renderTempInvoiceItems() {
+let tiHeaderEventsBound = false;
+function bindTempInvoiceHeaderEvents() {
+  if (tiHeaderEventsBound) return;
+  tiHeaderEventsBound = true;
+
+  const headerFieldIds = [
+    'tiCompName',
+    'tiCompAddress',
+    'tiCompTax',
+    'tiBuyerName',
+    'tiBuyerLine2',
+    'tiSellerName',
+    'tiSellerLine2',
+    'tiInvDate',
+    'tiKpDate',
+    'tiPpDate',
+    'tiInvNo',
+    'tiGstHeader'
+  ];
+
+  headerFieldIds.forEach(id => {
+    const el = $(id);
+    if (el) {
+      el.addEventListener('input', () => {
+        updateAutoSaveIndicator('saving');
+        clearTimeout(el._saveTimer);
+        el._saveTimer = setTimeout(() => {
+          saveTempInvoiceDraft(true);
+        }, 300);
+      });
+      el.addEventListener('blur', () => {
+        saveTempInvoiceDraft(true);
+      });
+    }
+  });
+}
+
+function renderTempInvoiceItems(shouldAutoSave = true) {
   const tbody = $('tiTableBody');
   if (!tbody || !currentTempInvoice) return;
 
@@ -7530,12 +7586,15 @@ function renderTempInvoiceItems() {
     tbody.appendChild(blankTr);
   }
 
-  // Update Total Row (if values are cleared, leave empty or show 0.00)
+  // Update Total Row
   if ($('tiTotalExVal')) $('tiTotalExVal').innerText = hasNumericValues ? formatTiCurrency(totalEx) : '';
   if ($('tiTotalGstVal')) $('tiTotalGstVal').innerText = hasNumericValues ? formatTiCurrency(totalGst) : '';
   if ($('tiTotalInclVal')) $('tiTotalInclVal').innerText = hasNumericValues ? formatTiCurrency(totalIncl) : '';
 
   bindTempInvoiceCellEvents();
+  if (shouldAutoSave) {
+    saveTempInvoiceDraft(true);
+  }
 }
 
 function bindTempInvoiceCellEvents() {
@@ -7544,6 +7603,19 @@ function bindTempInvoiceCellEvents() {
 
   const editableCells = tbody.querySelectorAll('.ti-editable');
   editableCells.forEach(cell => {
+    cell.addEventListener('input', () => {
+      updateAutoSaveIndicator('saving');
+      const idx = parseInt(cell.dataset.idx, 10);
+      const field = cell.dataset.field;
+      if (isNaN(idx) || !currentTempInvoice.items[idx]) return;
+      const rawVal = cell.innerText.trim();
+      currentTempInvoice.items[idx][field] = rawVal;
+      clearTimeout(cell._saveTimer);
+      cell._saveTimer = setTimeout(() => {
+        saveTempInvoiceDraft(true);
+      }, 400);
+    });
+
     cell.addEventListener('blur', () => {
       const idx = parseInt(cell.dataset.idx, 10);
       const field = cell.dataset.field;
@@ -7596,7 +7668,7 @@ function bindTempInvoiceCellEvents() {
         item.unit = rawVal;
       }
 
-      renderTempInvoiceItems();
+      renderTempInvoiceItems(true);
     });
   });
 }
@@ -7628,7 +7700,7 @@ function addTempInvoiceItem() {
     gstVal: '',
     inclVal: ''
   });
-  renderTempInvoiceItems();
+  renderTempInvoiceItems(true);
   toast('Added new item row to invoice', 'info');
 }
 
@@ -7648,7 +7720,7 @@ function deleteTempInvoiceItem(idx) {
   } else {
     currentTempInvoice.items.splice(idx, 1);
   }
-  renderTempInvoiceItems();
+  renderTempInvoiceItems(true);
   toast('Item row deleted', 'info');
 }
 
@@ -7661,7 +7733,7 @@ function clearTempInvoiceValues() {
     item.gstVal = '';
     item.inclVal = '';
   });
-  renderTempInvoiceItems();
+  renderTempInvoiceItems(true);
   toast('All table values cleared! You can now enter fresh numbers.', 'info');
 }
 
@@ -7669,26 +7741,45 @@ function removeTempInvoiceBlock(elementId) {
   const el = $(elementId);
   if (!el) return;
   el.style.display = 'none';
+  saveTempInvoiceDraft(true);
   toast('Block removed from invoice. Click Reset anytime to restore.', 'info');
 }
 
-function saveTempInvoiceDraft() {
-  collectTempInvoiceHeaderData();
-  localStorage.setItem('temp_invoice_draft', JSON.stringify(currentTempInvoice));
-  toast('Temp Invoice draft saved successfully!', 'success');
-}
-
 function collectTempInvoiceHeaderData() {
-  if (!currentTempInvoice) initTempInvoice();
+  if (!currentTempInvoice) currentTempInvoice = JSON.parse(JSON.stringify(DEFAULT_TEMP_INVOICE_DATA));
   if ($('tiCompName')) currentTempInvoice.compName = $('tiCompName').innerHTML;
   if ($('tiCompAddress')) currentTempInvoice.compAddress = $('tiCompAddress').innerHTML;
   if ($('tiCompTax')) currentTempInvoice.compTax = $('tiCompTax').innerHTML;
   if ($('tiBuyerName')) currentTempInvoice.buyerName = $('tiBuyerName').innerHTML;
-  if ($('tiBuyerAddr')) currentTempInvoice.buyerAddr = $('tiBuyerAddr').innerHTML;
-  if ($('tiBuyerNtn')) currentTempInvoice.buyerNtn = $('tiBuyerNtn').innerHTML;
+  if ($('tiBuyerLine2')) currentTempInvoice.buyerLine2 = $('tiBuyerLine2').innerHTML;
+  if ($('tiSellerName')) currentTempInvoice.sellerName = $('tiSellerName').innerHTML;
+  if ($('tiSellerLine2')) currentTempInvoice.sellerLine2 = $('tiSellerLine2').innerHTML;
   if ($('tiInvDate')) currentTempInvoice.invDate = $('tiInvDate').innerHTML;
+  if ($('tiKpDate')) currentTempInvoice.kpDate = $('tiKpDate').innerHTML;
+  if ($('tiPpDate')) currentTempInvoice.ppDate = $('tiPpDate').innerHTML;
   if ($('tiInvNo')) currentTempInvoice.invNo = $('tiInvNo').innerHTML;
   if ($('tiGstHeader')) currentTempInvoice.gstHeader = $('tiGstHeader').innerHTML;
+
+  currentTempInvoice.hiddenBlocks = [];
+  ['tiLogoWrap', 'tiCompAddress', 'tiCompTax', 'tiKpDateRow', 'tiPpDateRow'].forEach(id => {
+    const el = $(id);
+    if (el && el.style.display === 'none') {
+      currentTempInvoice.hiddenBlocks.push(id);
+    }
+  });
+}
+
+function saveTempInvoiceDraft(silent = false) {
+  collectTempInvoiceHeaderData();
+  try {
+    localStorage.setItem('temp_invoice_draft', JSON.stringify(currentTempInvoice));
+    updateAutoSaveIndicator('saved');
+    if (!silent) {
+      toast('Temp Invoice draft saved successfully!', 'success');
+    }
+  } catch (e) {
+    console.error('Failed to auto-save temp invoice:', e);
+  }
 }
 
 async function downloadTempInvoicePdf() {
@@ -7711,7 +7802,7 @@ async function downloadTempInvoicePdf() {
     clone.style.boxSizing = 'border-box';
 
     // Remove buttons, handles, and editable hints
-    clone.querySelectorAll('.ti-row-del-btn, .ti-remove-block-btn, .ti-remove-line-btn').forEach(el => el.remove());
+    clone.querySelectorAll('.ti-row-del-btn, .ti-remove-block-btn, .ti-remove-line-btn, .ti-remove-date-btn').forEach(el => el.remove());
     clone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
 
     const container = document.createElement('div');
@@ -7767,6 +7858,14 @@ window.addTempInvoiceItem = addTempInvoiceItem;
 window.clearTempInvoiceValues = clearTempInvoiceValues;
 window.removeTempInvoiceBlock = removeTempInvoiceBlock;
 window.initTempInvoice = initTempInvoice;
+window.saveTempInvoiceDraft = saveTempInvoiceDraft;
+
+// Auto-save before page unload / refresh
+window.addEventListener('beforeunload', () => {
+  if (currentTab === 'tempInvoice' || currentTempInvoice) {
+    saveTempInvoiceDraft(true);
+  }
+});
 
 // Event Listeners for Temp Invoice Toolbar
 if ($('tabTempInvoice')) {
@@ -7796,17 +7895,22 @@ if ($('btnTiReset')) {
   $('btnTiReset').addEventListener('click', () => {
     confirmAction(
       'Reset Invoice?',
-      'Are you sure you want to reset all invoice fields, layout, and values back to the original sample values?',
+      'Are you sure you want to reset all invoice fields, layout, and values back to the original default template?',
       () => {
+        try { localStorage.removeItem('temp_invoice_draft'); } catch (e) {}
+        currentTempInvoice = null;
         initTempInvoice(true);
-        toast('Invoice reset to original template values!', 'success');
+        saveTempInvoiceDraft(true);
+        toast('Invoice reset to default template values!', 'success');
       }
     );
   });
 }
 
 if ($('btnTiSaveDraft')) {
-  $('btnTiSaveDraft').addEventListener('click', saveTempInvoiceDraft);
+  $('btnTiSaveDraft').addEventListener('click', () => {
+    saveTempInvoiceDraft(false);
+  });
 }
 
 if ($('btnTiDownloadPdf')) {
@@ -7825,4 +7929,12 @@ if ($('btnTiPrint')) {
 
 populatePartyNamesDatalist();
 loadInvoices();
+initTempInvoice();
+
+try {
+  const savedTab = localStorage.getItem('active_tab');
+  if (savedTab === 'tempInvoice' && typeof viewTempInvoice !== 'undefined' && viewTempInvoice) {
+    showView(viewTempInvoice);
+  }
+} catch (e) {}
 
