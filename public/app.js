@@ -27,7 +27,8 @@ const viewCashbookDashboard = $('viewCashbookDashboard');
 const viewRokerDetail = $('viewRokerDetail');
 const viewKhata = $('viewKhata');
 const viewEntryForm = $('viewEntryForm');
-const views = [viewDashboard, viewForm, viewDetail, viewPartyGazanaDashboard, viewPartyGazanaDetail, viewPartyGazanaForm, viewCashbookDashboard, viewRokerDetail, viewKhata, viewEntryForm].filter(Boolean);
+const viewTempInvoice = $('viewTempInvoice');
+const views = [viewDashboard, viewForm, viewDetail, viewPartyGazanaDashboard, viewPartyGazanaDetail, viewPartyGazanaForm, viewCashbookDashboard, viewRokerDetail, viewKhata, viewEntryForm, viewTempInvoice].filter(Boolean);
 
 const invoiceList = $('invoiceList');
 const invoiceCount = $('invoiceCount');
@@ -83,6 +84,8 @@ function showView(view) {
     currentTab = 'gazana';
   } else if (view === viewCashbookDashboard || view === viewRokerDetail || view === viewKhata || view === viewEntryForm) {
     currentTab = 'cashbook';
+  } else if (view === viewTempInvoice) {
+    currentTab = 'tempInvoice';
   } else {
     currentTab = 'costing';
   }
@@ -7305,6 +7308,516 @@ window.closeEditPaymentRecordModal = closeEditPaymentRecordModal;
 window.submitEditPaymentRecord = submitEditPaymentRecord;
 window.handleDeletePaymentItem = handleDeletePaymentItem;
 window.apiPut = apiPut;
+
+// ═══════════════════════════════════════════════════════════
+//  TEMP INVOICE TAB (LIVE EDITABLE SHEET & PDF EXPORT)
+// ═══════════════════════════════════════════════════════════
+
+function getTodayDateFormatted() {
+  const d = new Date();
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const day = d.getDate();
+  const month = months[d.getMonth()];
+  const year = String(d.getFullYear()).slice(-2);
+  return `${day}-${month}-${year}`;
+}
+
+const DEFAULT_TEMP_INVOICE_DATA = {
+  compName: "MUTAHIR TEXTILES",
+  compAddress: "P16, AL-HAMAD INDUSTRIAL ESTATE,<br>CHAK NO. 8/JB, DAEWOO ROAD, FAISALABAD",
+  compTax: "NTN. A0973067. STRN. 32-77-8762-286-30",
+  buyerName: "Yarana Textile Mills",
+  buyerAddr: "Suite No. 304, 3rd Floor,<br>Uni Tower, I.I Chundrigar Road,<br>Karachi - 74000, Pakistan",
+  buyerNtn: "NTN. 8057750-5",
+  invDate: getTodayDateFormatted(),
+  invNo: "",
+  gstHeader: "GST # 18%",
+  items: [
+    {
+      qty: 12608,
+      unit: "Mtrs",
+      desc: '76x62/32x32 101" S/L',
+      subDesc: "100% CTN FABRIC",
+      rate: 293.00,
+      exVal: 3694144.00,
+      gstVal: 664945.92,
+      inclVal: 4359089.92
+    },
+    {
+      qty: 5842,
+      unit: "Mtrs",
+      desc: '76x66/30x32 104" S/L',
+      subDesc: "100% CTN FABRIC",
+      rate: 314.00,
+      exVal: 1834388.00,
+      gstVal: 330189.84,
+      inclVal: 2164577.84
+    }
+  ]
+};
+
+let currentTempInvoice = null;
+
+function parseNumericVal(str) {
+  if (str === '' || str == null) return null;
+  if (typeof str === 'number') return isNaN(str) ? null : str;
+  const cleaned = String(str).replace(/,/g, '').replace(/[^0-9.-]/g, '');
+  if (cleaned === '' || cleaned === '-') return null;
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? null : num;
+}
+
+function formatTiCurrency(val) {
+  if (val === '' || val == null) return '';
+  const num = typeof val === 'number' ? val : parseNumericVal(val);
+  if (num == null) return '';
+  return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function getGstPercentage() {
+  const gstHeaderEl = $('tiGstHeader');
+  const txt = gstHeaderEl ? gstHeaderEl.innerText : '18%';
+  const match = txt.match(/(\d+(\.\d+)?)/);
+  return match ? parseFloat(match[1]) : 18;
+}
+
+function initTempInvoice(forceDefault = false) {
+  if (forceDefault) {
+    currentTempInvoice = JSON.parse(JSON.stringify(DEFAULT_TEMP_INVOICE_DATA));
+  } else if (!currentTempInvoice) {
+    const saved = localStorage.getItem('temp_invoice_draft');
+    if (saved) {
+      try {
+        currentTempInvoice = JSON.parse(saved);
+      } catch (e) {
+        currentTempInvoice = JSON.parse(JSON.stringify(DEFAULT_TEMP_INVOICE_DATA));
+      }
+    } else {
+      currentTempInvoice = JSON.parse(JSON.stringify(DEFAULT_TEMP_INVOICE_DATA));
+    }
+  }
+
+  // Ensure current date and clean invoice no if unset or legacy
+  if (!currentTempInvoice.invDate || currentTempInvoice.invDate === '5-Oct-26') {
+    currentTempInvoice.invDate = getTodayDateFormatted();
+  }
+  if (currentTempInvoice.invNo === 'MT-39-27') {
+    currentTempInvoice.invNo = '';
+  }
+
+  // Restore any hidden blocks
+  if ($('tiLogoWrap')) $('tiLogoWrap').style.display = '';
+  if ($('tiCompAddress')) {
+    $('tiCompAddress').style.display = '';
+    const parentLine = $('tiCompAddress').closest('.ti-removable-line');
+    if (parentLine) parentLine.style.display = '';
+  }
+  if ($('tiCompTax')) {
+    $('tiCompTax').style.display = '';
+    const parentLine = $('tiCompTax').closest('.ti-removable-line');
+    if (parentLine) parentLine.style.display = '';
+  }
+
+  // Populate Header Fields
+  if ($('tiCompName')) $('tiCompName').innerHTML = currentTempInvoice.compName || '';
+  if ($('tiCompAddress')) $('tiCompAddress').innerHTML = currentTempInvoice.compAddress || '';
+  if ($('tiCompTax')) $('tiCompTax').innerHTML = currentTempInvoice.compTax || '';
+  if ($('tiBuyerName')) $('tiBuyerName').innerHTML = currentTempInvoice.buyerName || '';
+  if ($('tiBuyerAddr')) $('tiBuyerAddr').innerHTML = currentTempInvoice.buyerAddr || '';
+  if ($('tiBuyerNtn')) $('tiBuyerNtn').innerHTML = currentTempInvoice.buyerNtn || '';
+  if ($('tiInvDate')) $('tiInvDate').innerHTML = currentTempInvoice.invDate || getTodayDateFormatted();
+  if ($('tiInvNo')) $('tiInvNo').innerHTML = currentTempInvoice.invNo || '';
+  if ($('tiGstHeader')) $('tiGstHeader').innerHTML = currentTempInvoice.gstHeader || 'GST # 18%';
+
+  renderTempInvoiceItems();
+}
+
+function renderTempInvoiceItems() {
+  const tbody = $('tiTableBody');
+  if (!tbody || !currentTempInvoice) return;
+
+  tbody.innerHTML = '';
+  const items = currentTempInvoice.items || [];
+  const gstPct = getGstPercentage();
+
+  let totalEx = 0;
+  let totalGst = 0;
+  let totalIncl = 0;
+  let hasNumericValues = false;
+
+  items.forEach((item, idx) => {
+    let exVal = item.exVal !== undefined && item.exVal !== null && item.exVal !== '' ? item.exVal : '';
+    let gstVal = item.gstVal !== undefined && item.gstVal !== null && item.gstVal !== '' ? item.gstVal : '';
+    let inclVal = item.inclVal !== undefined && item.inclVal !== null && item.inclVal !== '' ? item.inclVal : '';
+
+    const qNum = parseNumericVal(item.qty);
+    const rNum = parseNumericVal(item.rate);
+
+    // Auto-calculate if qty & rate are present and exVal wasn't explicitly blanked
+    if (qNum != null && rNum != null && exVal === '') {
+      exVal = Math.round((qNum * rNum) * 100) / 100;
+      gstVal = Math.round((exVal * (gstPct / 100)) * 100) / 100;
+      inclVal = Math.round((exVal + gstVal) * 100) / 100;
+      item.exVal = exVal;
+      item.gstVal = gstVal;
+      item.inclVal = inclVal;
+    }
+
+    const exNum = parseNumericVal(exVal);
+    const gstNum = parseNumericVal(gstVal);
+    const inclNum = parseNumericVal(inclVal);
+
+    if (exNum != null) { totalEx += exNum; hasNumericValues = true; }
+    if (gstNum != null) { totalGst += gstNum; hasNumericValues = true; }
+    if (inclNum != null) { totalIncl += inclNum; hasNumericValues = true; }
+
+    // Line 1: Main data row (6 cells only)
+    const tr1 = document.createElement('tr');
+    tr1.className = 'ti-item-line1';
+    tr1.innerHTML = `
+      <td class="ti-cell-center">
+        <span contenteditable="true" class="ti-editable" data-idx="${idx}" data-field="qty">${item.qty != null ? item.qty : ''}</span>
+      </td>
+      <td class="ti-cell-center" style="font-weight: 700;">
+        <span contenteditable="true" class="ti-editable" data-idx="${idx}" data-field="desc">${escapeHtml(item.desc || '')}</span>
+      </td>
+      <td class="ti-cell-center">
+        <span contenteditable="true" class="ti-editable" data-idx="${idx}" data-field="rate">${item.rate !== '' && item.rate != null ? formatTiCurrency(item.rate) : ''}</span>
+      </td>
+      <td class="ti-cell-right">
+        <span contenteditable="true" class="ti-editable" data-idx="${idx}" data-field="exVal">${formatTiCurrency(exVal)}</span>
+      </td>
+      <td class="ti-cell-right">
+        <span contenteditable="true" class="ti-editable" data-idx="${idx}" data-field="gstVal">${formatTiCurrency(gstVal)}</span>
+      </td>
+      <td class="ti-cell-right">
+        <span contenteditable="true" class="ti-editable" data-idx="${idx}" data-field="inclVal">${formatTiCurrency(inclVal)}</span>
+      </td>
+      <button type="button" class="ti-row-del-btn" title="Delete Row" onclick="deleteTempInvoiceItem(${idx})">🗑️</button>
+    `;
+
+    // Line 2: Sub-description row (6 cells only)
+    const tr2 = document.createElement('tr');
+    tr2.className = 'ti-item-line2';
+    tr2.innerHTML = `
+      <td class="ti-cell-center" style="font-weight: 600;">
+        <span contenteditable="true" class="ti-editable" data-idx="${idx}" data-field="unit">${escapeHtml(item.unit || '')}</span>
+      </td>
+      <td class="ti-cell-center" style="font-weight: 600;">
+        <span contenteditable="true" class="ti-editable" data-idx="${idx}" data-field="subDesc">${escapeHtml(item.subDesc || '')}</span>
+      </td>
+      <td class="ti-cell-right"></td>
+      <td class="ti-cell-right"></td>
+      <td class="ti-cell-right"></td>
+      <td class="ti-cell-right"></td>
+    `;
+
+    tbody.appendChild(tr1);
+    tbody.appendChild(tr2);
+  });
+
+  // Render blank grid lines so invoice paper has the exact full-sheet look as shown in photo
+  const renderedLines = items.length * 2;
+  const targetLines = Math.max(16, renderedLines + 6);
+  const blankCount = Math.max(2, targetLines - renderedLines);
+
+  for (let b = 0; b < blankCount; b++) {
+    const blankTr = document.createElement('tr');
+    blankTr.className = 'ti-blank-row';
+    blankTr.innerHTML = `
+      <td></td><td></td><td></td><td></td><td></td><td></td>
+    `;
+    tbody.appendChild(blankTr);
+  }
+
+  // Update Total Row (if values are cleared, leave empty or show 0.00)
+  if ($('tiTotalExVal')) $('tiTotalExVal').innerText = hasNumericValues ? formatTiCurrency(totalEx) : '';
+  if ($('tiTotalGstVal')) $('tiTotalGstVal').innerText = hasNumericValues ? formatTiCurrency(totalGst) : '';
+  if ($('tiTotalInclVal')) $('tiTotalInclVal').innerText = hasNumericValues ? formatTiCurrency(totalIncl) : '';
+
+  bindTempInvoiceCellEvents();
+}
+
+function bindTempInvoiceCellEvents() {
+  const tbody = $('tiTableBody');
+  if (!tbody) return;
+
+  const editableCells = tbody.querySelectorAll('.ti-editable');
+  editableCells.forEach(cell => {
+    cell.addEventListener('blur', () => {
+      const idx = parseInt(cell.dataset.idx, 10);
+      const field = cell.dataset.field;
+      if (isNaN(idx) || !currentTempInvoice.items[idx]) return;
+
+      const rawVal = cell.innerText.trim();
+      const item = currentTempInvoice.items[idx];
+
+      if (field === 'qty') {
+        item.qty = rawVal === '' ? '' : (isNaN(Number(rawVal.replace(/,/g, ''))) ? rawVal : parseNumericVal(rawVal));
+        if (item.qty === '') {
+          item.exVal = '';
+          item.gstVal = '';
+          item.inclVal = '';
+        } else {
+          recalcTempInvoiceItem(item);
+        }
+      } else if (field === 'rate') {
+        item.rate = rawVal === '' ? '' : parseNumericVal(rawVal);
+        if (item.rate === '') {
+          item.exVal = '';
+          item.gstVal = '';
+          item.inclVal = '';
+        } else {
+          recalcTempInvoiceItem(item);
+        }
+      } else if (field === 'exVal') {
+        item.exVal = rawVal === '' ? '' : parseNumericVal(rawVal);
+        if (item.exVal !== '' && item.exVal != null) {
+          const gstPct = getGstPercentage();
+          item.gstVal = Math.round((item.exVal * (gstPct / 100)) * 100) / 100;
+          item.inclVal = Math.round((item.exVal + item.gstVal) * 100) / 100;
+        } else {
+          item.gstVal = '';
+          item.inclVal = '';
+        }
+      } else if (field === 'gstVal') {
+        item.gstVal = rawVal === '' ? '' : parseNumericVal(rawVal);
+        if (item.gstVal !== '' && item.gstVal != null) {
+          const ex = parseNumericVal(item.exVal) || 0;
+          item.inclVal = Math.round((ex + item.gstVal) * 100) / 100;
+        }
+      } else if (field === 'inclVal') {
+        item.inclVal = rawVal === '' ? '' : parseNumericVal(rawVal);
+      } else if (field === 'desc') {
+        item.desc = rawVal;
+      } else if (field === 'subDesc') {
+        item.subDesc = rawVal;
+      } else if (field === 'unit') {
+        item.unit = rawVal;
+      }
+
+      renderTempInvoiceItems();
+    });
+  });
+}
+
+function recalcTempInvoiceItem(item) {
+  const q = parseNumericVal(item.qty);
+  const r = parseNumericVal(item.rate);
+  if (q != null && r != null) {
+    const ex = Math.round((q * r) * 100) / 100;
+    const gstPct = getGstPercentage();
+    const gst = Math.round((ex * (gstPct / 100)) * 100) / 100;
+    const incl = Math.round((ex + gst) * 100) / 100;
+
+    item.exVal = ex;
+    item.gstVal = gst;
+    item.inclVal = incl;
+  }
+}
+
+function addTempInvoiceItem() {
+  if (!currentTempInvoice) initTempInvoice();
+  currentTempInvoice.items.push({
+    qty: '',
+    unit: 'Mtrs',
+    desc: 'Description / Fabric Quality',
+    subDesc: '100% CTN FABRIC',
+    rate: '',
+    exVal: '',
+    gstVal: '',
+    inclVal: ''
+  });
+  renderTempInvoiceItems();
+  toast('Added new item row to invoice', 'info');
+}
+
+function deleteTempInvoiceItem(idx) {
+  if (!currentTempInvoice || !currentTempInvoice.items) return;
+  if (currentTempInvoice.items.length <= 1) {
+    currentTempInvoice.items = [{
+      qty: '',
+      unit: '',
+      desc: '',
+      subDesc: '',
+      rate: '',
+      exVal: '',
+      gstVal: '',
+      inclVal: ''
+    }];
+  } else {
+    currentTempInvoice.items.splice(idx, 1);
+  }
+  renderTempInvoiceItems();
+  toast('Item row deleted', 'info');
+}
+
+function clearTempInvoiceValues() {
+  if (!currentTempInvoice || !currentTempInvoice.items) return;
+  currentTempInvoice.items.forEach(item => {
+    item.qty = '';
+    item.rate = '';
+    item.exVal = '';
+    item.gstVal = '';
+    item.inclVal = '';
+  });
+  renderTempInvoiceItems();
+  toast('All table values cleared! You can now enter fresh numbers.', 'info');
+}
+
+function removeTempInvoiceBlock(elementId) {
+  const el = $(elementId);
+  if (!el) return;
+  el.style.display = 'none';
+  toast('Block removed from invoice. Click Reset anytime to restore.', 'info');
+}
+
+function saveTempInvoiceDraft() {
+  collectTempInvoiceHeaderData();
+  localStorage.setItem('temp_invoice_draft', JSON.stringify(currentTempInvoice));
+  toast('Temp Invoice draft saved successfully!', 'success');
+}
+
+function collectTempInvoiceHeaderData() {
+  if (!currentTempInvoice) initTempInvoice();
+  if ($('tiCompName')) currentTempInvoice.compName = $('tiCompName').innerHTML;
+  if ($('tiCompAddress')) currentTempInvoice.compAddress = $('tiCompAddress').innerHTML;
+  if ($('tiCompTax')) currentTempInvoice.compTax = $('tiCompTax').innerHTML;
+  if ($('tiBuyerName')) currentTempInvoice.buyerName = $('tiBuyerName').innerHTML;
+  if ($('tiBuyerAddr')) currentTempInvoice.buyerAddr = $('tiBuyerAddr').innerHTML;
+  if ($('tiBuyerNtn')) currentTempInvoice.buyerNtn = $('tiBuyerNtn').innerHTML;
+  if ($('tiInvDate')) currentTempInvoice.invDate = $('tiInvDate').innerHTML;
+  if ($('tiInvNo')) currentTempInvoice.invNo = $('tiInvNo').innerHTML;
+  if ($('tiGstHeader')) currentTempInvoice.gstHeader = $('tiGstHeader').innerHTML;
+}
+
+async function downloadTempInvoicePdf() {
+  try {
+    toast('Generating Sale Invoice PDF...', 'info');
+    collectTempInvoiceHeaderData();
+
+    const paperEl = $('tempInvoicePaper');
+    if (!paperEl) return;
+
+    // Clone element to sanitize for print
+    const clone = paperEl.cloneNode(true);
+    clone.style.boxShadow = 'none';
+    clone.style.width = '700px';
+    clone.style.maxWidth = '700px';
+    clone.style.minWidth = '0';
+    clone.style.margin = '0 auto';
+    clone.style.padding = '18px 22px';
+    clone.style.background = '#ffffff';
+    clone.style.boxSizing = 'border-box';
+
+    // Remove buttons, handles, and editable hints
+    clone.querySelectorAll('.ti-row-del-btn, .ti-remove-block-btn, .ti-remove-line-btn').forEach(el => el.remove());
+    clone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+
+    const container = document.createElement('div');
+    container.style.cssText = 'position: fixed; left: -9999px; top: 0px; width: 700px; z-index: -99999; pointer-events: none;';
+    container.appendChild(clone);
+    document.body.appendChild(container);
+
+    const invNum = ($('tiInvNo') ? $('tiInvNo').innerText.trim() : '').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const buyerStr = ($('tiBuyerName') ? $('tiBuyerName').innerText.trim() : 'Buyer').replace(/\s+/g, '_');
+    const fileName = invNum ? `Sale_Invoice_${invNum}_${buyerStr}.pdf` : `Sale_Invoice_${buyerStr}.pdf`;
+
+    const opt = {
+      margin: [6, 6, 6, 6],
+      filename: fileName,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        scrollX: 0,
+        scrollY: 0
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    if (typeof html2pdf !== 'undefined') {
+      const pdfWorker = html2pdf().set(opt).from(clone);
+      const pdfBlob = await pdfWorker.output('blob');
+      if (container.parentNode) document.body.removeChild(container);
+
+      const downloadUrl = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+      toast('Downloaded Sale Invoice PDF successfully!', 'success');
+    } else {
+      if (container.parentNode) document.body.removeChild(container);
+      window.print();
+    }
+  } catch (err) {
+    console.error('PDF error:', err);
+    toast('Failed to generate PDF: ' + err.message, 'error');
+  }
+}
+
+// Window Globals for Temp Invoice
+window.deleteTempInvoiceItem = deleteTempInvoiceItem;
+window.addTempInvoiceItem = addTempInvoiceItem;
+window.clearTempInvoiceValues = clearTempInvoiceValues;
+window.removeTempInvoiceBlock = removeTempInvoiceBlock;
+window.initTempInvoice = initTempInvoice;
+
+// Event Listeners for Temp Invoice Toolbar
+if ($('tabTempInvoice')) {
+  $('tabTempInvoice').addEventListener('click', () => {
+    showView(viewTempInvoice);
+    initTempInvoice();
+  });
+}
+
+if ($('btnTiAddRow')) {
+  $('btnTiAddRow').addEventListener('click', addTempInvoiceItem);
+}
+
+if ($('btnTiClearValues')) {
+  $('btnTiClearValues').addEventListener('click', () => {
+    confirmAction(
+      'Clear All Values?',
+      'Are you sure you want to clear all numbers and amounts from the invoice table?',
+      () => {
+        clearTempInvoiceValues();
+      }
+    );
+  });
+}
+
+if ($('btnTiReset')) {
+  $('btnTiReset').addEventListener('click', () => {
+    confirmAction(
+      'Reset Invoice?',
+      'Are you sure you want to reset all invoice fields, layout, and values back to the original sample values?',
+      () => {
+        initTempInvoice(true);
+        toast('Invoice reset to original template values!', 'success');
+      }
+    );
+  });
+}
+
+if ($('btnTiSaveDraft')) {
+  $('btnTiSaveDraft').addEventListener('click', saveTempInvoiceDraft);
+}
+
+if ($('btnTiDownloadPdf')) {
+  $('btnTiDownloadPdf').addEventListener('click', downloadTempInvoicePdf);
+}
+
+if ($('btnTiPrint')) {
+  $('btnTiPrint').addEventListener('click', () => {
+    window.print();
+  });
+}
 
 // ═══════════════════════════════════════════════════════════
 //  INIT

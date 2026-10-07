@@ -13,7 +13,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>Textile Costing Sheet</title>
   <link rel="manifest" href="/manifest.json" />
-  <link rel="stylesheet" href="/styles.css?v=2.5.7" />
+  <link rel="stylesheet" href="/styles.css?v=2.6.2" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -783,6 +783,115 @@
 
 
 
+    <!-- ─── Temp Invoice View ─── -->
+    <section class="view" id="viewTempInvoice">
+      <div class="ti-toolbar">
+        <div class="ti-toolbar-title-wrap">
+          <h2 class="ti-toolbar-title">🧾 Editable Temp Invoice</h2>
+          <span class="ti-badge">Live Interactive Slip</span>
+        </div>
+        <div class="ti-toolbar-actions">
+          <button class="btn btn-primary" id="btnTiAddRow">＋ Add Item</button>
+          <button class="btn btn-secondary" id="btnTiClearValues" title="Clear all table values">🧹 Clear Values</button>
+          <button class="btn btn-secondary" id="btnTiReset" title="Restore original template values">🔄 Reset</button>
+          <button class="btn btn-secondary" id="btnTiSaveDraft">💾 Save Draft</button>
+          <button class="btn btn-primary" id="btnTiDownloadPdf" style="background: #0284c7; border-color: #0284c7;">📥 Download PDF</button>
+          <button class="btn btn-secondary" id="btnTiPrint">🖨️ Print</button>
+        </div>
+      </div>
+
+      <div class="ti-hint-bar">
+        <span>✏️ <strong>Live Editable:</strong> Click any text, description, date or rate to edit or remove it. Clear any value and it stays blank. Calculations update automatically!</span>
+      </div>
+
+      <!-- Printable / Viewable Paper Container -->
+      <div class="ti-paper-wrapper">
+        <div class="ti-paper" id="tempInvoicePaper">
+          
+          <!-- Top Header Section -->
+          <div class="ti-header">
+            <div class="ti-logo-wrap ti-removable-wrap" id="tiLogoWrap">
+              <img src="/loom-logo.png" alt="Loom Logo" class="ti-logo-img" id="tiLogoImg" />
+              <button type="button" class="ti-remove-block-btn" title="Remove Logo" onclick="removeTempInvoiceBlock('tiLogoWrap')">✕</button>
+            </div>
+            <div class="ti-company-info">
+              <div contenteditable="true" class="ti-editable ti-comp-name" id="tiCompName">MUTAHIR TEXTILES</div>
+              <div class="ti-removable-line">
+                <div contenteditable="true" class="ti-editable ti-comp-address" id="tiCompAddress">P16, AL-HAMAD INDUSTRIAL ESTATE,<br>CHAK NO. 8/JB, DAEWOO ROAD, FAISALABAD</div>
+                <button type="button" class="ti-remove-line-btn" title="Remove Address" onclick="removeTempInvoiceBlock('tiCompAddress')">✕</button>
+              </div>
+              <div class="ti-removable-line">
+                <div contenteditable="true" class="ti-editable ti-comp-tax" id="tiCompTax">NTN. A0973067. STRN. 32-77-8762-286-30</div>
+                <button type="button" class="ti-remove-line-btn" title="Remove Tax Line" onclick="removeTempInvoiceBlock('tiCompTax')">✕</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Buyer Detail & Invoice Meta Grid -->
+          <div class="ti-meta-grid">
+            <!-- Left: Buyer Detail -->
+            <div class="ti-buyer-col">
+              <div class="ti-buyer-banner">BUYER DETAIL</div>
+              <div class="ti-buyer-body">
+                <div contenteditable="true" class="ti-editable ti-buyer-name" id="tiBuyerName">Yarana Textile Mills</div>
+                <div contenteditable="true" class="ti-editable ti-buyer-addr" id="tiBuyerAddr">Suite No. 304, 3rd Floor,<br>Uni Tower, I.I Chundrigar Road,<br>Karachi - 74000, Pakistan</div>
+                <div contenteditable="true" class="ti-editable ti-buyer-ntn" id="tiBuyerNtn">NTN. 8057750-5</div>
+              </div>
+            </div>
+
+            <!-- Right: Sale Invoice Meta Box -->
+            <div class="ti-inv-col">
+              <div class="ti-inv-heading">SALE INVOICE</div>
+              <table class="ti-inv-meta-table">
+                <tr>
+                  <td class="ti-meta-lbl">DATE</td>
+                  <td class="ti-meta-val"><span contenteditable="true" class="ti-editable" id="tiInvDate">6-Oct-26</span></td>
+                </tr>
+              </table>
+            </div>
+          </div>
+
+          <!-- Main Items Table -->
+          <div class="ti-table-container">
+            <table class="ti-table" id="tiItemsTable">
+              <thead>
+                <tr>
+                  <th style="width: 12%;">QTY</th>
+                  <th style="width: 35%;">DESCRIPTION</th>
+                  <th style="width: 10%;">RATE</th>
+                  <th style="width: 14.5%;">EX. VALUE</th>
+                  <th style="width: 14%;"><span contenteditable="true" class="ti-editable" id="tiGstHeader">GST # 18%</span></th>
+                  <th style="width: 14.5%;">INCL. VALUE</th>
+                </tr>
+              </thead>
+              <tbody id="tiTableBody">
+                <!-- populated dynamically -->
+              </tbody>
+              <tfoot>
+                <tr class="ti-total-row">
+                  <td></td>
+                  <td></td>
+                  <td class="ti-total-label">TOTAL</td>
+                  <td class="ti-total-val" id="tiTotalExVal">5,528,532.00</td>
+                  <td class="ti-total-val" id="tiTotalGstVal">995,135.76</td>
+                  <td class="ti-total-val" id="tiTotalInclVal">6,523,667.76</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <!-- Footer Signature Section -->
+          <div class="ti-footer">
+            <div class="ti-signature-wrap">
+              <div class="ti-signature-line"></div>
+              <div class="ti-signature-label" contenteditable="true">SIGNATURE</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
   </main>
 
   <!-- ═══ Bottom Tab Navigation ═══ -->
@@ -798,6 +907,10 @@
     <button class="bottom-nav-tab" id="tabCashbook" data-tab="cashbook">
       <span class="tab-icon">📒</span>
       <span class="tab-label">Cashbook</span>
+    </button>
+    <button class="bottom-nav-tab" id="tabTempInvoice" data-tab="tempInvoice">
+      <span class="tab-icon">🧾</span>
+      <span class="tab-label">Temp Invoice</span>
     </button>
   </nav>
 
@@ -1217,7 +1330,7 @@
   <!-- ═══ Toast Container ═══ -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <script src="/app.js?v=2.5.7"></script>
+  <script src="/app.js?v=2.6.2"></script>
 </body>
 </html>
 
