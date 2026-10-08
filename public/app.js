@@ -1190,22 +1190,23 @@ async function populatePartyNamesDatalist() {
     ]);
 
     const partyMap = new Map();
-    const addParty = (rawName, khataNo = null, code = '') => {
+    const addParty = (rawName, khataNo = null, code = '', isInvestor = false) => {
       if (!rawName || !rawName.trim()) return;
       const cleanName = rawName.trim();
       const norm = cleanName.toLowerCase();
       const partyCode = code || (khataNo ? generatePartyCode(cleanName, khataNo) : '');
       if (!partyMap.has(norm)) {
-        partyMap.set(norm, { name: cleanName, khataNo: khataNo || null, code: partyCode });
+        partyMap.set(norm, { name: cleanName, khataNo: khataNo || null, code: partyCode, isInvestor: Boolean(isInvestor) });
       } else {
         const item = partyMap.get(norm);
         if (khataNo && !item.khataNo) item.khataNo = khataNo;
         if (partyCode && !item.code) item.code = partyCode;
+        if (isInvestor) item.isInvestor = true;
       }
     };
 
     if (Array.isArray(cbParties)) {
-      cbParties.forEach(p => addParty(p.name, p.khataNo, p.code));
+      cbParties.forEach(p => addParty(p.name, p.khataNo, p.code, Boolean(p.isInvestor || p.type === 'investor')));
     }
     if (Array.isArray(gazanaParties)) {
       gazanaParties.forEach(p => addParty(p.partyName));
@@ -2572,6 +2573,7 @@ async function openRokerDetail(rokerNo) {
                       ${escapeHtml(e.partyName)} ↗
                     </strong>
                     ${e.isCash ? '<span class="badge" style="background: #dcfce7; color: #15803d; font-size: 0.65rem; padding: 2px 5px; margin-left: 4px; border-radius: 4px; font-weight: 700;">💵 Cash</span>' : ''}
+                    ${e.isInvestor ? '<span class="badge" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 0.65rem; padding: 2px 5px; margin-left: 4px; border-radius: 4px; font-weight: 700;">⭐ Investor</span>' : ''}
                   </td>
                   <td class="col-roker">#${e.khataNo}</td>
                   <td class="col-desc" title="${escapeHtml(e.description)}">${escapeHtml(e.description)}</td>
@@ -3071,7 +3073,7 @@ async function loadInvestorRegisterDashboard(search = '') {
 
     $('cbCount').textContent = `(${displayedBags} Bags · ${fmtCurrency(displayedJama)})`;
 
-    if (!data.investorsCount || data.investorsCount === 0) {
+    if ((!data.investorsCount || data.investorsCount === 0) && (!data.totalEntries || data.totalEntries === 0)) {
       $('cbMainList').innerHTML = `
         <div class="empty-state" style="padding: 3rem 1.5rem; text-align: center; background: var(--surface); border: 1.5px dashed #f59e0b; border-radius: 12px; margin: 1.5rem 0;">
           <div style="font-size: 3rem; margin-bottom: 0.75rem;">⭐</div>
@@ -4267,6 +4269,7 @@ async function openKhata(khataNo) {
                     <td class="col-desc" title="${escapeHtml(e.description)}">
                       ${escapeHtml(e.description)}
                       ${e.isCash ? '<span style="background: #dcfce7; color: #15803d; font-size: 0.65rem; padding: 2px 5px; margin-left: 4px; border-radius: 4px; font-weight: 700;">💵 Cash</span>' : ''}
+                      ${e.isInvestor ? '<span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 0.65rem; padding: 2px 5px; margin-left: 4px; border-radius: 4px; font-weight: 700;">⭐ Investor</span>' : ''}
                     </td>
                     <td class="col-bags">${e.bags > 0 ? e.bags : '—'}</td>
                     <td class="col-meters">${e.meters > 0 ? e.meters : '—'}</td>
@@ -4659,10 +4662,16 @@ function handleTradeTypeChange() {
 
 function handleCashModeToggle() {
   const isCash = $('entryModeCash') ? $('entryModeCash').checked : false;
+  const side = $('entrySide') ? $('entrySide').value : 'jama';
   if (isCash) {
     if ($('entryTypeSection')) $('entryTypeSection').style.display = 'none';
+    if ($('entryInvestorSection')) $('entryInvestorSection').style.display = 'none';
+    if ($('entryInvestorNo')) $('entryInvestorNo').checked = true;
   } else {
     if ($('entryTypeSection')) $('entryTypeSection').style.display = '';
+    if (side === 'jama' && $('entryInvestorSection')) {
+      $('entryInvestorSection').style.display = '';
+    }
   }
 }
 
@@ -4721,6 +4730,26 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
       if ($('entryTypePurchase')) $('entryTypePurchase').checked = true; // Default to Purchase for Jama
     }
 
+    // Show Investor Classification for Jama entry
+    if ($('entryInvestorSection')) $('entryInvestorSection').style.display = '';
+    if (editData) {
+      if (editData.isInvestor) {
+        if ($('entryInvestorYes')) $('entryInvestorYes').checked = true;
+      } else {
+        if ($('entryInvestorNo')) $('entryInvestorNo').checked = true;
+      }
+    } else {
+      const pNorm = (preSelectPartyName || '').trim().toLowerCase();
+      const isKnownInv = pNorm && (allKnownPartiesList || []).some(p =>
+        p.name && p.name.trim().toLowerCase() === pNorm && p.isInvestor
+      );
+      if (isKnownInv) {
+        if ($('entryInvestorYes')) $('entryInvestorYes').checked = true;
+      } else {
+        if ($('entryInvestorNo')) $('entryInvestorNo').checked = true;
+      }
+    }
+
   } else {
     $('entryFormTitle').textContent = editData ? '✏️ Edit Banam Entry (بنام)' : (preSelectRokerNo ? `🔴 Add Banam Entry to Roker #${preSelectRokerNo}` : '🔴 New Banam Entry (بنام)');
     $('groupNaam').style.display = '';
@@ -4745,6 +4774,10 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
     } else {
       if ($('entryTypeSell')) $('entryTypeSell').checked = true; // Default to Sell for Banam
     }
+
+    // Hide Investor Classification for Banam entry
+    if ($('entryInvestorSection')) $('entryInvestorSection').style.display = 'none';
+    if ($('entryInvestorNo')) $('entryInvestorNo').checked = true;
   }
 
   // Fetch or set Roker No
@@ -4797,6 +4830,11 @@ async function openEntryForm(preSelectPartyName = null, preSelectRokerNo = null,
       if ($('entryModeCash')) $('entryModeCash').checked = true;
     } else {
       if ($('entryModeGeneral')) $('entryModeGeneral').checked = true;
+    }
+    if (editData.isInvestor) {
+      if ($('entryInvestorYes')) $('entryInvestorYes').checked = true;
+    } else {
+      if ($('entryInvestorNo')) $('entryInvestorNo').checked = true;
     }
   } else {
     if ($('entryModeGeneral')) $('entryModeGeneral').checked = true;
@@ -4853,6 +4891,7 @@ $('entryForm').addEventListener('submit', async (e) => {
   const isPurchaseVal = !isCashVal && (side === 'jama') && Boolean($('entryTypePurchase')?.checked);
   const isSellVal = !isCashVal && (side === 'banam') && Boolean($('entryTypeSell')?.checked);
   const linkedPurchaseIdVal = (isSellVal && $('sellPurchaseSelect')) ? ($('sellPurchaseSelect').value || null) : null;
+  const isInvestorVal = !isCashVal && (side === 'jama') && Boolean($('entryInvestorYes')?.checked);
 
   const naamVal = (side === 'banam') ? Math.round(parseFloat($('entryNaam').value) || 0) : 0;
   const jamaVal = (side === 'jama') ? Math.round(parseFloat($('entryJama').value) || 0) : 0;
@@ -4876,6 +4915,7 @@ $('entryForm').addEventListener('submit', async (e) => {
     isCash: isCashVal,
     isPurchase: isPurchaseVal,
     isSell: isSellVal,
+    isInvestor: isInvestorVal,
     linkedPurchaseId: linkedPurchaseIdVal,
     txnType: 'general',
     note: '',
@@ -4888,7 +4928,9 @@ $('entryForm').addEventListener('submit', async (e) => {
       toast('Roker entry updated!');
     } else {
       await apiPost(`${CB_API}/entries`, data);
-      if (isSellVal) {
+      if (isInvestorVal) {
+        toast(`⭐ Investor Jama entry saved in Roker #${rokerNoVal}!`, 'success');
+      } else if (isSellVal) {
         toast(`Sell entry saved in Roker #${rokerNoVal}!`);
       } else if (isPurchaseVal) {
         toast(`Purchase entry saved in Roker #${rokerNoVal}!`);
@@ -4912,6 +4954,28 @@ $('entryForm').addEventListener('submit', async (e) => {
     toast(err.message, 'error');
   }
 });
+
+function checkAndAutoSelectInvestor(partyName) {
+  const side = $('entrySide')?.value || 'jama';
+  if (side !== 'jama') return;
+  if ($('editEntryId')?.value) return; // Keep existing value when editing
+  if ($('entryModeCash')?.checked) return;
+
+  const pNorm = (partyName || '').trim().toLowerCase();
+  if (!pNorm) return;
+
+  const isInv = (allKnownPartiesList || []).some(p =>
+    p.name && p.name.trim().toLowerCase() === pNorm && p.isInvestor
+  );
+  if (isInv) {
+    if ($('entryInvestorYes')) $('entryInvestorYes').checked = true;
+  }
+}
+
+if ($('entryPartyName')) {
+  $('entryPartyName').addEventListener('input', (e) => checkAndAutoSelectInvestor(e.target.value));
+  $('entryPartyName').addEventListener('change', (e) => checkAndAutoSelectInvestor(e.target.value));
+}
 
 async function openEditEntry(id) {
   try {

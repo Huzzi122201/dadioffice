@@ -13,7 +13,7 @@
   <meta http-equiv="Expires" content="0" />
   <title>Textile Costing Sheet</title>
   <link rel="manifest" href="/manifest.json" />
-  <link rel="stylesheet" href="/styles.css?v=2.6.7" />
+  <link rel="stylesheet" href="/styles.css?v=2.6.8" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -738,6 +738,27 @@
           </div>
         </div>
 
+        <!-- Investor Classification: Normal vs Investor Entry (Specifically for Jama Entries in Roker) -->
+        <div class="form-section" id="entryInvestorSection">
+          <h3 class="section-title">⭐ Investor Classification (سرمایہ کار انٹری)</h3>
+          <div class="cb-radio-group">
+            <label class="cb-radio-option" id="wrapperInvestorNo">
+              <input type="radio" name="entryIsInvestor" id="entryInvestorNo" value="false" checked />
+              <div class="cb-radio-text">
+                <strong>⚪ Regular Party Entry</strong>
+                <small>Normal roker account entry</small>
+              </div>
+            </label>
+            <label class="cb-radio-option" id="wrapperInvestorYes">
+              <input type="radio" name="entryIsInvestor" id="entryInvestorYes" value="true" />
+              <div class="cb-radio-text">
+                <strong style="color: #b45309;">⭐ Investor Entry (سرمایہ کار انٹری)</strong>
+                <small>Include in Month-wise Investor Register</small>
+              </div>
+            </label>
+          </div>
+        </div>
+
         <!-- Entry Mode: General vs Cash Entry -->
         <div class="form-section">
           <h3 class="section-title">💵 Entry Mode</h3>
@@ -1367,7 +1388,7 @@
   <!-- ═══ Toast Container ═══ -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <script src="/app.js?v=2.6.6"></script>
+  <script src="/app.js?v=2.6.8"></script>
 </body>
 </html>
 

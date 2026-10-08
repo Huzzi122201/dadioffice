@@ -938,6 +938,10 @@ router.post('/entries', async (req, res) => {
         }
       }
 
+      const isInvestorEntry = item.isInvestor !== undefined
+        ? Boolean(item.isInvestor)
+        : Boolean(party.isInvestor || party.type === 'investor');
+
       const entry = new CashbookEntry({
         rokerNo: finalRokerNo,
         khataNo: party.khataNo,
@@ -958,6 +962,7 @@ router.post('/entries', async (req, res) => {
         note: note || '',
         isPurchase: isPurchaseEntry,
         isSell: isSellEntry,
+        isInvestor: isInvestorEntry,
         linkedPurchaseId: null,
         remainingBags: 0,
       });
@@ -1100,6 +1105,10 @@ router.put('/entries/:id', async (req, res) => {
         }
         await oldPurchase.save();
       }
+    }
+
+    if (req.body.isInvestor !== undefined) {
+      entry.isInvestor = Boolean(req.body.isInvestor);
     }
 
     await entry.save();
@@ -1590,34 +1599,62 @@ router.get('/investor-register', async (req, res) => {
       });
     });
 
-    // 2. Query Jama entries for investor parties from August 1, 2026 onwards (Month 8 onwards)
+    // 2. Query Jama entries for investor parties/entries from August 1, 2026 onwards (Month 8 onwards)
     // ONLY include bag entries (bags > 0), do not include cash entries
     const startDate = new Date('2026-08-01T00:00:00.000Z');
     let entries = [];
+
+    const orInvestorConds = [
+      { isInvestor: true }
+    ];
     if (investorKhataNos.length > 0) {
-      const query = {
+      orInvestorConds.push({
         khataNo: { $in: investorKhataNos },
-        jama: { $gt: 0 },
-        date: { $gte: startDate },
-        bags: { $gt: 0 },
-        isCash: { $ne: true },
-      };
+        isInvestor: { $ne: false },
+      });
+    }
 
-      if (search && search.trim()) {
-        const q = search.trim();
-        const regex = new RegExp(q, 'i');
-        const numQ = parseInt(q.replace(/^#/, ''), 10);
-        const orConds = [
-          { partyName: regex },
-          { description: regex },
-        ];
-        if (!isNaN(numQ)) {
-          orConds.push({ rokerNo: numQ }, { khataNo: numQ });
-        }
-        query.$or = orConds;
+    const query = {
+      jama: { $gt: 0 },
+      date: { $gte: startDate },
+      bags: { $gt: 0 },
+      isCash: { $ne: true },
+      $or: orInvestorConds,
+    };
+
+    if (search && search.trim()) {
+      const q = search.trim();
+      const regex = new RegExp(q, 'i');
+      const numQ = parseInt(q.replace(/^#/, ''), 10);
+      const orSearchConds = [
+        { partyName: regex },
+        { description: regex },
+      ];
+      if (!isNaN(numQ)) {
+        orSearchConds.push({ rokerNo: numQ }, { khataNo: numQ });
       }
+      query.$and = [
+        { $or: orInvestorConds },
+        { $or: orSearchConds }
+      ];
+      delete query.$or;
+    }
 
-      entries = await CashbookEntry.find(query).sort({ date: 1, rokerNo: 1, _id: 1 }).lean();
+    entries = await CashbookEntry.find(query).sort({ date: 1, rokerNo: 1, _id: 1 }).lean();
+
+    // Populate investorMap for any parties that were not originally marked as investor
+    const missingKhataNos = [...new Set(entries.map(e => e.khataNo).filter(k => k && !investorMap.has(k)))];
+    if (missingKhataNos.length > 0) {
+      const extraParties = await CashbookParty.find({ khataNo: { $in: missingKhataNos } }).lean();
+      extraParties.forEach(p => {
+        investorMap.set(p.khataNo, {
+          _id: p._id,
+          name: p.name,
+          code: p.code || CashbookParty.computePartyCode(p.name, p.khataNo),
+          khataNo: p.khataNo,
+          phone: p.phone,
+        });
+      });
     }
 
     // 3. Group by YYYY-MM
@@ -1677,7 +1714,7 @@ router.get('/investor-register', async (req, res) => {
       const partyInfo = investorMap.get(e.khataNo) || {};
       const enrichedEntry = {
         ...e,
-        partyCode: partyInfo.code || '',
+        partyCode: partyInfo.code || CashbookParty.computePartyCode(e.partyName || 'Party', e.khataNo || 1),
         partyPhone: partyInfo.phone || '',
       };
       grp.entries.push(enrichedEntry);
@@ -1704,19 +1741,14 @@ router.get('/investor-register', async (req, res) => {
     }
 
     res.json({
-      investorsCount: investors.length,
+      investorsCount: investorMap.size,
       grandTotalJama,
       grandTotalBags,
       totalEntries: entries.length,
       availableMonths,
       selectedMonth: month || 'all',
       months: filteredGroups,
-      investorParties: investors.map(p => ({
-        _id: p._id,
-        name: p.name,
-        khataNo: p.khataNo,
-        code: p.code || CashbookParty.computePartyCode(p.name, p.khataNo),
-      })),
+      investorParties: Array.from(investorMap.values()),
     });
   } catch (err) {
     console.error('Error fetching investor register:', err);

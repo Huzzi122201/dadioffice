@@ -103,6 +103,13 @@ const cashbookEntrySchema = new mongoose.Schema(
       default: false,
     },
 
+    // ── Investor Entry Flag ──────────────────────────────
+    isInvestor: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+
     // ── Purchase / Sell Tracking ─────────────────────────
     isPurchase: {
       type: Boolean,
