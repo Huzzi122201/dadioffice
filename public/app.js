@@ -3067,8 +3067,9 @@ async function loadInvestorRegisterDashboard(search = '') {
 
     const displayedEntries = (data.months || []).reduce((sum, m) => sum + (m.entryCount || 0), 0);
     const displayedJama = (data.months || []).reduce((sum, m) => sum + (m.totalJama || 0), 0);
+    const displayedBags = (data.months || []).reduce((sum, m) => sum + (m.totalBags || 0), 0);
 
-    $('cbCount').textContent = `(${displayedEntries} Entries · ${fmtCurrency(displayedJama)})`;
+    $('cbCount').textContent = `(${displayedBags} Bags · ${fmtCurrency(displayedJama)})`;
 
     if (!data.investorsCount || data.investorsCount === 0) {
       $('cbMainList').innerHTML = `
@@ -3076,7 +3077,7 @@ async function loadInvestorRegisterDashboard(search = '') {
           <div style="font-size: 3rem; margin-bottom: 0.75rem;">⭐</div>
           <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">No Investor Parties Marked Yet</h3>
           <p style="color: var(--text-secondary); max-width: 520px; margin: 0 auto 1.25rem; line-height: 1.5; font-size: 0.925rem;">
-            To track investor deposits from August 2026 onwards, go to the <strong>👥 All Parties</strong> tab and click the <strong>☆</strong> button on any party card to mark them as an Investor Party.
+            To track investor bag deposits from August 2026 onwards, go to the <strong>👥 All Parties</strong> tab and click the <strong>☆</strong> button on any party card to mark them as an Investor Party.
           </p>
           <button class="btn btn-primary" onclick="setCashbookSubtab('parties')" style="background: #d97706; border-color: #d97706; font-weight: 700; padding: 8px 18px;">
             👥 Go to All Parties List
@@ -3088,7 +3089,7 @@ async function loadInvestorRegisterDashboard(search = '') {
 
     // Month Selector Options
     const monthOptions = (data.availableMonths || []).map(m => {
-      return `<option value="${m.key}" ${currentInvestorMonth === m.key ? 'selected' : ''}>${m.label} (${m.count} entries · ${fmtCurrency(m.totalJama)})</option>`;
+      return `<option value="${m.key}" ${currentInvestorMonth === m.key ? 'selected' : ''}>${m.label} (${m.totalBags || 0} bags · ${fmtCurrency(m.totalJama)})</option>`;
     }).join('');
 
     const filterBarHtml = `
@@ -3097,7 +3098,7 @@ async function loadInvestorRegisterDashboard(search = '') {
           <label style="font-weight: 700; font-size: 0.85rem; color: #92400e; display: flex; align-items: center; gap: 4px;">
             <span>📅 Filter Month:</span>
             <select class="investor-month-select" onchange="setInvestorMonthFilter(this.value)">
-              <option value="all" ${currentInvestorMonth === 'all' ? 'selected' : ''}>📅 All Months (Aug 2026 Onwards) — ${data.totalEntries} entries</option>
+              <option value="all" ${currentInvestorMonth === 'all' ? 'selected' : ''}>📅 All Months (Aug 2026 Onwards) — ${data.grandTotalBags || displayedBags} bags</option>
               ${monthOptions}
             </select>
           </label>
@@ -3118,6 +3119,13 @@ async function loadInvestorRegisterDashboard(search = '') {
           </div>
         </div>
         <div class="investor-kpi-card">
+          <div class="investor-kpi-icon" style="color: #7c3aed; background: rgba(124, 58, 237, 0.12);">📦</div>
+          <div class="investor-kpi-info">
+            <span class="investor-kpi-value" style="color: #7c3aed;">${displayedBags}</span>
+            <span class="investor-kpi-label">Total Bags</span>
+          </div>
+        </div>
+        <div class="investor-kpi-card">
           <div class="investor-kpi-icon" style="color: #d97706; background: rgba(217, 119, 6, 0.12);">⭐</div>
           <div class="investor-kpi-info">
             <span class="investor-kpi-value" style="color: #d97706;">${data.investorsCount}</span>
@@ -3128,7 +3136,7 @@ async function loadInvestorRegisterDashboard(search = '') {
           <div class="investor-kpi-icon" style="color: #0284c7; background: rgba(2, 132, 199, 0.12);">📋</div>
           <div class="investor-kpi-info">
             <span class="investor-kpi-value" style="color: #0284c7;">${displayedEntries}</span>
-            <span class="investor-kpi-label">Jama Transactions</span>
+            <span class="investor-kpi-label">Bag Entries</span>
           </div>
         </div>
       </div>
@@ -3137,12 +3145,12 @@ async function loadInvestorRegisterDashboard(search = '') {
     if (displayedEntries === 0) {
       $('cbMainList').innerHTML = filterBarHtml + `
         <div class="empty-state" style="padding: 2.5rem 1rem; text-align: center; background: var(--surface); border: 1px dashed var(--border); border-radius: 8px;">
-          <div class="empty-icon" style="font-size: 2.25rem; margin-bottom: 0.5rem;">📭</div>
+          <div class="empty-icon" style="font-size: 2.25rem; margin-bottom: 0.5rem;">📦</div>
           <p style="font-size: 0.95rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">
-            ${search ? 'No investor entries matched your search.' : 'No Jama (Credit) entries found for marked investor parties from August 1, 2026 onwards.'}
+            ${search ? 'No investor bag entries matched your search.' : 'No Jama bag entries found for marked investor parties from August 1, 2026 onwards.'}
           </p>
           <p style="font-size: 0.8125rem; color: var(--text-secondary);">
-            Any Jama entry made in Roker for an investor party automatically appears here.
+            Only Jama entries with yarn bags (bags &gt; 0) are listed here. Pure cash entries are excluded.
           </p>
         </div>
       `;
@@ -3154,7 +3162,6 @@ async function loadInvestorRegisterDashboard(search = '') {
       if (!group.entries || group.entries.length === 0) return '';
 
       const rowsHtml = group.entries.map((e, idx) => {
-        const qtyStr = (e.meters && e.meters > 0) ? `${e.meters}m` : (e.bags && e.bags > 0) ? `${e.bags}b` : '—';
         const rateStr = e.ratePerBag ? fmtRate(e.ratePerBag) : '—';
         return `
           <tr>
@@ -3171,7 +3178,7 @@ async function loadInvestorRegisterDashboard(search = '') {
               <a href="javascript:void(0)" onclick="openRokerDetail(${e.rokerNo})" style="color: #0284c7; font-weight: 700; text-decoration: underline; font-size: 0.8rem;">R#${e.rokerNo}</a>
             </td>
             <td style="max-width: 250px; font-size: 0.8rem; color: var(--text-primary); word-break: break-word;">${escapeHtml(e.description || '—')}</td>
-            <td style="white-space: nowrap; text-align: center; font-size: 0.8rem;">${qtyStr}</td>
+            <td style="white-space: nowrap; text-align: center; font-size: 0.85rem; font-weight: 700; color: #7c3aed;">${e.bags || 0} bags</td>
             <td style="white-space: nowrap; text-align: right; font-size: 0.8rem;">${rateStr}</td>
             <td style="white-space: nowrap; text-align: right; font-weight: 800; color: #15803d; font-size: 0.9rem;">${fmtCurrency(e.jama)}</td>
           </tr>
@@ -3183,7 +3190,7 @@ async function loadInvestorRegisterDashboard(search = '') {
           <div class="investor-month-header">
             <div class="investor-month-title">
               <span>📅 ${group.monthLabel}</span>
-              <span class="investor-month-badge">${group.entryCount} entries</span>
+              <span class="investor-month-badge">${group.totalBags || 0} bags · ${group.entryCount} entries</span>
             </div>
             <div class="investor-month-total">
               Month Jama: ${fmtCurrency(group.totalJama)}
@@ -3199,7 +3206,7 @@ async function loadInvestorRegisterDashboard(search = '') {
                   <th style="text-align: center;">Khata #</th>
                   <th style="text-align: center;">Roker #</th>
                   <th>Description / Details</th>
-                  <th style="text-align: center;">Qty</th>
+                  <th style="text-align: center;">Bags</th>
                   <th style="text-align: right;">Rate</th>
                   <th style="text-align: right;">Jama (₹)</th>
                 </tr>
@@ -3209,7 +3216,9 @@ async function loadInvestorRegisterDashboard(search = '') {
               </tbody>
               <tfoot>
                 <tr>
-                  <td colspan="8" style="text-align: right; font-weight: 800;">Month Subtotal (${group.monthLabel}):</td>
+                  <td colspan="6" style="text-align: right; font-weight: 800;">Month Subtotal (${group.monthLabel}):</td>
+                  <td style="text-align: center; font-weight: 800; color: #7c3aed;">${group.totalBags || 0} bags</td>
+                  <td style="text-align: right; color: var(--text-muted);">—</td>
                   <td style="text-align: right; color: #15803d; font-size: 0.95rem; font-weight: 800;">${fmtCurrency(group.totalJama)}</td>
                 </tr>
               </tfoot>
@@ -3222,12 +3231,12 @@ async function loadInvestorRegisterDashboard(search = '') {
     let grandFooterHtml = '';
     if (currentInvestorMonth === 'all' && (data.months || []).length > 1) {
       grandFooterHtml = `
-        <div style="background: linear-gradient(135deg, #064e3b 0%, #065f46 100%); color: #ffffff; padding: 1rem 1.25rem; border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; margin-top: 1.25rem; flex-wrap: gap: 0.5rem; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+        <div style="background: linear-gradient(135deg, #064e3b 0%, #065f46 100%); color: #ffffff; padding: 1rem 1.25rem; border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; margin-top: 1.25rem; flex-wrap: wrap; gap: 0.5rem; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
           <div style="font-weight: 800; font-size: 1.05rem;">
-            Grand Total Investment (August 2026 Onwards · All Months)
+            Grand Total Bags Investment (August 2026 Onwards · All Months)
           </div>
           <div style="font-size: 1.25rem; font-weight: 800; color: #6ee7b7;">
-            ${fmtCurrency(data.grandTotalJama)}
+            ${data.grandTotalBags || displayedBags} Bags · ${fmtCurrency(data.grandTotalJama)}
           </div>
         </div>
       `;
@@ -3266,6 +3275,7 @@ async function generateInvestorRegisterPDF(action = 'download') {
 
     const displayedEntries = (data.months || []).reduce((sum, m) => sum + (m.entryCount || 0), 0);
     const displayedJama = (data.months || []).reduce((sum, m) => sum + (m.totalJama || 0), 0);
+    const displayedBags = (data.months || []).reduce((sum, m) => sum + (m.totalBags || 0), 0);
 
     // Build tables per month
     let tablesHtml = '';
@@ -3273,7 +3283,7 @@ async function generateInvestorRegisterPDF(action = 'download') {
       if (!group.entries || group.entries.length === 0) return;
 
       const rows = group.entries.map((e, idx) => {
-        const qtyStr = (e.meters && e.meters > 0) ? `${e.meters}m` : (e.bags && e.bags > 0) ? `${e.bags}b` : '—';
+        const bagsStr = e.bags ? `${e.bags} bags` : '—';
         const rateStr = e.ratePerBag ? fmtRate(e.ratePerBag) : '—';
         const bgColor = idx % 2 === 1 ? 'background: #f8fafc;' : 'background: #ffffff;';
         return `
@@ -3284,7 +3294,7 @@ async function generateInvestorRegisterPDF(action = 'download') {
             <td style="padding: 5px 4px; font-size: 10px; text-align: center; color: #475569;">#${e.khataNo}</td>
             <td style="padding: 5px 4px; font-size: 10.5px; text-align: center; font-weight: 700; color: #0284c7;">R#${e.rokerNo}</td>
             <td style="padding: 5px 6px; font-size: 10px; color: #334155;">${escapeHtml(e.description || '—')}</td>
-            <td style="padding: 5px 4px; font-size: 10px; text-align: center;">${qtyStr}</td>
+            <td style="padding: 5px 4px; font-size: 10px; text-align: center; font-weight: 700; color: #7c3aed;">${bagsStr}</td>
             <td style="padding: 5px 5px; font-size: 10px; text-align: right;">${rateStr}</td>
             <td style="padding: 5px 6px; font-size: 11px; text-align: right; font-weight: 800; color: #15803d; white-space: nowrap;">${fmtCurrency(e.jama)}</td>
           </tr>
@@ -3294,7 +3304,7 @@ async function generateInvestorRegisterPDF(action = 'download') {
       tablesHtml += `
         <div style="margin-bottom: 14px; page-break-inside: auto;">
           <div style="background: #1e293b; color: #ffffff; padding: 6px 10px; border-radius: 4px 4px 0 0; display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 800; page-break-inside: avoid;">
-            <span>📅 ${group.monthLabel} (${group.entryCount} Entries)</span>
+            <span>📅 ${group.monthLabel} (${group.totalBags || 0} Bags · ${group.entryCount} Entries)</span>
             <span style="color: #4ade80;">Month Jama: ${fmtCurrency(group.totalJama)}</span>
           </div>
           <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; border-top: none; table-layout: fixed;">
@@ -3305,9 +3315,9 @@ async function generateInvestorRegisterPDF(action = 'download') {
               <col style="width: 44px;">
               <col style="width: 44px;">
               <col style="width: 154px;">
-              <col style="width: 48px;">
+              <col style="width: 52px;">
               <col style="width: 50px;">
-              <col style="width: 82px;">
+              <col style="width: 78px;">
             </colgroup>
             <thead style="background: #f1f5f9; color: #334155; font-size: 9.5px; font-weight: 800; border-bottom: 1px solid #cbd5e1; page-break-inside: avoid;">
               <tr>
@@ -3317,7 +3327,7 @@ async function generateInvestorRegisterPDF(action = 'download') {
                 <th style="padding: 5px 2px; text-align: center;">Khata</th>
                 <th style="padding: 5px 2px; text-align: center;">Roker</th>
                 <th style="padding: 5px 4px; text-align: left;">Description</th>
-                <th style="padding: 5px 2px; text-align: center;">Qty</th>
+                <th style="padding: 5px 2px; text-align: center;">Bags</th>
                 <th style="padding: 5px 4px; text-align: right;">Rate</th>
                 <th style="padding: 5px 6px; text-align: right;">Jama (₹)</th>
               </tr>
@@ -3327,7 +3337,9 @@ async function generateInvestorRegisterPDF(action = 'download') {
             </tbody>
             <tfoot style="page-break-inside: avoid;">
               <tr style="background: #e2e8f0; font-weight: 800; font-size: 10.5px; border-top: 1.5px solid #0f172a;">
-                <td colspan="8" style="padding: 6px 8px; text-align: right;">Subtotal for ${group.monthLabel}:</td>
+                <td colspan="6" style="padding: 6px 8px; text-align: right;">Subtotal for ${group.monthLabel}:</td>
+                <td style="padding: 6px 4px; text-align: center; color: #7c3aed; font-weight: 800;">${group.totalBags || 0} bags</td>
+                <td style="padding: 6px 4px; text-align: right; color: #64748b;">—</td>
                 <td style="padding: 6px 8px; text-align: right; color: #15803d; font-size: 11px; font-weight: 800;">${fmtCurrency(group.totalJama)}</td>
               </tr>
             </tfoot>
@@ -3361,12 +3373,16 @@ async function generateInvestorRegisterPDF(action = 'download') {
             <div style="font-size: 8.5px; text-transform: uppercase; font-weight: 700; color: #047857;">TOTAL INVESTMENT JAMA</div>
             <div style="font-size: 15px; font-weight: 800; color: #065f46;">${fmtCurrency(displayedJama)}</div>
           </div>
+          <div style="flex: 1; background: #fdf4ff; border: 1.5px solid #c084fc; border-radius: 4px; padding: 6px 10px;">
+            <div style="font-size: 8.5px; text-transform: uppercase; font-weight: 700; color: #7e22ce;">TOTAL BAGS</div>
+            <div style="font-size: 15px; font-weight: 800; color: #6b21a8;">${displayedBags} Bags</div>
+          </div>
           <div style="flex: 1; background: #fef3c7; border: 1.5px solid #f59e0b; border-radius: 4px; padding: 6px 10px;">
             <div style="font-size: 8.5px; text-transform: uppercase; font-weight: 700; color: #b45309;">INVESTOR PARTIES</div>
             <div style="font-size: 15px; font-weight: 800; color: #92400e;">${data.investorsCount} Parties</div>
           </div>
           <div style="flex: 1; background: #eff6ff; border: 1.5px solid #3b82f6; border-radius: 4px; padding: 6px 10px;">
-            <div style="font-size: 8.5px; text-transform: uppercase; font-weight: 700; color: #1d4ed8;">TOTAL ENTRIES</div>
+            <div style="font-size: 8.5px; text-transform: uppercase; font-weight: 700; color: #1d4ed8;">BAG TRANSACTIONS</div>
             <div style="font-size: 15px; font-weight: 800; color: #1e40af;">${displayedEntries} Entries</div>
           </div>
         </div>
@@ -3377,12 +3393,12 @@ async function generateInvestorRegisterPDF(action = 'download') {
         <!-- Grand Total Summary -->
         <div style="background: #0f172a; color: #ffffff; padding: 8px 12px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; margin-top: 10px; page-break-inside: avoid;">
           <span style="font-size: 12px; font-weight: 800;">GRAND TOTAL INVESTMENT (${periodLabel}):</span>
-          <span style="font-size: 14px; font-weight: 800; color: #4ade80;">${fmtCurrency(displayedJama)}</span>
+          <span style="font-size: 14px; font-weight: 800; color: #4ade80;">${displayedBags} Bags · ${fmtCurrency(displayedJama)}</span>
         </div>
 
         <!-- Footer -->
         <div style="margin-top: 14px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 6px; font-size: 9.5px; color: #94a3b8; page-break-inside: avoid;">
-          Investor Register (سرمایہ کار رجسٹر) · ${periodLabel} · Generated on ${dateStr} · Textile Costing & Cashbook System
+          Investor Register / <span dir="rtl" style="direction: rtl; unicode-bidi: embed;">سرمایہ کار رجسٹر</span> · ${periodLabel} · ${dateStr} · Generated by Textile Costing & Cashbook System
         </div>
       </div>
     `;
@@ -3463,11 +3479,12 @@ function shareInvestorRegisterWhatsApp() {
 
   const displayedEntries = (data.months || []).reduce((sum, m) => sum + (m.entryCount || 0), 0);
   const displayedJama = (data.months || []).reduce((sum, m) => sum + (m.totalJama || 0), 0);
+  const displayedBags = (data.months || []).reduce((sum, m) => sum + (m.totalBags || 0), 0);
 
   let monthlyBreakdown = '';
   data.months.forEach(m => {
     if (m.entryCount > 0) {
-      monthlyBreakdown += `\n• *${m.monthLabel}*: ${fmtCurrency(m.totalJama)} (${m.entryCount} entries)`;
+      monthlyBreakdown += `\n• *${m.monthLabel}*: ${m.totalBags || 0} bags · ${fmtCurrency(m.totalJama)} (${m.entryCount} entries)`;
     }
   });
 
@@ -3475,8 +3492,9 @@ function shareInvestorRegisterWhatsApp() {
 📅 *Period:* ${periodLabel}
 ──────────────────
 💰 *Total Jama:* ${fmtCurrency(displayedJama)}
-📋 *Total Entries:* ${displayedEntries}
+📦 *Total Bags:* ${displayedBags} Bags
 👥 *Investor Parties:* ${data.investorsCount}
+📋 *Bag Entries:* ${displayedEntries}
 ──────────────────
 *Month-wise Summary:*${monthlyBreakdown}
 ──────────────────

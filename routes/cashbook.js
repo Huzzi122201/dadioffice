@@ -1591,6 +1591,7 @@ router.get('/investor-register', async (req, res) => {
     });
 
     // 2. Query Jama entries for investor parties from August 1, 2026 onwards (Month 8 onwards)
+    // ONLY include bag entries (bags > 0), do not include cash entries
     const startDate = new Date('2026-08-01T00:00:00.000Z');
     let entries = [];
     if (investorKhataNos.length > 0) {
@@ -1598,6 +1599,8 @@ router.get('/investor-register', async (req, res) => {
         khataNo: { $in: investorKhataNos },
         jama: { $gt: 0 },
         date: { $gte: startDate },
+        bags: { $gt: 0 },
+        isCash: { $ne: true },
       };
 
       if (search && search.trim()) {
@@ -1642,12 +1645,14 @@ router.get('/investor-register', async (req, res) => {
           monthNumber: m,
           entries: [],
           totalJama: 0,
+          totalBags: 0,
           entryCount: 0,
         });
       }
     }
 
     let grandTotalJama = 0;
+    let grandTotalBags = 0;
     entries.forEach(e => {
       const eDate = new Date(e.date);
       const y = eDate.getFullYear();
@@ -1663,6 +1668,7 @@ router.get('/investor-register', async (req, res) => {
           monthNumber: m,
           entries: [],
           totalJama: 0,
+          totalBags: 0,
           entryCount: 0,
         });
       }
@@ -1676,8 +1682,10 @@ router.get('/investor-register', async (req, res) => {
       };
       grp.entries.push(enrichedEntry);
       grp.totalJama += (e.jama || 0);
+      grp.totalBags += (e.bags || 0);
       grp.entryCount += 1;
       grandTotalJama += (e.jama || 0);
+      grandTotalBags += (e.bags || 0);
     });
 
     const allGroups = Array.from(groupsMap.values()).sort((a, b) => a.monthKey.localeCompare(b.monthKey));
@@ -1685,7 +1693,8 @@ router.get('/investor-register', async (req, res) => {
       key: g.monthKey,
       label: g.monthLabel,
       count: g.entryCount,
-      totalJama: g.totalJama
+      totalJama: g.totalJama,
+      totalBags: g.totalBags,
     }));
 
     // Filter by requested month if specified and not 'all'
@@ -1697,6 +1706,7 @@ router.get('/investor-register', async (req, res) => {
     res.json({
       investorsCount: investors.length,
       grandTotalJama,
+      grandTotalBags,
       totalEntries: entries.length,
       availableMonths,
       selectedMonth: month || 'all',
