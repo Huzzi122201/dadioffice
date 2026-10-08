@@ -3300,8 +3300,6 @@ async function generateInvestorRegisterPDF(action = 'download') {
             <td style="padding: 5px 4px; font-size: 10px; text-align: center; color: #64748b;">${idx + 1}</td>
             <td style="padding: 5px 6px; font-size: 10.5px; font-weight: 700; white-space: nowrap;">${formatDate(e.date)}</td>
             <td style="padding: 5px 6px; font-size: 11px; font-weight: 700; color: #0f172a;">${escapeHtml(e.partyName)} ${e.partyCode ? `<span style="font-size: 9px; color: #1e40af;">(${e.partyCode})</span>` : ''}</td>
-            <td style="padding: 5px 4px; font-size: 10px; text-align: center; color: #475569;">#${e.khataNo}</td>
-            <td style="padding: 5px 4px; font-size: 10.5px; text-align: center; font-weight: 700; color: #0284c7;">R#${e.rokerNo}</td>
             <td style="padding: 5px 6px; font-size: 10px; color: #334155;">${escapeHtml(e.description || '—')}</td>
             <td style="padding: 5px 4px; font-size: 10px; text-align: center; font-weight: 700; color: #7c3aed;">${bagsStr}</td>
             <td style="padding: 5px 5px; font-size: 10px; text-align: right;">${rateStr}</td>
@@ -3318,23 +3316,19 @@ async function generateInvestorRegisterPDF(action = 'download') {
           </div>
           <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; border-top: none; table-layout: fixed;">
             <colgroup>
-              <col style="width: 26px;">
-              <col style="width: 72px;">
-              <col style="width: 140px;">
-              <col style="width: 44px;">
-              <col style="width: 44px;">
-              <col style="width: 154px;">
-              <col style="width: 52px;">
-              <col style="width: 50px;">
+              <col style="width: 28px;">
               <col style="width: 78px;">
+              <col style="width: 175px;">
+              <col style="width: 205px;">
+              <col style="width: 58px;">
+              <col style="width: 56px;">
+              <col style="width: 80px;">
             </colgroup>
             <thead style="background: #f1f5f9; color: #334155; font-size: 9.5px; font-weight: 800; border-bottom: 1px solid #cbd5e1; page-break-inside: avoid;">
               <tr>
                 <th style="padding: 5px 2px; text-align: center;">#</th>
                 <th style="padding: 5px 4px; text-align: left;">Date</th>
                 <th style="padding: 5px 4px; text-align: left;">Party Name</th>
-                <th style="padding: 5px 2px; text-align: center;">Khata</th>
-                <th style="padding: 5px 2px; text-align: center;">Roker</th>
                 <th style="padding: 5px 4px; text-align: left;">Description</th>
                 <th style="padding: 5px 2px; text-align: center;">Bags</th>
                 <th style="padding: 5px 4px; text-align: right;">Rate</th>
@@ -3346,7 +3340,7 @@ async function generateInvestorRegisterPDF(action = 'download') {
             </tbody>
             <tfoot style="page-break-inside: avoid;">
               <tr style="background: #e2e8f0; font-weight: 800; font-size: 10.5px; border-top: 1.5px solid #0f172a;">
-                <td colspan="6" style="padding: 6px 8px; text-align: right;">Subtotal for ${group.monthLabel}:</td>
+                <td colspan="4" style="padding: 6px 8px; text-align: right;">Subtotal for ${group.monthLabel}:</td>
                 <td style="padding: 6px 4px; text-align: center; color: #7c3aed; font-weight: 800;">${group.totalBags || 0} bags</td>
                 <td style="padding: 6px 4px; text-align: right; color: #64748b;">—</td>
                 <td style="padding: 6px 8px; text-align: right; color: #15803d; font-size: 11px; font-weight: 800;">${fmtCurrency(group.totalJama)}</td>
