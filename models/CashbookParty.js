@@ -27,11 +27,16 @@ const cashbookPartySchema = new mongoose.Schema(
       index: true,
     },
 
-    // ── Party Type ──────────────────────────────────────
+    // ── Party Type & Investor Flag ──────────────────────
     type: {
       type: String,
       enum: ['supplier', 'investor', 'loomwala', 'general'],
       default: 'supplier',
+    },
+    isInvestor: {
+      type: Boolean,
+      default: false,
+      index: true,
     },
 
     // ── Opening Balance ─────────────────────────────────

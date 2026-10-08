@@ -1859,7 +1859,7 @@ function getEntryRate(e) {
   return 0;
 }
 
-// ── Subnav Switcher (Rokers vs Khata vs Parties vs PurchaseSell vs Contracts) ─────────
+// ── Subnav Switcher (Rokers vs Khata vs Parties vs PurchaseSell vs Contracts vs Investors) ──
 function setCashbookSubtab(subtab) {
   currentCashbookSubtab = subtab;
   $('subnavRokers').classList.toggle('active', subtab === 'rokers');
@@ -1867,6 +1867,7 @@ function setCashbookSubtab(subtab) {
   if ($('subnavParties')) $('subnavParties').classList.toggle('active', subtab === 'parties');
   if ($('subnavPurchaseSell')) $('subnavPurchaseSell').classList.toggle('active', subtab === 'purchaseSell');
   if ($('subnavContracts')) $('subnavContracts').classList.toggle('active', subtab === 'contracts');
+  if ($('subnavInvestors')) $('subnavInvestors').classList.toggle('active', subtab === 'investors');
 
   // Clear search field whenever switching subtabs
   if ($('cbSearchInput')) {
@@ -1881,6 +1882,8 @@ function setCashbookSubtab(subtab) {
     $('cbSearchInput').placeholder = 'Search purchases...';
   } else if (subtab === 'contracts') {
     $('cbSearchInput').placeholder = 'Search contracts by purchaser, seller, quality, broker...';
+  } else if (subtab === 'investors') {
+    $('cbSearchInput').placeholder = 'Search investor jama entries, party, roker...';
   } else {
     $('cbSearchInput').placeholder = 'Search party accounts...';
   }
@@ -1898,12 +1901,24 @@ if ($('subnavPurchaseSell')) {
 if ($('subnavContracts')) {
   $('subnavContracts').addEventListener('click', () => setCashbookSubtab('contracts'));
 }
+if ($('subnavInvestors')) {
+  $('subnavInvestors').addEventListener('click', () => setCashbookSubtab('investors'));
+}
 if ($('btnNewContract')) {
   $('btnNewContract').addEventListener('click', () => openNewContractModal());
 }
+if ($('btnDownloadInvestorPDF')) {
+  $('btnDownloadInvestorPDF').addEventListener('click', () => generateInvestorRegisterPDF('download'));
+}
+if ($('btnShareInvestorPDF')) {
+  $('btnShareInvestorPDF').addEventListener('click', () => generateInvestorRegisterPDF('share'));
+}
+if ($('btnWhatsAppInvestor')) {
+  $('btnWhatsAppInvestor').addEventListener('click', () => shareInvestorRegisterWhatsApp());
+}
 
 // ═══════════════════════════════════════════════════════════
-//  CASHBOOK DASHBOARD (Rokers, Khata Ledger, All Parties, Contracts)
+//  CASHBOOK DASHBOARD (Rokers, Khata Ledger, All Parties, Contracts, Investors)
 // ═══════════════════════════════════════════════════════════
 
 async function loadCashbookDashboard() {
@@ -1914,6 +1929,9 @@ async function loadCashbookDashboard() {
       if ($('btnNewContract')) $('btnNewContract').style.display = '';
       if ($('btnDownloadChatha')) $('btnDownloadChatha').style.display = 'none';
       if ($('btnShareChatha')) $('btnShareChatha').style.display = 'none';
+      if ($('btnDownloadInvestorPDF')) $('btnDownloadInvestorPDF').style.display = 'none';
+      if ($('btnShareInvestorPDF')) $('btnShareInvestorPDF').style.display = 'none';
+      if ($('btnWhatsAppInvestor')) $('btnWhatsAppInvestor').style.display = 'none';
       if ($('btnNewJamaEntry')) $('btnNewJamaEntry').style.display = 'none';
       if ($('btnNewBanamEntry')) $('btnNewBanamEntry').style.display = 'none';
       if ($('btnNewParty')) $('btnNewParty').style.display = 'none';
@@ -1922,6 +1940,24 @@ async function loadCashbookDashboard() {
       return;
     }
 
+    if (currentCashbookSubtab === 'investors') {
+      if ($('btnNewContract')) $('btnNewContract').style.display = 'none';
+      if ($('btnDownloadChatha')) $('btnDownloadChatha').style.display = 'none';
+      if ($('btnShareChatha')) $('btnShareChatha').style.display = 'none';
+      if ($('btnDownloadInvestorPDF')) $('btnDownloadInvestorPDF').style.display = '';
+      if ($('btnShareInvestorPDF')) $('btnShareInvestorPDF').style.display = '';
+      if ($('btnWhatsAppInvestor')) $('btnWhatsAppInvestor').style.display = '';
+      if ($('btnNewJamaEntry')) $('btnNewJamaEntry').style.display = 'none';
+      if ($('btnNewBanamEntry')) $('btnNewBanamEntry').style.display = 'none';
+      if ($('btnNewParty')) $('btnNewParty').style.display = 'none';
+
+      await loadInvestorRegisterDashboard(search);
+      return;
+    }
+
+    if ($('btnDownloadInvestorPDF')) $('btnDownloadInvestorPDF').style.display = 'none';
+    if ($('btnShareInvestorPDF')) $('btnShareInvestorPDF').style.display = 'none';
+    if ($('btnWhatsAppInvestor')) $('btnWhatsAppInvestor').style.display = 'none';
     if ($('btnNewContract')) $('btnNewContract').style.display = 'none';
     if ($('btnDownloadChatha')) $('btnDownloadChatha').style.display = '';
     if ($('btnShareChatha')) $('btnShareChatha').style.display = '';
@@ -2231,10 +2267,12 @@ async function loadCashbookDashboard() {
       const jamaParties = nonCashParties.filter(p => p.balance > 0);
       const banamParties = nonCashParties.filter(p => p.balance < 0);
       const zeroParties = nonCashParties.filter(p => p.balance === 0);
+      const investorParties = parties.filter(p => Boolean(p.isInvestor || p.type === 'investor'));
 
       const totalCashSum = cashParties.reduce((s, p) => s + p.balance, 0);
       const totalJamaSum = jamaParties.reduce((s, p) => s + p.balance, 0);
       const totalBanamSum = banamParties.reduce((s, p) => s + Math.abs(p.balance), 0);
+      const totalInvestorSum = investorParties.reduce((s, p) => s + (p.balance > 0 ? p.balance : 0), 0);
 
       $('cbCount').textContent = `(${parties.length} Parties)`;
 
@@ -2251,6 +2289,7 @@ async function loadCashbookDashboard() {
 
       function renderPartyCard(p) {
         const isCashP = cashParties.some(cp => cp._id === p._id);
+        const isInv = Boolean(p.isInvestor || p.type === 'investor');
         const balClass = isCashP ? (p.balance >= 0 ? 'positive' : 'negative') : (p.balance > 0 ? 'positive' : p.balance < 0 ? 'negative' : 'zero');
         const balLabel = isCashP ? 'Cash Balance' : (p.balance > 0 ? 'Jama (Credit)' : p.balance < 0 ? 'Banam (Debit)' : 'Balanced');
         return `
@@ -2262,6 +2301,7 @@ async function loadCashbookDashboard() {
                   <span class="cb-party-code" style="background: rgba(30, 64, 175, 0.12); color: #1e40af; border: 1px solid rgba(30, 64, 175, 0.3); font-weight: 800; font-size: 0.75rem; padding: 2px 7px; border-radius: 4px;">${getPartyCode(p)}</span>
                   <span class="cb-party-khata-no">#${p.khataNo}</span>
                   ${isCashP ? '<span class="badge" style="background: #e0f2fe; color: #0284c7; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 700;">💵 Cash Party</span>' : ''}
+                  ${isInv ? '<span class="badge badge-investor" title="Marked as Investor Party">⭐ Investor</span>' : ''}
                 </div>
                 <div class="cb-party-meta">
                   ${p.phone ? `<span>📞 ${escapeHtml(p.phone)}</span>` : ''}
@@ -2276,8 +2316,9 @@ async function loadCashbookDashboard() {
                 <div class="cb-party-balance ${balClass}">${fmtCurrency(Math.abs(p.balance))}</div>
                 <div class="cb-party-balance-label">${balLabel}</div>
               </div>
-              <div style="display: flex; gap: 0.25rem;">
-                <button class="btn-action edit" onclick="event.stopPropagation(); editPartyFromCard('${p._id}', '${escapeHtml(p.name)}', ${p.openingBalance || 0}, '${p.balanceType || 'none'}', '${escapeHtml(p.phone || '')}')" title="Edit Party">✏️</button>
+              <div style="display: flex; gap: 0.25rem; align-items: center;">
+                <button class="btn-action" onclick="event.stopPropagation(); toggleInvestorParty('${p._id}', '${escapeHtml(p.name)}')" title="${isInv ? 'Unmark as Investor' : 'Mark as Investor Party'}" style="${isInv ? 'background: #fef3c7; border: 1px solid #f59e0b; color: #b45309;' : 'background: #f1f5f9; border: 1px solid #cbd5e1; color: #64748b;'} font-size: 0.85rem; padding: 2px 7px; border-radius: 4px;">${isInv ? '⭐' : '☆'}</button>
+                <button class="btn-action edit" onclick="event.stopPropagation(); editPartyFromCard('${p._id}', '${escapeHtml(p.name)}', ${p.openingBalance || 0}, '${p.balanceType || 'none'}', '${escapeHtml(p.phone || '')}', ${isInv})" title="Edit Party">✏️</button>
                 <button class="btn-action delete" onclick="event.stopPropagation(); deleteCbParty('${p._id}', '${escapeHtml(p.name)}')" title="Delete Party">🗑️</button>
               </div>
             </div>
@@ -2300,13 +2341,26 @@ async function loadCashbookDashboard() {
             <button class="cb-filter-pill pill-cash ${cbKhataFilter === 'cash' ? 'active' : ''}" onclick="setKhataFilter('cash')">
               💵 Cash Parties (${cashParties.length}) · ${fmtCurrency(Math.abs(totalCashSum))}
             </button>
+            <button class="cb-filter-pill pill-investor ${cbKhataFilter === 'investors' ? 'active' : ''}" onclick="setKhataFilter('investors')">
+              ⭐ Investors (${investorParties.length})
+            </button>
           </div>
         </div>
       `;
 
       let contentHtml = filterBarHtml;
 
-      if (cbKhataFilter === 'jama') {
+      if (cbKhataFilter === 'investors') {
+        contentHtml += `
+          <div class="cb-section-header">
+            <span class="cb-section-title" style="color: #b45309;">⭐ Marked Investor Parties (سرمایہ کار) — ${investorParties.length}</span>
+            <span class="cb-section-total" style="color: #b45309;">Total Current Jama: ${fmtCurrency(totalInvestorSum)}</span>
+          </div>
+          <div class="cb-party-list">
+            ${investorParties.length > 0 ? investorParties.map(renderPartyCard).join('') : '<p class="empty-hint" style="padding: 1rem; color: var(--text-muted);">No investor parties marked yet. Click ☆ on any party above to mark them as an investor!</p>'}
+          </div>
+        `;
+      } else if (cbKhataFilter === 'jama') {
         contentHtml += `
           <div class="cb-section-header">
             <span class="cb-section-title title-jama">🟢 Jama Parties (Credit / جمع) — ${jamaParties.length}</span>
@@ -2991,6 +3045,468 @@ async function generateChathaPDF(action = 'download') {
     toast('PDF generation failed: ' + err.message, 'error');
   }
 }
+
+// ═══════════════════════════════════════════════════════════
+//  INVESTOR REGISTER (سرمایہ کار جمع رجسٹر - Month-wise Jama)
+// ═══════════════════════════════════════════════════════════
+
+let currentInvestorMonth = 'all'; // 'all' or 'YYYY-MM'
+let lastInvestorRegisterData = null;
+
+function setInvestorMonthFilter(month) {
+  currentInvestorMonth = month;
+  loadCashbookDashboard();
+}
+window.setInvestorMonthFilter = setInvestorMonthFilter;
+
+async function loadInvestorRegisterDashboard(search = '') {
+  try {
+    const url = `${CB_API}/investor-register?month=${encodeURIComponent(currentInvestorMonth)}${search ? '&search=' + encodeURIComponent(search) : ''}`;
+    const data = await apiGet(url);
+    lastInvestorRegisterData = data;
+
+    const displayedEntries = (data.months || []).reduce((sum, m) => sum + (m.entryCount || 0), 0);
+    const displayedJama = (data.months || []).reduce((sum, m) => sum + (m.totalJama || 0), 0);
+
+    $('cbCount').textContent = `(${displayedEntries} Entries · ${fmtCurrency(displayedJama)})`;
+
+    if (!data.investorsCount || data.investorsCount === 0) {
+      $('cbMainList').innerHTML = `
+        <div class="empty-state" style="padding: 3rem 1.5rem; text-align: center; background: var(--surface); border: 1.5px dashed #f59e0b; border-radius: 12px; margin: 1.5rem 0;">
+          <div style="font-size: 3rem; margin-bottom: 0.75rem;">⭐</div>
+          <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">No Investor Parties Marked Yet</h3>
+          <p style="color: var(--text-secondary); max-width: 520px; margin: 0 auto 1.25rem; line-height: 1.5; font-size: 0.925rem;">
+            To track investor deposits from August 2026 onwards, go to the <strong>👥 All Parties</strong> tab and click the <strong>☆</strong> button on any party card to mark them as an Investor Party.
+          </p>
+          <button class="btn btn-primary" onclick="setCashbookSubtab('parties')" style="background: #d97706; border-color: #d97706; font-weight: 700; padding: 8px 18px;">
+            👥 Go to All Parties List
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    // Month Selector Options
+    const monthOptions = (data.availableMonths || []).map(m => {
+      return `<option value="${m.key}" ${currentInvestorMonth === m.key ? 'selected' : ''}>${m.label} (${m.count} entries · ${fmtCurrency(m.totalJama)})</option>`;
+    }).join('');
+
+    const filterBarHtml = `
+      <div class="investor-filter-bar">
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+          <label style="font-weight: 700; font-size: 0.85rem; color: #92400e; display: flex; align-items: center; gap: 4px;">
+            <span>📅 Filter Month:</span>
+            <select class="investor-month-select" onchange="setInvestorMonthFilter(this.value)">
+              <option value="all" ${currentInvestorMonth === 'all' ? 'selected' : ''}>📅 All Months (Aug 2026 Onwards) — ${data.totalEntries} entries</option>
+              ${monthOptions}
+            </select>
+          </label>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+          <button class="btn btn-secondary" onclick="setCashbookSubtab('parties'); setKhataFilter('investors');" style="font-size: 0.8rem; padding: 6px 12px; font-weight: 700; border-color: #f59e0b; color: #b45309;">
+            👥 View ${data.investorsCount} Investor Parties
+          </button>
+        </div>
+      </div>
+
+      <div class="investor-kpi-grid">
+        <div class="investor-kpi-card">
+          <div class="investor-kpi-icon" style="color: #15803d; background: rgba(21, 128, 61, 0.12);">💰</div>
+          <div class="investor-kpi-info">
+            <span class="investor-kpi-value" style="color: #15803d;">${fmtCurrency(displayedJama)}</span>
+            <span class="investor-kpi-label">Total Investment Jama</span>
+          </div>
+        </div>
+        <div class="investor-kpi-card">
+          <div class="investor-kpi-icon" style="color: #d97706; background: rgba(217, 119, 6, 0.12);">⭐</div>
+          <div class="investor-kpi-info">
+            <span class="investor-kpi-value" style="color: #d97706;">${data.investorsCount}</span>
+            <span class="investor-kpi-label">Marked Investor Parties</span>
+          </div>
+        </div>
+        <div class="investor-kpi-card">
+          <div class="investor-kpi-icon" style="color: #0284c7; background: rgba(2, 132, 199, 0.12);">📋</div>
+          <div class="investor-kpi-info">
+            <span class="investor-kpi-value" style="color: #0284c7;">${displayedEntries}</span>
+            <span class="investor-kpi-label">Jama Transactions</span>
+          </div>
+        </div>
+      </div>
+    `;
+
+    if (displayedEntries === 0) {
+      $('cbMainList').innerHTML = filterBarHtml + `
+        <div class="empty-state" style="padding: 2.5rem 1rem; text-align: center; background: var(--surface); border: 1px dashed var(--border); border-radius: 8px;">
+          <div class="empty-icon" style="font-size: 2.25rem; margin-bottom: 0.5rem;">📭</div>
+          <p style="font-size: 0.95rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">
+            ${search ? 'No investor entries matched your search.' : 'No Jama (Credit) entries found for marked investor parties from August 1, 2026 onwards.'}
+          </p>
+          <p style="font-size: 0.8125rem; color: var(--text-secondary);">
+            Any Jama entry made in Roker for an investor party automatically appears here.
+          </p>
+        </div>
+      `;
+      return;
+    }
+
+    // Render month-by-month cards and tables
+    const monthCardsHtml = (data.months || []).map(group => {
+      if (!group.entries || group.entries.length === 0) return '';
+
+      const rowsHtml = group.entries.map((e, idx) => {
+        const qtyStr = (e.meters && e.meters > 0) ? `${e.meters}m` : (e.bags && e.bags > 0) ? `${e.bags}b` : '—';
+        const rateStr = e.ratePerBag ? fmtRate(e.ratePerBag) : '—';
+        return `
+          <tr>
+            <td style="color: var(--text-muted); font-size: 0.75rem; text-align: center; width: 35px;">${idx + 1}</td>
+            <td style="white-space: nowrap; font-weight: 600;">${formatDate(e.date)}</td>
+            <td>
+              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                <span style="font-weight: 700; color: #1e40af; cursor: pointer;" onclick="openKhata(${e.khataNo})">${escapeHtml(e.partyName)}</span>
+                ${e.partyCode ? `<span style="font-size: 0.68rem; background: #e0e7ff; color: #3730a3; padding: 1px 5px; border-radius: 3px; font-weight: 800;">${escapeHtml(e.partyCode)}</span>` : ''}
+              </div>
+            </td>
+            <td style="white-space: nowrap; font-size: 0.78rem; color: var(--text-secondary); text-align: center;">#${e.khataNo}</td>
+            <td style="white-space: nowrap; text-align: center;">
+              <a href="javascript:void(0)" onclick="openRokerDetail(${e.rokerNo})" style="color: #0284c7; font-weight: 700; text-decoration: underline; font-size: 0.8rem;">R#${e.rokerNo}</a>
+            </td>
+            <td style="max-width: 250px; font-size: 0.8rem; color: var(--text-primary); word-break: break-word;">${escapeHtml(e.description || '—')}</td>
+            <td style="white-space: nowrap; text-align: center; font-size: 0.8rem;">${qtyStr}</td>
+            <td style="white-space: nowrap; text-align: right; font-size: 0.8rem;">${rateStr}</td>
+            <td style="white-space: nowrap; text-align: right; font-weight: 800; color: #15803d; font-size: 0.9rem;">${fmtCurrency(e.jama)}</td>
+            <td style="white-space: nowrap; text-align: center;">
+              <button class="btn-action" onclick="event.stopPropagation(); openPartyReceiptPreview('${e._id}')" title="Print Receipt" style="font-size: 0.8rem; padding: 2px 6px;">🧾</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      return `
+        <div class="investor-month-card">
+          <div class="investor-month-header">
+            <div class="investor-month-title">
+              <span>📅 ${group.monthLabel}</span>
+              <span class="investor-month-badge">${group.entryCount} entries</span>
+            </div>
+            <div class="investor-month-total">
+              Month Jama: ${fmtCurrency(group.totalJama)}
+            </div>
+          </div>
+          <div class="investor-table-wrapper">
+            <table class="investor-table">
+              <thead>
+                <tr>
+                  <th style="width: 35px; text-align: center;">#</th>
+                  <th>Date</th>
+                  <th>Party Name</th>
+                  <th style="text-align: center;">Khata #</th>
+                  <th style="text-align: center;">Roker #</th>
+                  <th>Description / Details</th>
+                  <th style="text-align: center;">Qty</th>
+                  <th style="text-align: right;">Rate</th>
+                  <th style="text-align: right;">Jama (₹)</th>
+                  <th style="text-align: center; width: 50px;">Receipt</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="8" style="text-align: right; font-weight: 800;">Month Subtotal (${group.monthLabel}):</td>
+                  <td style="text-align: right; color: #15803d; font-size: 0.95rem; font-weight: 800;">${fmtCurrency(group.totalJama)}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    let grandFooterHtml = '';
+    if (currentInvestorMonth === 'all' && (data.months || []).length > 1) {
+      grandFooterHtml = `
+        <div style="background: linear-gradient(135deg, #064e3b 0%, #065f46 100%); color: #ffffff; padding: 1rem 1.25rem; border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; margin-top: 1.25rem; flex-wrap: gap: 0.5rem; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+          <div style="font-weight: 800; font-size: 1.05rem;">
+            Grand Total Investment (August 2026 Onwards · All Months)
+          </div>
+          <div style="font-size: 1.25rem; font-weight: 800; color: #6ee7b7;">
+            ${fmtCurrency(data.grandTotalJama)}
+          </div>
+        </div>
+      `;
+    }
+
+    $('cbMainList').innerHTML = filterBarHtml + monthCardsHtml + grandFooterHtml;
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+async function generateInvestorRegisterPDF(action = 'download') {
+  try {
+    toast(action === 'share' ? 'Preparing Investor Register to share...' : 'Downloading Investor Register PDF...', 'info');
+
+    let data = lastInvestorRegisterData;
+    if (!data) {
+      const url = `${CB_API}/investor-register?month=${encodeURIComponent(currentInvestorMonth)}`;
+      data = await apiGet(url);
+    }
+
+    if (!data || !data.months || data.months.length === 0 || data.totalEntries === 0) {
+      toast('No investor entries available to generate PDF.', 'info');
+      return;
+    }
+
+    const periodLabel = currentInvestorMonth === 'all'
+      ? 'August 2026 Onwards (All Months)'
+      : (data.months[0] ? data.months[0].monthLabel : currentInvestorMonth);
+
+    const dateStr = new Date().toLocaleDateString('en-PK', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+
+    const displayedEntries = (data.months || []).reduce((sum, m) => sum + (m.entryCount || 0), 0);
+    const displayedJama = (data.months || []).reduce((sum, m) => sum + (m.totalJama || 0), 0);
+
+    // Build tables per month
+    let tablesHtml = '';
+    data.months.forEach(group => {
+      if (!group.entries || group.entries.length === 0) return;
+
+      const rows = group.entries.map((e, idx) => {
+        const qtyStr = (e.meters && e.meters > 0) ? `${e.meters}m` : (e.bags && e.bags > 0) ? `${e.bags}b` : '—';
+        const rateStr = e.ratePerBag ? fmtRate(e.ratePerBag) : '—';
+        const bgColor = idx % 2 === 1 ? 'background: #f8fafc;' : 'background: #ffffff;';
+        return `
+          <tr style="border-bottom: 1px solid #e2e8f0; ${bgColor} page-break-inside: avoid !important; break-inside: avoid !important;">
+            <td style="padding: 5px 4px; font-size: 10px; text-align: center; color: #64748b;">${idx + 1}</td>
+            <td style="padding: 5px 6px; font-size: 10.5px; font-weight: 700; white-space: nowrap;">${formatDate(e.date)}</td>
+            <td style="padding: 5px 6px; font-size: 11px; font-weight: 700; color: #0f172a;">${escapeHtml(e.partyName)} ${e.partyCode ? `<span style="font-size: 9px; color: #1e40af;">(${e.partyCode})</span>` : ''}</td>
+            <td style="padding: 5px 4px; font-size: 10px; text-align: center; color: #475569;">#${e.khataNo}</td>
+            <td style="padding: 5px 4px; font-size: 10.5px; text-align: center; font-weight: 700; color: #0284c7;">R#${e.rokerNo}</td>
+            <td style="padding: 5px 6px; font-size: 10px; color: #334155;">${escapeHtml(e.description || '—')}</td>
+            <td style="padding: 5px 4px; font-size: 10px; text-align: center;">${qtyStr}</td>
+            <td style="padding: 5px 5px; font-size: 10px; text-align: right;">${rateStr}</td>
+            <td style="padding: 5px 6px; font-size: 11px; text-align: right; font-weight: 800; color: #15803d; white-space: nowrap;">${fmtCurrency(e.jama)}</td>
+          </tr>
+        `;
+      }).join('');
+
+      tablesHtml += `
+        <div style="margin-bottom: 14px; page-break-inside: auto;">
+          <div style="background: #1e293b; color: #ffffff; padding: 6px 10px; border-radius: 4px 4px 0 0; display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 800; page-break-inside: avoid;">
+            <span>📅 ${group.monthLabel} (${group.entryCount} Entries)</span>
+            <span style="color: #4ade80;">Month Jama: ${fmtCurrency(group.totalJama)}</span>
+          </div>
+          <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; border-top: none; table-layout: fixed;">
+            <colgroup>
+              <col style="width: 26px;">
+              <col style="width: 72px;">
+              <col style="width: 140px;">
+              <col style="width: 44px;">
+              <col style="width: 44px;">
+              <col style="width: 154px;">
+              <col style="width: 48px;">
+              <col style="width: 50px;">
+              <col style="width: 82px;">
+            </colgroup>
+            <thead style="background: #f1f5f9; color: #334155; font-size: 9.5px; font-weight: 800; border-bottom: 1px solid #cbd5e1; page-break-inside: avoid;">
+              <tr>
+                <th style="padding: 5px 2px; text-align: center;">#</th>
+                <th style="padding: 5px 4px; text-align: left;">Date</th>
+                <th style="padding: 5px 4px; text-align: left;">Party Name</th>
+                <th style="padding: 5px 2px; text-align: center;">Khata</th>
+                <th style="padding: 5px 2px; text-align: center;">Roker</th>
+                <th style="padding: 5px 4px; text-align: left;">Description</th>
+                <th style="padding: 5px 2px; text-align: center;">Qty</th>
+                <th style="padding: 5px 4px; text-align: right;">Rate</th>
+                <th style="padding: 5px 6px; text-align: right;">Jama (₹)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+            <tfoot style="page-break-inside: avoid;">
+              <tr style="background: #e2e8f0; font-weight: 800; font-size: 10.5px; border-top: 1.5px solid #0f172a;">
+                <td colspan="8" style="padding: 6px 8px; text-align: right;">Subtotal for ${group.monthLabel}:</td>
+                <td style="padding: 6px 8px; text-align: right; color: #15803d; font-size: 11px; font-weight: 800;">${fmtCurrency(group.totalJama)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      `;
+    });
+
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    container.style.top = '-9999px';
+    container.style.width = '210mm';
+    container.style.background = '#ffffff';
+
+    container.innerHTML = `
+      <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 12mm 10mm; background: #ffffff; color: #0f172a; box-sizing: border-box; width: 100%;">
+        <!-- Header -->
+        <div style="border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: flex-end;">
+          <div>
+            <h1 style="margin: 0; font-size: 20px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">MUTAHIR TEXTILES</h1>
+            <div style="font-size: 10px; color: #475569; margin-top: 2px;">
+              P16, AL-HAMAD INDUSTRIAL ESTATE, CHAK NO. 8/JB, DAEWOO ROAD, FAISALABAD
+            </div>
+            <div style="font-size: 9.5px; color: #64748b; margin-top: 1px;">
+              NTN: A0973067 · STRN: 32-77-8762-286-30
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 14px; font-weight: 800; color: #b45309;">
+              INVESTOR JAMA REGISTER
+            </div>
+            <div style="font-size: 11px; font-weight: 700; color: #0f172a;" dir="rtl">
+              سرمایہ کار جمع رجسٹر
+            </div>
+            <div style="font-size: 10px; color: #475569; margin-top: 3px;">
+              Period: <strong>${periodLabel}</strong> · ${dateStr}
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI Strip -->
+        <div style="display: flex; gap: 8px; margin-bottom: 14px; page-break-inside: avoid;">
+          <div style="flex: 1; background: #ecfdf5; border: 1.5px solid #10b981; border-radius: 4px; padding: 6px 10px;">
+            <div style="font-size: 8.5px; text-transform: uppercase; font-weight: 700; color: #047857;">TOTAL INVESTMENT JAMA</div>
+            <div style="font-size: 15px; font-weight: 800; color: #065f46;">${fmtCurrency(displayedJama)}</div>
+          </div>
+          <div style="flex: 1; background: #fef3c7; border: 1.5px solid #f59e0b; border-radius: 4px; padding: 6px 10px;">
+            <div style="font-size: 8.5px; text-transform: uppercase; font-weight: 700; color: #b45309;">INVESTOR PARTIES</div>
+            <div style="font-size: 15px; font-weight: 800; color: #92400e;">${data.investorsCount} Parties</div>
+          </div>
+          <div style="flex: 1; background: #eff6ff; border: 1.5px solid #3b82f6; border-radius: 4px; padding: 6px 10px;">
+            <div style="font-size: 8.5px; text-transform: uppercase; font-weight: 700; color: #1d4ed8;">TOTAL ENTRIES</div>
+            <div style="font-size: 15px; font-weight: 800; color: #1e40af;">${displayedEntries} Entries</div>
+          </div>
+        </div>
+
+        <!-- Tables -->
+        ${tablesHtml}
+
+        <!-- Grand Total Summary -->
+        <div style="background: #0f172a; color: #ffffff; padding: 8px 12px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; margin-top: 10px; page-break-inside: avoid;">
+          <span style="font-size: 12px; font-weight: 800;">GRAND TOTAL INVESTMENT (${periodLabel}):</span>
+          <span style="font-size: 14px; font-weight: 800; color: #4ade80;">${fmtCurrency(displayedJama)}</span>
+        </div>
+
+        <!-- Footer -->
+        <div style="margin-top: 14px; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 6px; font-size: 9.5px; color: #94a3b8; page-break-inside: avoid;">
+          Investor Register (سرمایہ کار رجسٹر) · ${periodLabel} · Generated on ${dateStr} · Textile Costing & Cashbook System
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(container);
+
+    const safePeriod = periodLabel.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const fileName = `Investor_Register_${safePeriod}_${dateStr.replace(/\s+/g, '_')}.pdf`;
+    const opt = {
+      margin: [6, 6, 6, 6],
+      filename: fileName,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        scrollX: 0,
+        scrollY: 0
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: {
+        mode: ['css', 'legacy'],
+        avoid: ['tr', 'thead', 'tfoot', '.page-break-avoid']
+      }
+    };
+
+    if (typeof html2pdf !== 'undefined') {
+      const pdfWorker = html2pdf().set(opt).from(container.firstElementChild);
+      const pdfBlob = await pdfWorker.output('blob');
+      if (container.parentNode) document.body.removeChild(container);
+
+      if (action === 'share') {
+        const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+          try {
+            await navigator.share({
+              files: [pdfFile],
+              title: `Investor Register - ${periodLabel}`,
+              text: `MUTAHIR TEXTILES - Investor Jama Register (${periodLabel})`,
+            });
+            toast('Shared Investor Register PDF successfully!', 'success');
+            return;
+          } catch (shareErr) {
+            if (shareErr.name === 'AbortError') return;
+          }
+        }
+      }
+
+      // Direct download
+      const downloadUrl = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+      toast('Downloaded Investor Register PDF successfully!', 'success');
+    } else {
+      if (container.parentNode) document.body.removeChild(container);
+      window.print();
+    }
+  } catch (err) {
+    toast('PDF generation failed: ' + err.message, 'error');
+  }
+}
+
+function shareInvestorRegisterWhatsApp() {
+  const data = lastInvestorRegisterData;
+  if (!data || !data.months || data.months.length === 0 || data.totalEntries === 0) {
+    toast('No investor data to share.', 'info');
+    return;
+  }
+
+  const periodLabel = currentInvestorMonth === 'all'
+    ? 'August 2026 Onwards'
+    : (data.months[0] ? data.months[0].monthLabel : currentInvestorMonth);
+
+  const displayedEntries = (data.months || []).reduce((sum, m) => sum + (m.entryCount || 0), 0);
+  const displayedJama = (data.months || []).reduce((sum, m) => sum + (m.totalJama || 0), 0);
+
+  let monthlyBreakdown = '';
+  data.months.forEach(m => {
+    if (m.entryCount > 0) {
+      monthlyBreakdown += `\n• *${m.monthLabel}*: ${fmtCurrency(m.totalJama)} (${m.entryCount} entries)`;
+    }
+  });
+
+  const text = `*MUTAHIR TEXTILES*
+⭐ *INVESTOR JAMA REGISTER (سرمایہ کار جمع رجسٹر)*
+📅 *Period:* ${periodLabel}
+──────────────────
+💰 *Total Jama:* ${fmtCurrency(displayedJama)}
+📋 *Total Entries:* ${displayedEntries}
+👥 *Investor Parties:* ${data.investorsCount}
+──────────────────
+*Month-wise Summary:*${monthlyBreakdown}
+──────────────────
+_Generated from Textile Costing & Cashbook_`;
+
+  const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+  window.open(waUrl, '_blank');
+}
+window.generateInvestorRegisterPDF = generateInvestorRegisterPDF;
+window.shareInvestorRegisterWhatsApp = shareInvestorRegisterWhatsApp;
 
 // ═══════════════════════════════════════════════════════════
 //  CONTRACTS MANAGEMENT (معاہدے / Fabric Contracts)
@@ -4003,20 +4519,23 @@ if ($('btnNewParty')) {
   $('btnNewParty').addEventListener('click', () => openPartyModal());
 }
 
-function openPartyModal(id = null, name = '', amount = 0, type = 'jama', phone = '') {
+function openPartyModal(id = null, name = '', amount = 0, type = 'jama', phone = '', isInvestor = false) {
   $('partyForm').reset();
   $('partyModalId').value = id || '';
   $('partyModalName').value = name || '';
   $('partyModalAmount').value = amount || '';
   $('partyModalType').value = (type === 'banam') ? 'banam' : (type === 'cash') ? 'cash' : 'jama';
   $('partyModalPhone').value = phone || '';
+  if ($('partyModalIsInvestor')) {
+    $('partyModalIsInvestor').checked = Boolean(isInvestor);
+  }
   $('partyModalTitle').textContent = id ? '✏️ Edit Party' : '＋ Add New Party';
   $('partyModal').classList.remove('hidden');
 }
 window.openPartyModal = openPartyModal;
 
-function editPartyFromCard(id, name, amount, type, phone) {
-  openPartyModal(id, name, amount, type, phone);
+function editPartyFromCard(id, name, amount, type, phone, isInvestor = false) {
+  openPartyModal(id, name, amount, type, phone, isInvestor);
 }
 window.editPartyFromCard = editPartyFromCard;
 
@@ -4031,6 +4550,7 @@ async function savePartyModal() {
   const amount = parseFloat($('partyModalAmount').value) || 0;
   const type = $('partyModalType').value;
   const phone = $('partyModalPhone').value.trim();
+  const isInvestor = $('partyModalIsInvestor') ? $('partyModalIsInvestor').checked : false;
 
   if (!name) {
     toast('Party name is required', 'error');
@@ -4043,6 +4563,7 @@ async function savePartyModal() {
       openingBalance: amount,
       balanceType: type,
       phone,
+      isInvestor,
     };
 
     if (id) {
@@ -4060,6 +4581,21 @@ async function savePartyModal() {
   }
 }
 window.savePartyModal = savePartyModal;
+
+async function toggleInvestorParty(id, partyName = '') {
+  try {
+    const res = await apiPatch(`${CB_API}/parties/${id}/toggle-investor`);
+    if (res.isInvestor) {
+      toast(`⭐ "${partyName || 'Party'}" marked as Investor!`, 'success');
+    } else {
+      toast(`"${partyName || 'Party'}" unmarked from Investors.`, 'info');
+    }
+    loadCashbookDashboard();
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+window.toggleInvestorParty = toggleInvestorParty;
 
 async function deleteCbParty(id, partyName = '') {
   showConfirm('Delete Party', `Are you sure you want to delete party "${partyName || 'this party'}"?`, async () => {

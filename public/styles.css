@@ -4212,6 +4212,195 @@ body {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════ */
+/*  INVESTOR REGISTER STYLES                                  */
+/* ═══════════════════════════════════════════════════════════ */
+.badge-investor {
+  background: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  font-size: 0.68rem;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.cb-filter-pill.pill-investor {
+  background: rgba(245, 158, 11, 0.1);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.cb-filter-pill.pill-investor.active {
+  background: #f59e0b;
+  color: #ffffff;
+  border-color: #d97706;
+}
+
+.investor-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.investor-month-select {
+  padding: 0.55rem 0.85rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid #d97706;
+  background: var(--bg-surface-secondary, #fff);
+  color: #92400e;
+  cursor: pointer;
+  outline: none;
+  min-width: 220px;
+}
+
+.investor-month-select:focus {
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25);
+}
+
+.investor-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.investor-kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+
+.investor-kpi-icon {
+  font-size: 1.75rem;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.investor-kpi-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.investor-kpi-value {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.investor-kpi-label {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.investor-month-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: 1.25rem;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.investor-month-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  color: #ffffff;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.investor-month-title {
+  font-size: 1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.investor-month-badge {
+  background: rgba(245, 158, 11, 0.25);
+  color: #fef3c7;
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.investor-month-total {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #4ade80;
+}
+
+.investor-table-wrapper {
+  overflow-x: auto;
+}
+
+.investor-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.825rem;
+}
+
+.investor-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 700;
+  padding: 0.55rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.investor-table td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.investor-table tr:hover {
+  background: rgba(245, 158, 11, 0.03);
+}
+
+.investor-table tfoot td {
+  background: #f8fafc;
+  font-weight: 800;
+  border-top: 2px solid var(--border);
+  padding: 0.65rem 0.75rem;
+}
+
 
 
 

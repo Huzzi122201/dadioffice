@@ -106,6 +106,7 @@ router.get('/parties', async (req, res) => {
       const balance = openingNet + s.totalJama - s.totalNaam;
       return {
         ...p,
+        isInvestor: Boolean(p.isInvestor || p.type === 'investor'),
         code: p.code || CashbookParty.computePartyCode(p.name, p.khataNo),
         totalNaam: s.totalNaam,
         totalJama: s.totalJama,
@@ -209,6 +210,7 @@ router.post('/parties', async (req, res) => {
       khataNo: nextKhataNo,
       name: cleanName,
       type: type || 'general',
+      isInvestor: Boolean(req.body.isInvestor || type === 'investor'),
       phone: phone || '',
       description: description || '',
       note: note || '',
@@ -226,7 +228,7 @@ router.post('/parties', async (req, res) => {
 // ── PUT /api/cashbook/parties/:id ── Update party ─────────
 router.put('/parties/:id', async (req, res) => {
   try {
-    const { name, type, phone, description, note, openingBalance, balanceType } = req.body;
+    const { name, type, phone, description, note, openingBalance, balanceType, isInvestor } = req.body;
     const party = await CashbookParty.findById(req.params.id);
     if (!party) return res.status(404).json({ error: 'Party not found' });
 
@@ -242,6 +244,7 @@ router.put('/parties/:id', async (req, res) => {
       party.name = cleanName;
     }
     if (type) party.type = type;
+    if (isInvestor !== undefined) party.isInvestor = Boolean(isInvestor);
     if (phone !== undefined) party.phone = phone || '';
     if (description !== undefined) party.description = description || '';
     if (note !== undefined) party.note = note || '';
@@ -259,6 +262,28 @@ router.put('/parties/:id', async (req, res) => {
     );
 
     res.json(party);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// ── PATCH /api/cashbook/parties/:id/toggle-investor ── Quick toggle investor flag ──
+router.patch('/parties/:id/toggle-investor', async (req, res) => {
+  try {
+    const party = await CashbookParty.findById(req.params.id);
+    if (!party) return res.status(404).json({ error: 'Party not found' });
+
+    const currentFlag = Boolean(party.isInvestor || party.type === 'investor');
+    party.isInvestor = !currentFlag;
+    await party.save();
+
+    res.json({
+      success: true,
+      partyId: party._id,
+      khataNo: party.khataNo,
+      partyName: party.name,
+      isInvestor: party.isInvestor,
+    });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -1540,6 +1565,152 @@ router.get('/chatha', async (req, res) => {
     res.json(active);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/cashbook/investor-register ── Month-wise Jama entries for Investor Parties from Month 8 (Aug 2026) onwards ──
+router.get('/investor-register', async (req, res) => {
+  try {
+    const { month, search } = req.query; // month format: '2026-08' or 'all'
+
+    // 1. Find all investor parties
+    const investors = await CashbookParty.find({
+      $or: [{ isInvestor: true }, { type: 'investor' }]
+    }).sort({ khataNo: 1 }).lean();
+
+    const investorKhataNos = investors.map(p => p.khataNo);
+    const investorMap = new Map();
+    investors.forEach(p => {
+      investorMap.set(p.khataNo, {
+        _id: p._id,
+        name: p.name,
+        code: p.code || CashbookParty.computePartyCode(p.name, p.khataNo),
+        khataNo: p.khataNo,
+        phone: p.phone,
+      });
+    });
+
+    // 2. Query Jama entries for investor parties from August 1, 2026 onwards (Month 8 onwards)
+    const startDate = new Date('2026-08-01T00:00:00.000Z');
+    let entries = [];
+    if (investorKhataNos.length > 0) {
+      const query = {
+        khataNo: { $in: investorKhataNos },
+        jama: { $gt: 0 },
+        date: { $gte: startDate },
+      };
+
+      if (search && search.trim()) {
+        const q = search.trim();
+        const regex = new RegExp(q, 'i');
+        const numQ = parseInt(q.replace(/^#/, ''), 10);
+        const orConds = [
+          { partyName: regex },
+          { description: regex },
+        ];
+        if (!isNaN(numQ)) {
+          orConds.push({ rokerNo: numQ }, { khataNo: numQ });
+        }
+        query.$or = orConds;
+      }
+
+      entries = await CashbookEntry.find(query).sort({ date: 1, rokerNo: 1, _id: 1 }).lean();
+    }
+
+    // 3. Group by YYYY-MM
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    const groupsMap = new Map();
+    // Default months from August 2026 up to current month (or at least August, September, October 2026)
+    const curDate = new Date();
+    const curYear = Math.max(2026, curDate.getFullYear());
+    const curMonth = (curYear === 2026) ? Math.max(8, curDate.getMonth() + 1) : (curDate.getMonth() + 1);
+
+    for (let y = 2026; y <= curYear; y++) {
+      const startM = (y === 2026) ? 8 : 1;
+      const endM = (y === curYear) ? curMonth : 12;
+      for (let m = startM; m <= endM; m++) {
+        const mKey = `${y}-${String(m).padStart(2, '0')}`;
+        const mLabel = `${monthNames[m - 1]} ${y}`;
+        groupsMap.set(mKey, {
+          monthKey: mKey,
+          monthLabel: mLabel,
+          year: y,
+          monthNumber: m,
+          entries: [],
+          totalJama: 0,
+          entryCount: 0,
+        });
+      }
+    }
+
+    let grandTotalJama = 0;
+    entries.forEach(e => {
+      const eDate = new Date(e.date);
+      const y = eDate.getFullYear();
+      const m = eDate.getMonth() + 1;
+      const mKey = `${y}-${String(m).padStart(2, '0')}`;
+      const mLabel = `${monthNames[m - 1]} ${y}`;
+
+      if (!groupsMap.has(mKey)) {
+        groupsMap.set(mKey, {
+          monthKey: mKey,
+          monthLabel: mLabel,
+          year: y,
+          monthNumber: m,
+          entries: [],
+          totalJama: 0,
+          entryCount: 0,
+        });
+      }
+
+      const grp = groupsMap.get(mKey);
+      const partyInfo = investorMap.get(e.khataNo) || {};
+      const enrichedEntry = {
+        ...e,
+        partyCode: partyInfo.code || '',
+        partyPhone: partyInfo.phone || '',
+      };
+      grp.entries.push(enrichedEntry);
+      grp.totalJama += (e.jama || 0);
+      grp.entryCount += 1;
+      grandTotalJama += (e.jama || 0);
+    });
+
+    const allGroups = Array.from(groupsMap.values()).sort((a, b) => a.monthKey.localeCompare(b.monthKey));
+    const availableMonths = allGroups.map(g => ({
+      key: g.monthKey,
+      label: g.monthLabel,
+      count: g.entryCount,
+      totalJama: g.totalJama
+    }));
+
+    // Filter by requested month if specified and not 'all'
+    let filteredGroups = allGroups;
+    if (month && month !== 'all') {
+      filteredGroups = allGroups.filter(g => g.monthKey === month);
+    }
+
+    res.json({
+      investorsCount: investors.length,
+      grandTotalJama,
+      totalEntries: entries.length,
+      availableMonths,
+      selectedMonth: month || 'all',
+      months: filteredGroups,
+      investorParties: investors.map(p => ({
+        _id: p._id,
+        name: p.name,
+        khataNo: p.khataNo,
+        code: p.code || CashbookParty.computePartyCode(p.name, p.khataNo),
+      })),
+    });
+  } catch (err) {
+    console.error('Error fetching investor register:', err);
+    res.status(500).json({ error: 'Failed to fetch investor register', details: err.message });
   }
 });
 
