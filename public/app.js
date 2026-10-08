@@ -3174,9 +3174,6 @@ async function loadInvestorRegisterDashboard(search = '') {
             <td style="white-space: nowrap; text-align: center; font-size: 0.8rem;">${qtyStr}</td>
             <td style="white-space: nowrap; text-align: right; font-size: 0.8rem;">${rateStr}</td>
             <td style="white-space: nowrap; text-align: right; font-weight: 800; color: #15803d; font-size: 0.9rem;">${fmtCurrency(e.jama)}</td>
-            <td style="white-space: nowrap; text-align: center;">
-              <button class="btn-action" onclick="event.stopPropagation(); openPartyReceiptPreview('${e._id}')" title="Print Receipt" style="font-size: 0.8rem; padding: 2px 6px;">🧾</button>
-            </td>
           </tr>
         `;
       }).join('');
@@ -3205,7 +3202,6 @@ async function loadInvestorRegisterDashboard(search = '') {
                   <th style="text-align: center;">Qty</th>
                   <th style="text-align: right;">Rate</th>
                   <th style="text-align: right;">Jama (₹)</th>
-                  <th style="text-align: center; width: 50px;">Receipt</th>
                 </tr>
               </thead>
               <tbody>
@@ -3215,7 +3211,6 @@ async function loadInvestorRegisterDashboard(search = '') {
                 <tr>
                   <td colspan="8" style="text-align: right; font-weight: 800;">Month Subtotal (${group.monthLabel}):</td>
                   <td style="text-align: right; color: #15803d; font-size: 0.95rem; font-weight: 800;">${fmtCurrency(group.totalJama)}</td>
-                  <td></td>
                 </tr>
               </tfoot>
             </table>
