@@ -3345,28 +3345,14 @@ async function generateInvestorRegisterPDF(action = 'download') {
 
     container.innerHTML = `
       <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 12mm 10mm; background: #ffffff; color: #0f172a; box-sizing: border-box; width: 100%;">
-        <!-- Header -->
-        <div style="border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: flex-end;">
-          <div>
-            <h1 style="margin: 0; font-size: 20px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">MUTAHIR TEXTILES</h1>
-            <div style="font-size: 10px; color: #475569; margin-top: 2px;">
-              P16, AL-HAMAD INDUSTRIAL ESTATE, CHAK NO. 8/JB, DAEWOO ROAD, FAISALABAD
-            </div>
-            <div style="font-size: 9.5px; color: #64748b; margin-top: 1px;">
-              NTN: A0973067 · STRN: 32-77-8762-286-30
-            </div>
-          </div>
-          <div style="text-align: right;">
-            <div style="font-size: 14px; font-weight: 800; color: #b45309;">
-              INVESTOR JAMA REGISTER
-            </div>
-            <div style="font-size: 11px; font-weight: 700; color: #0f172a;" dir="rtl">
-              سرمایہ کار جمع رجسٹر
-            </div>
-            <div style="font-size: 10px; color: #475569; margin-top: 3px;">
-              Period: <strong>${periodLabel}</strong> · ${dateStr}
-            </div>
-          </div>
+        <!-- Header (General Chatha-style Header) -->
+        <div style="background: linear-gradient(135deg, #0f172a, #1e3a8a); color: #ffffff; padding: 11px 14px; border-radius: 6px; margin-bottom: 12px; text-align: center; page-break-inside: avoid;">
+          <h1 style="margin: 0; font-size: 21px; font-weight: 800; color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <span style="letter-spacing: 1.5px; text-transform: uppercase;">INVESTOR JAMA REGISTER</span>
+            <span style="color: #93c5fd; font-weight: 400;">/</span>
+            <span dir="rtl" style="direction: rtl; unicode-bidi: embed; font-family: 'Noto Sans Arabic', 'Segoe UI', Tahoma, sans-serif; font-size: 25px; font-weight: 900; letter-spacing: normal;">سرمایہ کار جمع رجسٹر</span>
+          </h1>
+          <p style="margin: 3px 0 0 0; font-size: 11.5px; color: #93c5fd; font-weight: 600;">Investor Accounts Ledger (August 2026 Onwards) · Period: ${periodLabel} · ${dateStr}</p>
         </div>
 
         <!-- KPI Strip -->
@@ -3435,7 +3421,7 @@ async function generateInvestorRegisterPDF(action = 'download') {
             await navigator.share({
               files: [pdfFile],
               title: `Investor Register - ${periodLabel}`,
-              text: `MUTAHIR TEXTILES - Investor Jama Register (${periodLabel})`,
+              text: `Investor Jama Register / سرمایہ کار جمع رجسٹر (${periodLabel})`,
             });
             toast('Shared Investor Register PDF successfully!', 'success');
             return;
@@ -3485,8 +3471,7 @@ function shareInvestorRegisterWhatsApp() {
     }
   });
 
-  const text = `*MUTAHIR TEXTILES*
-⭐ *INVESTOR JAMA REGISTER (سرمایہ کار جمع رجسٹر)*
+  const text = `⭐ *INVESTOR JAMA REGISTER (سرمایہ کار جمع رجسٹر)*
 📅 *Period:* ${periodLabel}
 ──────────────────
 💰 *Total Jama:* ${fmtCurrency(displayedJama)}
