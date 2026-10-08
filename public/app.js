@@ -3187,6 +3187,35 @@ async function loadInvestorRegisterDashboard(search = '') {
         `;
       }).join('');
 
+      const mobileCardsHtml = group.entries.map((e, idx) => {
+        const rateStr = e.ratePerBag ? fmtRate(e.ratePerBag) : '';
+        const descStr = (e.description && e.description !== '—' && e.description !== '-') ? escapeHtml(e.description) : '';
+        return `
+          <div class="investor-mcard">
+            <div class="investor-mcard-top">
+              <div class="investor-mcard-party">
+                <span class="investor-mcard-idx">#${idx + 1}</span>
+                <strong onclick="openKhata(${e.khataNo})" class="investor-mcard-name">${escapeHtml(e.partyName)}</strong>
+                ${e.partyCode ? `<span class="investor-mcard-code">${escapeHtml(e.partyCode)}</span>` : ''}
+                <span class="investor-mcard-khata">#${e.khataNo}</span>
+              </div>
+              <div class="investor-mcard-jama">${fmtCurrency(e.jama)}</div>
+            </div>
+            <div class="investor-mcard-bottom">
+              <div class="investor-mcard-meta">
+                <span>${formatDate(e.date)}</span>
+                <a href="javascript:void(0)" onclick="openRokerDetail(${e.rokerNo})" class="investor-mcard-roker">R#${e.rokerNo}</a>
+                ${descStr ? `<span class="investor-mcard-desc" title="${descStr}">· ${descStr}</span>` : ''}
+              </div>
+              <div class="investor-mcard-qty">
+                <span class="investor-mcard-bags">${e.bags || 0} bags</span>
+                ${rateStr ? `<span class="investor-mcard-rate">@ ${rateStr}</span>` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
       return `
         <div class="investor-month-card">
           <div class="investor-month-header">
@@ -3198,6 +3227,7 @@ async function loadInvestorRegisterDashboard(search = '') {
               Month Jama: ${fmtCurrency(group.totalJama)}
             </div>
           </div>
+          <!-- Desktop Table View -->
           <div class="investor-table-wrapper">
             <table class="investor-table">
               <thead>
@@ -3226,6 +3256,14 @@ async function loadInvestorRegisterDashboard(search = '') {
               </tfoot>
             </table>
           </div>
+          <!-- Mobile Compact Cards View -->
+          <div class="investor-mobile-list">
+            ${mobileCardsHtml}
+            <div class="investor-mobile-subtotal">
+              <span class="investor-mobile-subtotal-lbl">Month Subtotal (${group.monthLabel}):</span>
+              <span class="investor-mobile-subtotal-val"><strong>${group.totalBags || 0} bags</strong> · <strong style="color: #15803d;">${fmtCurrency(group.totalJama)}</strong></span>
+            </div>
+          </div>
         </div>
       `;
     }).join('');
@@ -3233,11 +3271,11 @@ async function loadInvestorRegisterDashboard(search = '') {
     let grandFooterHtml = '';
     if (currentInvestorMonth === 'all' && (data.months || []).length > 1) {
       grandFooterHtml = `
-        <div style="background: linear-gradient(135deg, #064e3b 0%, #065f46 100%); color: #ffffff; padding: 1rem 1.25rem; border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; margin-top: 1.25rem; flex-wrap: wrap; gap: 0.5rem; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
-          <div style="font-weight: 800; font-size: 1.05rem;">
+        <div class="investor-grand-footer" style="background: linear-gradient(135deg, #064e3b 0%, #065f46 100%); color: #ffffff; padding: 1rem 1.25rem; border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; margin-top: 1.25rem; flex-wrap: wrap; gap: 0.5rem; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+          <div style="font-weight: 800; font-size: 1.05rem;" class="investor-grand-title">
             Grand Total Bags Investment (August 2026 Onwards · All Months)
           </div>
-          <div style="font-size: 1.25rem; font-weight: 800; color: #6ee7b7;">
+          <div style="font-size: 1.25rem; font-weight: 800; color: #6ee7b7;" class="investor-grand-val">
             ${data.grandTotalBags || displayedBags} Bags · ${fmtCurrency(data.grandTotalJama)}
           </div>
         </div>

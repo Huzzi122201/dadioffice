@@ -4428,6 +4428,276 @@ body {
   padding: 0.65rem 0.75rem;
 }
 
+/* ── Mobile Compact View for Investor Jama Register ──────── */
+.investor-mobile-list {
+  display: none;
+}
+
+.investor-mcard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  transition: background 0.15s ease;
+}
+
+.investor-mcard:hover {
+  background: rgba(245, 158, 11, 0.04);
+}
+
+.investor-mcard-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.investor-mcard-party {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  min-width: 0;
+  flex: 1;
+}
+
+.investor-mcard-idx {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.investor-mcard-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #1e40af;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.investor-mcard-code {
+  font-size: 0.64rem;
+  background: #e0e7ff;
+  color: #3730a3;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.investor-mcard-khata {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.investor-mcard-jama {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #15803d;
+  white-space: nowrap;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.investor-mcard-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.investor-mcard-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.investor-mcard-roker {
+  color: #0284c7;
+  font-weight: 700;
+  text-decoration: underline;
+  flex-shrink: 0;
+}
+
+.investor-mcard-desc {
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.70rem;
+}
+
+.investor-mcard-qty {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.investor-mcard-bags {
+  font-weight: 700;
+  color: #7c3aed;
+  font-size: 0.76rem;
+}
+
+.investor-mcard-rate {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.investor-mobile-subtotal {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  background: #f8fafc;
+  border-top: 1px dashed var(--border);
+  font-size: 0.76rem;
+  border-radius: 0 0 6px 6px;
+  margin-top: 2px;
+}
+
+.investor-mobile-subtotal-lbl {
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.investor-mobile-subtotal-val {
+  font-size: 0.8rem;
+}
+
+/* ── Mobile Compact Breakpoints (<= 640px) ────────────────── */
+@media (max-width: 640px) {
+  /* Action buttons compact */
+  .cb-header-btns {
+    gap: 3px !important;
+  }
+
+  #btnDownloadInvestorPDF,
+  #btnShareInvestorPDF,
+  #btnWhatsAppInvestor {
+    padding: 4px 7px !important;
+    font-size: 0.72rem !important;
+    border-radius: 6px !important;
+  }
+
+  .hide-on-mobile-sm {
+    display: none !important;
+  }
+
+  /* Filter bar compact */
+  .investor-filter-bar {
+    padding: 6px 8px !important;
+    gap: 5px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .investor-month-select {
+    padding: 4px 6px !important;
+    font-size: 0.78rem !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  /* KPI grid compact 2x2 */
+  .investor-kpi-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 4px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .investor-kpi-card {
+    padding: 5px 7px !important;
+    gap: 5px !important;
+    border-radius: 6px !important;
+  }
+
+  .investor-kpi-icon {
+    width: 24px !important;
+    height: 24px !important;
+    font-size: 0.9rem !important;
+    border-radius: 5px !important;
+  }
+
+  .investor-kpi-value {
+    font-size: 0.82rem !important;
+  }
+
+  .investor-kpi-label {
+    font-size: 0.58rem !important;
+    letter-spacing: 0 !important;
+    line-height: 1.1 !important;
+  }
+
+  /* Month cards compact */
+  .investor-month-card {
+    margin-bottom: 8px !important;
+    border-radius: 8px !important;
+  }
+
+  .investor-month-header {
+    padding: 5px 8px !important;
+    gap: 4px !important;
+  }
+
+  .investor-month-title {
+    font-size: 0.80rem !important;
+    gap: 4px !important;
+  }
+
+  .investor-month-badge {
+    font-size: 0.65rem !important;
+    padding: 1px 4px !important;
+  }
+
+  .investor-month-total {
+    font-size: 0.80rem !important;
+  }
+
+  /* Switch from wide 9-column table to compact mobile cards */
+  .investor-table-wrapper {
+    display: none !important;
+  }
+
+  .investor-mobile-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+    padding: 5px !important;
+  }
+
+  /* Compact Grand Total Footer */
+  .investor-grand-footer {
+    padding: 7px 10px !important;
+    margin-top: 8px !important;
+    border-radius: 8px !important;
+  }
+
+  .investor-grand-title {
+    font-size: 0.78rem !important;
+  }
+
+  .investor-grand-val {
+    font-size: 0.95rem !important;
+  }
+}
+
 
 
 
