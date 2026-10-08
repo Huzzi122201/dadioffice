@@ -3111,37 +3111,6 @@ async function loadInvestorRegisterDashboard(search = '') {
           </button>
         </div>
       </div>
-
-      <div class="investor-kpi-grid">
-        <div class="investor-kpi-card">
-          <div class="investor-kpi-icon" style="color: #15803d; background: rgba(21, 128, 61, 0.12);">💰</div>
-          <div class="investor-kpi-info">
-            <span class="investor-kpi-value" style="color: #15803d;">${fmtCurrency(displayedJama)}</span>
-            <span class="investor-kpi-label">Total Investment Jama</span>
-          </div>
-        </div>
-        <div class="investor-kpi-card">
-          <div class="investor-kpi-icon" style="color: #7c3aed; background: rgba(124, 58, 237, 0.12);">📦</div>
-          <div class="investor-kpi-info">
-            <span class="investor-kpi-value" style="color: #7c3aed;">${displayedBags}</span>
-            <span class="investor-kpi-label">Total Bags</span>
-          </div>
-        </div>
-        <div class="investor-kpi-card">
-          <div class="investor-kpi-icon" style="color: #d97706; background: rgba(217, 119, 6, 0.12);">⭐</div>
-          <div class="investor-kpi-info">
-            <span class="investor-kpi-value" style="color: #d97706;">${data.investorsCount}</span>
-            <span class="investor-kpi-label">Marked Investor Parties</span>
-          </div>
-        </div>
-        <div class="investor-kpi-card">
-          <div class="investor-kpi-icon" style="color: #0284c7; background: rgba(2, 132, 199, 0.12);">📋</div>
-          <div class="investor-kpi-info">
-            <span class="investor-kpi-value" style="color: #0284c7;">${displayedEntries}</span>
-            <span class="investor-kpi-label">Bag Entries</span>
-          </div>
-        </div>
-      </div>
     `;
 
     if (displayedEntries === 0) {
