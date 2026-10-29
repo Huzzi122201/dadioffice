@@ -2070,9 +2070,8 @@ async function loadCashbookDashboard() {
       $('cbMainList').innerHTML = `
         <div class="cb-party-list">
           ${parties.map(p => {
-            const isNill = Boolean(p.isNill);
-            const balClass = isNill ? 'zero' : (p.balance > 0 ? 'positive' : p.balance < 0 ? 'negative' : 'zero');
-            const balLabel = isNill ? '⚪ Nill (Remaining: 0)' : (p.balance > 0 ? 'Jama Balance' : p.balance < 0 ? 'Banam Balance' : 'Settled');
+            const balClass = p.balance > 0 ? 'positive' : p.balance < 0 ? 'negative' : 'zero';
+            const balLabel = p.balance > 0 ? 'Jama Balance' : p.balance < 0 ? 'Banam Balance' : 'Settled';
             return `
               <div class="cb-party-card" onclick="openKhata(${p.khataNo})">
                 <div class="cb-party-card-left">
@@ -2081,14 +2080,12 @@ async function loadCashbookDashboard() {
                       <span class="cb-party-name">${search ? highlightMatches(p.name, search) : escapeHtml(p.name)}</span>
                       <span class="cb-party-code" style="background: rgba(30, 64, 175, 0.12); color: #1e40af; border: 1px solid rgba(30, 64, 175, 0.3); font-weight: 800; font-size: 0.75rem; padding: 2px 7px; border-radius: 4px;">${getPartyCode(p)}</span>
                       <span class="cb-party-khata-no">Khata #${p.khataNo}</span>
-                      ${isNill ? '<span class="badge" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 700;">⚪ Nill (0)</span>' : ''}
                     </div>
                     <div class="cb-party-meta">
                       ${p.phone ? `<span>📞 ${escapeHtml(p.phone)}</span>` : ''}
                       <span>${p.txnCount || 0} entries</span>
                       ${p.totalBags ? `<span> · 📦 ${p.totalBags} bags</span>` : ''}
                       ${p.totalMeters ? `<span> · 📏 ${p.totalMeters} meters</span>` : ''}
-                      ${isNill ? `<span style="color: #64748b; font-size: 0.75rem;"> · (Raw Bal: ${fmtCurrency(Math.abs(p.rawBalance || 0))})</span>` : ''}
                     </div>
                   </div>
                 </div>
@@ -2287,10 +2284,8 @@ async function loadCashbookDashboard() {
       const cashParties = parties.filter(p => p.balanceType === 'cash' || (p.nameNorm && p.nameNorm === 'cash in hand'));
       const nonCashParties = parties.filter(p => !cashParties.some(cp => cp._id === p._id));
 
-      const nillParties = nonCashParties.filter(p => Boolean(p.isNill));
-      const activeParties = nonCashParties.filter(p => !p.isNill);
-      const jamaParties = activeParties.filter(p => p.balance > 0);
-      const banamParties = activeParties.filter(p => p.balance < 0);
+      const jamaParties = nonCashParties.filter(p => p.balance > 0);
+      const banamParties = nonCashParties.filter(p => p.balance < 0);
       const zeroParties = nonCashParties.filter(p => p.balance === 0);
       const investorParties = parties.filter(p => Boolean(p.isInvestor || p.type === 'investor'));
 
@@ -2316,8 +2311,8 @@ async function loadCashbookDashboard() {
         const isCashP = cashParties.some(cp => cp._id === p._id);
         const isInv = Boolean(p.isInvestor || p.type === 'investor');
         const isNill = Boolean(p.isNill);
-        const balClass = isNill ? 'zero' : isCashP ? (p.balance >= 0 ? 'positive' : 'negative') : (p.balance > 0 ? 'positive' : p.balance < 0 ? 'negative' : 'zero');
-        const balLabel = isNill ? '⚪ Nill (Remaining: 0)' : isCashP ? 'Cash Balance' : (p.balance > 0 ? 'Jama (Credit)' : p.balance < 0 ? 'Banam (Debit)' : 'Balanced');
+        const balClass = isCashP ? (p.balance >= 0 ? 'positive' : 'negative') : (p.balance > 0 ? 'positive' : p.balance < 0 ? 'negative' : 'zero');
+        const balLabel = isCashP ? 'Cash Balance' : (p.balance > 0 ? 'Jama (Credit)' : p.balance < 0 ? 'Banam (Debit)' : 'Balanced');
         return `
           <div class="cb-party-card" onclick="openKhata(${p.khataNo})">
             <div class="cb-party-card-left">
@@ -2328,14 +2323,12 @@ async function loadCashbookDashboard() {
                   <span class="cb-party-khata-no">#${p.khataNo}</span>
                   ${isCashP ? '<span class="badge" style="background: #e0f2fe; color: #0284c7; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 700;">💵 Cash Party</span>' : ''}
                   ${isInv ? '<span class="badge badge-investor" title="Marked as Investor Party">⭐ Investor</span>' : ''}
-                  ${isNill ? '<span class="badge" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 700;">⚪ Nill (0)</span>' : ''}
                 </div>
                 <div class="cb-party-meta">
                   ${p.phone ? `<span>📞 ${escapeHtml(p.phone)}</span>` : ''}
                   <span>${p.txnCount || 0} entries</span>
                   ${p.totalBags ? `<span> · 📦 ${p.totalBags} bags</span>` : ''}
                   ${p.totalMeters ? `<span> · 📏 ${p.totalMeters} meters</span>` : ''}
-                  ${isNill ? `<span style="color: #64748b; font-size: 0.75rem;"> · (Raw Bal: ${fmtCurrency(Math.abs(p.rawBalance || 0))})</span>` : ''}
                 </div>
               </div>
             </div>
@@ -2345,9 +2338,9 @@ async function loadCashbookDashboard() {
                 <div class="cb-party-balance-label">${balLabel}</div>
               </div>
               <div style="display: flex; gap: 0.25rem; align-items: center;">
-                <button class="btn-action" onclick="event.stopPropagation(); toggleNillParty('${p._id}', '${escapeHtml(p.name)}', ${isNill})" title="${isNill ? 'Nilled (Remaining: 0) — Click to restore balance' : 'Make Nill (Remaining: 0 without entry)'}" style="${isNill ? 'background: #dcfce7; border: 1px solid #16a34a; color: #15803d; font-weight:700;' : 'background: #f1f5f9; border: 1px solid #cbd5e1; color: #64748b; font-weight: 700;'} font-size: 0.75rem; padding: 2px 6px; border-radius: 4px;">${isNill ? '✅ Nill' : '⚪ Nill'}</button>
+                <button class="btn-action" onclick="event.stopPropagation(); toggleNillParty('${p._id}', '${escapeHtml(p.name)}', ${isNill})" title="${isNill ? 'Restore balance' : 'Make remaining 0'}" style="${isNill ? 'background: #dcfce7; border: 1px solid #16a34a; color: #15803d; font-weight: 700;' : ''} font-size: 0.75rem; padding: 2px 6px; border-radius: 4px;">${isNill ? '✅ 0' : '0️⃣'}</button>
                 <button class="btn-action" onclick="event.stopPropagation(); toggleInvestorParty('${p._id}', '${escapeHtml(p.name)}')" title="${isInv ? 'Unmark as Investor' : 'Mark as Investor Party'}" style="${isInv ? 'background: #fef3c7; border: 1px solid #f59e0b; color: #b45309;' : 'background: #f1f5f9; border: 1px solid #cbd5e1; color: #64748b;'} font-size: 0.85rem; padding: 2px 7px; border-radius: 4px;">${isInv ? '⭐' : '☆'}</button>
-                <button class="btn-action edit" onclick="event.stopPropagation(); editPartyFromCard('${p._id}', '${escapeHtml(p.name)}', ${p.openingBalance || 0}, '${p.balanceType || 'none'}', '${escapeHtml(p.phone || '')}', ${isInv}, ${isNill})" title="Edit Party">✏️</button>
+                <button class="btn-action edit" onclick="event.stopPropagation(); editPartyFromCard('${p._id}', '${escapeHtml(p.name)}', ${p.openingBalance || 0}, '${p.balanceType || 'none'}', '${escapeHtml(p.phone || '')}', ${isInv})" title="Edit Party">✏️</button>
                 <button class="btn-action delete" onclick="event.stopPropagation(); deleteCbParty('${p._id}', '${escapeHtml(p.name)}')" title="Delete Party">🗑️</button>
               </div>
             </div>
@@ -2373,26 +2366,13 @@ async function loadCashbookDashboard() {
             <button class="cb-filter-pill pill-investor ${cbKhataFilter === 'investors' ? 'active' : ''}" onclick="setKhataFilter('investors')">
               ⭐ Investors (${investorParties.length})
             </button>
-            <button class="cb-filter-pill ${cbKhataFilter === 'nill' ? 'active' : ''}" onclick="setKhataFilter('nill')" style="border-color: #94a3b8; color: #475569;">
-              ⚪ Nill (${nillParties.length})
-            </button>
           </div>
         </div>
       `;
 
       let contentHtml = filterBarHtml;
 
-      if (cbKhataFilter === 'nill') {
-        contentHtml += `
-          <div class="cb-section-header">
-            <span class="cb-section-title" style="color: #475569;">⚪ Nill Parties (Remaining: Rs. 0 / نِل کھاتہ) — ${nillParties.length}</span>
-            <span class="cb-section-total" style="color: #64748b;">Remaining: Rs. 0</span>
-          </div>
-          <div class="cb-party-list">
-            ${nillParties.length > 0 ? nillParties.map(renderPartyCard).join('') : '<p class="empty-hint" style="padding: 1rem; color: var(--text-muted);">No Nill parties. Click ⚪ Nill on any party to set remaining to 0 without adding an entry.</p>'}
-          </div>
-        `;
-      } else if (cbKhataFilter === 'investors') {
+      if (cbKhataFilter === 'investors') {
         contentHtml += `
           <div class="cb-section-header">
             <span class="cb-section-title" style="color: #b45309;">⭐ Marked Investor Parties (سرمایہ کار) — ${investorParties.length}</span>
@@ -4228,50 +4208,10 @@ async function openKhata(khataNo) {
 
     const p = data.party;
     const s = data.summary;
+    $('khataTitle').textContent = `${p.name} — Khata #${p.khataNo}`;
 
-    const isNill = Boolean(p.isNill || s.isNill);
-    $('khataTitle').textContent = `${p.name} — Khata #${p.khataNo}${isNill ? ' (Nill)' : ''}`;
-
-    const nillBtn = $('btnKhataToggleNill');
-    if (nillBtn) {
-      nillBtn.style.display = 'inline-flex';
-      if (isNill) {
-        nillBtn.innerHTML = '✅ Nilled (0)';
-        nillBtn.className = 'btn btn-success';
-        nillBtn.style.background = '#059669';
-        nillBtn.style.borderColor = '#059669';
-        nillBtn.style.color = '#fff';
-        nillBtn.title = 'Remaining balance is 0. Click to restore actual balance.';
-      } else {
-        nillBtn.innerHTML = '⚪ Make Nill';
-        nillBtn.className = 'btn btn-secondary';
-        nillBtn.style.background = '#f1f5f9';
-        nillBtn.style.color = '#334155';
-        nillBtn.style.borderColor = '#cbd5e1';
-        nillBtn.title = 'Make remaining balance 0 without adding an entry.';
-      }
-      nillBtn.onclick = async () => {
-        const willNill = !isNill;
-        const msg = willNill
-          ? `Make remaining balance 0 (Nill) for "${p.name}"?\n\n(No entry will be added to the cashbook)`
-          : `Restore actual balance for "${p.name}"?`;
-        if (!confirm(msg)) return;
-        try {
-          const res = await apiPatch(`${CB_API}/parties/${p._id}/toggle-nill`);
-          if (res.isNill) {
-            toast(`⚪ "${p.name}" marked as Nill (Remaining: Rs. 0)`, 'success');
-          } else {
-            toast(`"${p.name}" actual balance restored.`, 'info');
-          }
-          openKhata(khataNo);
-        } catch (err) {
-          toast(err.message, 'error');
-        }
-      };
-    }
-
-    const balClass = isNill ? 'zero' : (s.balance > 0 ? 'positive' : s.balance < 0 ? 'negative' : 'zero');
-    const balLabel = isNill ? '⚪ Nill Balance (Settled)' : (s.balance >= 0 ? 'Jama Balance (Remaining)' : 'Naam Balance (Remaining)');
+    const balClass = s.balance > 0 ? 'positive' : s.balance < 0 ? 'negative' : 'zero';
+    const balLabel = s.balance >= 0 ? 'Jama Balance (Remaining)' : 'Naam Balance (Remaining)';
     $('khataPartyInfo').innerHTML = `
       <div class="cb-khata-info">
         <div class="cb-khata-info-left">
@@ -4290,7 +4230,6 @@ async function openKhata(khataNo) {
         <div class="cb-khata-info-right">
           <div class="cb-khata-balance-big ${balClass}">${fmtCurrency(Math.abs(s.balance))}</div>
           <div class="cb-khata-balance-label-big">${balLabel}</div>
-          ${isNill ? `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 3px; font-weight: 600;">(No entry added · Actual Bal: ${fmtCurrency(Math.abs(s.rawBalance || 0))})</div>` : ''}
         </div>
       </div>
     `;
@@ -4416,8 +4355,8 @@ async function shareKhataAsPDF(khataNo) {
     const p = data.party;
     const s = data.summary;
     const hasInitial = (data.initialAmount || 0) > 0;
-    const isNill = Boolean(p.isNill || s.isNill);
-    const balLabel = isNill ? 'SETTLED / NILL (REMAINING: RS. 0)' : (s.balance >= 0 ? 'JAMA / CREDIT (REMAINING)' : 'NAAM / DEBIT (REMAINING)');
+
+    const balLabel = s.balance >= 0 ? 'JAMA / CREDIT (REMAINING)' : 'NAAM / DEBIT (REMAINING)';
 
     const container = document.createElement('div');
     container.style.position = 'fixed';
@@ -4461,18 +4400,17 @@ async function shareKhataAsPDF(khataNo) {
         <!-- Header Bar -->
         <div style="background: linear-gradient(135deg, #0f172a, #1e3a8a); color: #ffffff; padding: 12px 16px; border-radius: 6px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
           <div>
-            <h1 style="margin: 0; font-size: 18px; font-weight: 800; letter-spacing: 0.5px; color: #ffffff;">📒 ${escapeHtml(p.name)} ${isNill ? '(Nill)' : ''}</h1>
+            <h1 style="margin: 0; font-size: 18px; font-weight: 800; letter-spacing: 0.5px; color: #ffffff;">📒 ${escapeHtml(p.name)}</h1>
             <p style="margin: 3px 0 0 0; font-size: 11.5px; color: #93c5fd;">
               Khata <strong>#${p.khataNo}</strong>
               ${p.phone ? ` · 📞 ${escapeHtml(p.phone)}` : ''}
               ${s.totalBags > 0 ? ` · 📦 ${s.totalBags} bags` : ''}
               ${s.totalMeters > 0 ? ` · 📏 ${s.totalMeters} meters` : ''}
-              ${isNill ? ' · ⚪ Nill Account' : ''}
             </p>
           </div>
           <div style="text-align: right;">
             <div style="font-size: 10px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.5px;">${balLabel}</div>
-            <div style="font-size: 18px; font-weight: 800; color: ${isNill ? '#94a3b8' : (s.balance >= 0 ? '#86efac' : '#fca5a5')};">${fmtCurrency(Math.abs(s.balance))}</div>
+            <div style="font-size: 18px; font-weight: 800; color: ${s.balance >= 0 ? '#86efac' : '#fca5a5'};">${fmtCurrency(Math.abs(s.balance))}</div>
           </div>
         </div>
 
@@ -4605,7 +4543,7 @@ if ($('btnNewParty')) {
   $('btnNewParty').addEventListener('click', () => openPartyModal());
 }
 
-function openPartyModal(id = null, name = '', amount = 0, type = 'jama', phone = '', isInvestor = false, isNill = false) {
+function openPartyModal(id = null, name = '', amount = 0, type = 'jama', phone = '', isInvestor = false) {
   $('partyForm').reset();
   $('partyModalId').value = id || '';
   $('partyModalName').value = name || '';
@@ -4615,16 +4553,13 @@ function openPartyModal(id = null, name = '', amount = 0, type = 'jama', phone =
   if ($('partyModalIsInvestor')) {
     $('partyModalIsInvestor').checked = Boolean(isInvestor);
   }
-  if ($('partyModalIsNill')) {
-    $('partyModalIsNill').checked = Boolean(isNill);
-  }
   $('partyModalTitle').textContent = id ? '✏️ Edit Party' : '＋ Add New Party';
   $('partyModal').classList.remove('hidden');
 }
 window.openPartyModal = openPartyModal;
 
-function editPartyFromCard(id, name, amount, type, phone, isInvestor = false, isNill = false) {
-  openPartyModal(id, name, amount, type, phone, isInvestor, isNill);
+function editPartyFromCard(id, name, amount, type, phone, isInvestor = false) {
+  openPartyModal(id, name, amount, type, phone, isInvestor);
 }
 window.editPartyFromCard = editPartyFromCard;
 
@@ -4640,7 +4575,6 @@ async function savePartyModal() {
   const type = $('partyModalType').value;
   const phone = $('partyModalPhone').value.trim();
   const isInvestor = $('partyModalIsInvestor') ? $('partyModalIsInvestor').checked : false;
-  const isNill = $('partyModalIsNill') ? $('partyModalIsNill').checked : false;
 
   if (!name) {
     toast('Party name is required', 'error');
@@ -4654,7 +4588,6 @@ async function savePartyModal() {
       balanceType: type,
       phone,
       isInvestor,
-      isNill,
     };
 
     if (id) {
@@ -4692,16 +4625,16 @@ window.toggleInvestorParty = toggleInvestorParty;
 async function toggleNillParty(id, partyName = '', currentNill = false) {
   const willNill = !currentNill;
   const msg = willNill
-    ? `Make remaining balance 0 (Nill) for "${partyName}"?\n\n(No entry will be added to the cashbook)`
-    : `Restore actual remaining balance for "${partyName}"?`;
+    ? `Set remaining balance to 0 for "${partyName}"?`
+    : `Restore remaining balance for "${partyName}"?`;
   if (!confirm(msg)) return;
 
   try {
     const res = await apiPatch(`${CB_API}/parties/${id}/toggle-nill`);
     if (res.isNill) {
-      toast(`⚪ "${partyName || 'Party'}" marked as Nill (Remaining: Rs. 0)`, 'success');
+      toast(`Remaining balance set to 0 for "${partyName || 'Party'}"`, 'success');
     } else {
-      toast(`"${partyName || 'Party'}" actual balance restored.`, 'info');
+      toast(`Balance restored for "${partyName || 'Party'}"`, 'info');
     }
     loadCashbookDashboard();
   } catch (err) {
