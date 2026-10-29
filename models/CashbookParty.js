@@ -38,6 +38,11 @@ const cashbookPartySchema = new mongoose.Schema(
       default: false,
       index: true,
     },
+    isNill: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
 
     // ── Opening Balance ─────────────────────────────────
     openingBalance: {

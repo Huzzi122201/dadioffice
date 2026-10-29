@@ -121,10 +121,14 @@ router.get('/parties', async (req, res) => {
 
       const opening = Number(p.openingBalance) || 0;
       const openingNet = (p.balanceType === 'jama' || p.balanceType === 'cash') ? opening : p.balanceType === 'banam' ? -opening : 0;
-      const balance = openingNet + s.totalJama - s.totalNaam;
+      const calculatedBalance = openingNet + s.totalJama - s.totalNaam;
+      const isNill = Boolean(p.isNill);
+      const balance = isNill ? 0 : calculatedBalance;
       return {
         ...p,
         isInvestor: Boolean(p.isInvestor || p.type === 'investor'),
+        isNill,
+        rawBalance: calculatedBalance,
         code: p.code || CashbookParty.computePartyCode(p.name, p.khataNo),
         totalNaam: s.totalNaam,
         totalJama: s.totalJama,
@@ -263,6 +267,7 @@ router.put('/parties/:id', async (req, res) => {
     }
     if (type) party.type = type;
     if (isInvestor !== undefined) party.isInvestor = Boolean(isInvestor);
+    if (req.body.isNill !== undefined) party.isNill = Boolean(req.body.isNill);
     if (phone !== undefined) party.phone = phone || '';
     if (description !== undefined) party.description = description || '';
     if (note !== undefined) party.note = note || '';
@@ -301,6 +306,27 @@ router.patch('/parties/:id/toggle-investor', async (req, res) => {
       khataNo: party.khataNo,
       partyName: party.name,
       isInvestor: party.isInvestor,
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// ── PATCH /api/cashbook/parties/:id/toggle-nill ── Quick toggle Nill (zero remaining) flag ──
+router.patch('/parties/:id/toggle-nill', async (req, res) => {
+  try {
+    const party = await CashbookParty.findById(req.params.id);
+    if (!party) return res.status(404).json({ error: 'Party not found' });
+
+    party.isNill = !Boolean(party.isNill);
+    await party.save();
+
+    res.json({
+      success: true,
+      partyId: party._id,
+      khataNo: party.khataNo,
+      partyName: party.name,
+      isNill: party.isNill,
     });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -355,9 +381,15 @@ router.get('/khata/:khataNo', async (req, res) => {
     const totalNaam = entries.reduce((s, e) => s + (e.naam || 0), 0) + (party.balanceType === 'banam' ? opening : 0);
     const totalJama = entries.reduce((s, e) => s + (e.jama || 0), 0) + ((party.balanceType === 'jama' || party.balanceType === 'cash') ? opening : 0);
 
+    const isNill = Boolean(party.isNill);
+    const balance = isNill ? 0 : runningBalance;
+
     // Return newest first for display
     res.json({
-      party,
+      party: {
+        ...party,
+        isNill,
+      },
       initialAmount: opening,
       initialType: party.balanceType || 'none',
       initialBalance,
@@ -365,7 +397,9 @@ router.get('/khata/:khataNo', async (req, res) => {
       summary: {
         totalNaam,
         totalJama,
-        balance: runningBalance,
+        balance,
+        rawBalance: runningBalance,
+        isNill,
         totalBags: (() => {
           const jB = entries.filter(e => e.jama > 0).reduce((s, e) => s + (e.bags || 0), 0);
           const nB = entries.filter(e => e.naam > 0).reduce((s, e) => s + (e.bags || 0), 0);
