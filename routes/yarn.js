@@ -188,9 +188,22 @@ router.get('/contracts/:partyNorm', async (req, res) => {
   }
 });
 
+const ROMAN_NUMERALS_REGEX = /^(I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII|XIII|XIV|XV|XVI|XVII|XVIII|XIX|XX|XXI|XXII|XXIII|XXIV|XXV|XXVI|XXVII|XXVIII|XXIX|XXX)$/i;
+const COMMON_ABBRS_REGEX = /^(LLC|LTD|PVT|CO|INC|CORP|NTN|STRN|HBL|UBL|MCB|ABL|NBP)$/i;
+
 function toTitleCase(str) {
   if (!str) return '';
-  return str.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  return str.trim().split(/\s+/).map(token => {
+    return token.replace(/\b([a-zA-Z0-9]+)\b/g, (match) => {
+      if (match.toLowerCase() === 'll') return 'II';
+      if (ROMAN_NUMERALS_REGEX.test(match)) return match.toUpperCase();
+      if (COMMON_ABBRS_REGEX.test(match)) return match.toUpperCase();
+      if (match === match.toUpperCase() && match.length >= 2 && match.length <= 4 && !/^\d+$/.test(match)) {
+        return match;
+      }
+      return match.charAt(0).toUpperCase() + match.slice(1).toLowerCase();
+    });
+  }).join(' ');
 }
 
 function toUtcDate(dateStr) {

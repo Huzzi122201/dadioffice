@@ -1025,9 +1025,27 @@ if ($('yarnSearchInput')) {
 //  YARN STOCK — ISSUE FORM & PARTY AUTO-COMPLETE
 // ═══════════════════════════════════════════════════════════
 
+const ROMAN_NUMERALS_REGEX = /^(I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII|XIII|XIV|XV|XVI|XVII|XVIII|XIX|XX|XXI|XXII|XXIII|XXIV|XXV|XXVI|XXVII|XXVIII|XXIX|XXX)$/i;
+const COMMON_ABBRS_REGEX = /^(LLC|LTD|PVT|CO|INC|CORP|NTN|STRN|HBL|UBL|MCB|ABL|NBP)$/i;
+
 function toTitleCase(str) {
   if (!str) return '';
-  return str.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  return str.trim().split(/\s+/).map(token => {
+    return token.replace(/\b([a-zA-Z0-9]+)\b/g, (match) => {
+      // Standalone double-L typo for Roman numeral II
+      if (match.toLowerCase() === 'll') return 'II';
+      // Roman numerals (I, II, III, IV, etc.)
+      if (ROMAN_NUMERALS_REGEX.test(match)) return match.toUpperCase();
+      // Common business abbreviations
+      if (COMMON_ABBRS_REGEX.test(match)) return match.toUpperCase();
+      // If user typed 2-4 letter all-caps acronym (e.g. MK, ABC, VIP)
+      if (match === match.toUpperCase() && match.length >= 2 && match.length <= 4 && !/^\d+$/.test(match)) {
+        return match;
+      }
+      // Standard title case
+      return match.charAt(0).toUpperCase() + match.slice(1).toLowerCase();
+    });
+  }).join(' ');
 }
 
 function escapeRegex(str) {
@@ -4578,6 +4596,7 @@ async function savePartyModal() {
 
     closePartyModal();
     loadCashbookDashboard();
+    populatePartyNamesDatalist();
   } catch (err) {
     toast(err.message, 'error');
   }
