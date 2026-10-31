@@ -5965,36 +5965,22 @@ async function openPartyGazanaDetail(partyName, resetTab = true) {
             p.note.includes('مکمل ادائیگی')
           );
 
+          // Don't show auto/settlement completed payments in Payments tab, only genuine payments
+          if (isSettlement) return;
+
           entryHistorySum += Number(p.amount) || 0;
 
           entrySpecificPayments.push({
             date: p.date || e.date,
             amount: Number(p.amount) || 0,
-            note: p.note || (isSettlement ? 'Paid Amount (مکمل ادائیگی)' : ''),
-            type: isSettlement ? 'completed' : 'installment',
+            note: p.note || '',
+            type: 'installment',
             entryVariety: e.variety || '—',
             entryDate: e.date,
             paymentId: p._id,
             entryId: e._id
           });
         });
-      }
-
-      // If entry is marked as completed but has an unrecorded balance (e.g. legacy completed entry)
-      if (isCompleted && billableTotal > 0) {
-        const totalRecordedForEntry = (e.advance || 0) + totalAllHistorySum;
-        const unrecordedSettlement = Math.max(0, Math.round((billableTotal - totalRecordedForEntry) * 100) / 100);
-        if (unrecordedSettlement > 0) {
-          entrySpecificPayments.push({
-            date: e.updatedAt || e.date,
-            amount: unrecordedSettlement,
-            note: 'Paid Amount (مکمل ادائیگی)',
-            type: 'completed',
-            entryVariety: e.variety || '—',
-            entryDate: e.date,
-            entryId: e._id
-          });
-        }
       }
     });
 
