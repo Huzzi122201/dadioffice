@@ -6563,9 +6563,9 @@ async function savePartyGazanaForm() {
     const id = $('gazanaFormEditId') ? $('gazanaFormEditId').value : '';
     const date = $('formGazanaDate') ? $('formGazanaDate').value : '';
     const rawPartyName = $('formGazanaPartyName') ? $('formGazanaPartyName').value.trim() : '';
-    const partyName = rawPartyName || 'Daily Entries';
     const loomWala = $('formGazanaLoomWala') ? $('formGazanaLoomWala').value.trim() : '';
     const purchaser = $('formGazanaPurchaser') ? $('formGazanaPurchaser').value.trim() : '';
+    const partyName = rawPartyName || purchaser || 'Daily Entries';
     const gudaam = $('formGazanaGudaam') ? $('formGazanaGudaam').value.trim() : '';
     const variety = $('formGazanaVariety') ? $('formGazanaVariety').value.trim() : '';
     const kachaGazana = parseFloat($('formGazanaKacha')?.value) || 0;

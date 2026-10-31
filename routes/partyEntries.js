@@ -431,9 +431,9 @@ router.post('/', async (req, res) => {
       status
     } = req.body;
 
-    let resolvedPartyName = (partyName && partyName.trim()) ? partyName.trim() : 'Daily Entries';
+    let resolvedPartyName = (partyName && partyName.trim()) ? partyName.trim() : (purchaser && purchaser.trim()) ? purchaser.trim() : 'Daily Entries';
     if (resolvedPartyName.toLowerCase() === 'default party') {
-      resolvedPartyName = 'Daily Entries';
+      resolvedPartyName = (purchaser && purchaser.trim()) ? purchaser.trim() : 'Daily Entries';
     }
 
     const safi = Number(safiGazana) || 0;
@@ -512,9 +512,9 @@ router.put('/:id', async (req, res) => {
 
     if (date) entry.date = new Date(date);
     if (partyName !== undefined) {
-      let resolvedPartyName = (partyName && partyName.trim()) ? partyName.trim() : 'Daily Entries';
+      let resolvedPartyName = (partyName && partyName.trim()) ? partyName.trim() : (purchaser && purchaser.trim()) ? purchaser.trim() : (entry.purchaser && entry.purchaser.trim()) ? entry.purchaser.trim() : 'Daily Entries';
       if (resolvedPartyName.toLowerCase() === 'default party') {
-        resolvedPartyName = 'Daily Entries';
+        resolvedPartyName = (purchaser && purchaser.trim()) ? purchaser.trim() : (entry.purchaser && entry.purchaser.trim()) ? entry.purchaser.trim() : 'Daily Entries';
       }
       entry.partyName = resolvedPartyName;
       entry.partyNameNorm = resolvedPartyName.toLowerCase();
