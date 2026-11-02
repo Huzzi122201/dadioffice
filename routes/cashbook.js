@@ -118,7 +118,8 @@ router.get('/parties', async (req, res) => {
       const s = statsMap[p.khataNo] || { totalNaam: 0, totalJama: 0, txnCount: 0, jamaBags: 0, naamBags: 0, jamaMeters: 0, naamMeters: 0 };
       const jB = s.jamaBags || 0;
       const nB = s.naamBags || 0;
-      const totalBags = (jB > 0 && nB > 0) ? `${jB}+${nB}` : (jB > 0 ? String(jB) : nB > 0 ? String(nB) : 0);
+      // In Khatas: Total bags = Total Banaam bags - Jama bags
+      const totalBags = nB - jB;
       const totalMeters = s.jamaMeters > 0 ? s.jamaMeters : s.naamMeters;
 
       const opening = Number(p.openingBalance) || 0;
@@ -405,8 +406,8 @@ router.get('/khata/:khataNo', async (req, res) => {
         totalBags: (() => {
           const jB = entries.filter(e => e.jama > 0).reduce((s, e) => s + (e.bags || 0), 0);
           const nB = entries.filter(e => e.naam > 0).reduce((s, e) => s + (e.bags || 0), 0);
-          if (jB > 0 && nB > 0) return `${jB}+${nB}`;
-          return jB > 0 ? String(jB) : nB > 0 ? String(nB) : 0;
+          // In Khatas: Total bags = Total Banaam bags - Jama bags
+          return nB - jB;
         })(),
         jamaBags: entries.filter(e => e.jama > 0).reduce((s, e) => s + (e.bags || 0), 0),
         naamBags: entries.filter(e => e.naam > 0).reduce((s, e) => s + (e.bags || 0), 0),
@@ -546,7 +547,8 @@ router.get('/rokers', async (req, res) => {
       const cashDifference = totalJamaCashWithPrev - totalCashNaam;
       const jB = r.jamaBags || 0;
       const nB = r.naamBags || 0;
-      const formattedTotalBags = (jB > 0 && nB > 0) ? `${jB}+${nB}` : (jB > 0 ? String(jB) : nB > 0 ? String(nB) : 0);
+      // In Rokers: Total bags = Total Jama bags
+      const formattedTotalBags = jB;
       return {
         ...r,
         totalBags: formattedTotalBags,
@@ -602,7 +604,8 @@ router.get('/roker/:rokerNo', async (req, res) => {
     const totalJama = entries.reduce((s, e) => s + (e.jama || 0), 0);
     const jB = entries.filter(e => (e.jama || 0) > 0).reduce((s, e) => s + (e.bags || 0), 0);
     const nB = entries.filter(e => (e.naam || 0) > 0).reduce((s, e) => s + (e.bags || 0), 0);
-    const totalBags = (jB > 0 && nB > 0) ? `${jB}+${nB}` : (jB > 0 ? String(jB) : nB > 0 ? String(nB) : 0);
+    // In Rokers: Total bags = Total Jama bags
+    const totalBags = jB;
     const totalMeters = entries.filter(e => (e.jama || 0) > 0).reduce((s, e) => s + (e.meters || 0), 0);
     const date = entries[0]?.date || new Date();
 
