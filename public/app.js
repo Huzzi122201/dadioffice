@@ -4,7 +4,7 @@
 
 // ── Register Service Worker (PWA) ──────────────────────────
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {});
+  navigator.serviceWorker.register('/sw.js').catch(() => { });
 }
 
 // ── Constants ──────────────────────────────────────────────
@@ -94,7 +94,7 @@ function showView(view) {
   });
   try {
     localStorage.setItem('active_tab', currentTab);
-  } catch (e) {}
+  } catch (e) { }
 }
 
 // ── Calculator (client-side replica) ───────────────────────
@@ -660,7 +660,7 @@ async function shareInvoiceAsPDF(inv) {
   container.style.position = 'fixed';
   container.style.left = '-9999px';
   container.style.top = '-9999px';
-  
+
   container.innerHTML = `
     <div style="padding: 24px; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #0f172a; background: #ffffff; width: 720px; box-sizing: border-box;">
       
@@ -752,18 +752,18 @@ async function shareInvoiceAsPDF(inv) {
   const fileName = `Costing_${cleanParty}_${cleanDate}.pdf`;
 
   const opt = {
-    margin:       10,
-    filename:     fileName,
-    image:        { type: 'jpeg', quality: 0.98 },
-    html2canvas:  { scale: 2, useCORS: true, logging: false },
-    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    margin: 10,
+    filename: fileName,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, logging: false },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
   };
 
   try {
     if (typeof html2pdf !== 'undefined') {
       const pdfWorker = html2pdf().set(opt).from(container.firstElementChild);
       const pdfBlob = await pdfWorker.output('blob');
-      
+
       if (container.parentNode) document.body.removeChild(container);
 
       const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
@@ -1189,7 +1189,7 @@ try {
   if (cachedParties) {
     allKnownPartiesList = JSON.parse(cachedParties);
   }
-} catch (e) {}
+} catch (e) { }
 
 async function populatePartyNamesDatalist() {
   try {
@@ -1244,7 +1244,7 @@ async function populatePartyNamesDatalist() {
     allKnownPartiesList = sortedParties;
     try {
       localStorage.setItem('cached_known_parties', JSON.stringify(sortedParties));
-    } catch (e) {}
+    } catch (e) { }
 
     const optionsHtml = sortedParties.map(p => `<option value="${escapeHtml(p.name)}">${p.code ? `[${p.code}] ` : (p.khataNo ? `Khata #${p.khataNo} · ` : '')}${escapeHtml(p.name)}</option>`).join('');
 
@@ -1591,81 +1591,81 @@ function openYarnForm(partyNamePreFill = '', editRecord = null) {
   showView(viewYarnForm);
 }
 
-  if ($('btnNewYarnIssue')) $('btnNewYarnIssue').addEventListener('click', () => openYarnForm(''));
+if ($('btnNewYarnIssue')) $('btnNewYarnIssue').addEventListener('click', () => openYarnForm(''));
 
-  if ($('btnYarnFormBack')) {
-    $('btnYarnFormBack').addEventListener('click', () => {
-      editingYarnId = null;
-      if (currentHistoryPartyName && currentHistoryPartyNorm) {
-        openYarnHistory(encodeURIComponent(currentHistoryPartyNorm), currentHistoryPartyName);
-      } else if (typeof viewYarnDashboard !== 'undefined' && viewYarnDashboard) {
-        showView(viewYarnDashboard);
-        loadYarnStock();
-      }
-    });
-  }
-
-  if ($('btnYarnFormCancel')) {
-    $('btnYarnFormCancel').addEventListener('click', () => {
-      editingYarnId = null;
-      if (currentHistoryPartyName && currentHistoryPartyNorm) {
-        openYarnHistory(encodeURIComponent(currentHistoryPartyNorm), currentHistoryPartyName);
-      } else if (typeof viewYarnDashboard !== 'undefined' && viewYarnDashboard) {
-        showView(viewYarnDashboard);
-        loadYarnStock();
-      }
-    });
-  }
-
-  if ($('yarnForm')) {
-    $('yarnForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-
-  const partyName = $('yarnPartyName').value.trim();
-  if (!partyName) {
-    toast('Party name is required', 'error');
-    return;
-  }
-
-  const warpBags = parseFloat($('yarnWarpBags').value) || 0;
-  const weftBags = parseFloat($('yarnWeftBags').value) || 0;
-
-  if (warpBags <= 0 && weftBags <= 0) {
-    toast('Enter at least warp or weft bags', 'error');
-    return;
-  }
-
-  const data = {
-    partyName,
-    date: $('yarnDate').value || toInputDate(new Date()),
-    warpBags,
-    weftBags,
-    warpQuality: $('yarnWarpQuality').value.trim(),
-    weftQuality: $('yarnWeftQuality').value.trim(),
-    note: $('yarnNote').value.trim(),
-  };
-
-  try {
-    if (editingYarnId) {
-      await apiPut(`${YARN_API}/${editingYarnId}`, data);
-      toast('Yarn issuance updated successfully!');
-    } else {
-      await apiPost(YARN_API, data);
-      toast('Yarn issued successfully!');
-    }
-
+if ($('btnYarnFormBack')) {
+  $('btnYarnFormBack').addEventListener('click', () => {
     editingYarnId = null;
-    const norm = partyName.toLowerCase();
-    if (currentHistoryPartyNorm === norm) {
+    if (currentHistoryPartyName && currentHistoryPartyNorm) {
       openYarnHistory(encodeURIComponent(currentHistoryPartyNorm), currentHistoryPartyName);
-    } else {
+    } else if (typeof viewYarnDashboard !== 'undefined' && viewYarnDashboard) {
       showView(viewYarnDashboard);
       loadYarnStock();
     }
-  } catch (err) {
-    toast(err.message, 'error');
-  }
-});
+  });
+}
+
+if ($('btnYarnFormCancel')) {
+  $('btnYarnFormCancel').addEventListener('click', () => {
+    editingYarnId = null;
+    if (currentHistoryPartyName && currentHistoryPartyNorm) {
+      openYarnHistory(encodeURIComponent(currentHistoryPartyNorm), currentHistoryPartyName);
+    } else if (typeof viewYarnDashboard !== 'undefined' && viewYarnDashboard) {
+      showView(viewYarnDashboard);
+      loadYarnStock();
+    }
+  });
+}
+
+if ($('yarnForm')) {
+  $('yarnForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const partyName = $('yarnPartyName').value.trim();
+    if (!partyName) {
+      toast('Party name is required', 'error');
+      return;
+    }
+
+    const warpBags = parseFloat($('yarnWarpBags').value) || 0;
+    const weftBags = parseFloat($('yarnWeftBags').value) || 0;
+
+    if (warpBags <= 0 && weftBags <= 0) {
+      toast('Enter at least warp or weft bags', 'error');
+      return;
+    }
+
+    const data = {
+      partyName,
+      date: $('yarnDate').value || toInputDate(new Date()),
+      warpBags,
+      weftBags,
+      warpQuality: $('yarnWarpQuality').value.trim(),
+      weftQuality: $('yarnWeftQuality').value.trim(),
+      note: $('yarnNote').value.trim(),
+    };
+
+    try {
+      if (editingYarnId) {
+        await apiPut(`${YARN_API}/${editingYarnId}`, data);
+        toast('Yarn issuance updated successfully!');
+      } else {
+        await apiPost(YARN_API, data);
+        toast('Yarn issued successfully!');
+      }
+
+      editingYarnId = null;
+      const norm = partyName.toLowerCase();
+      if (currentHistoryPartyNorm === norm) {
+        openYarnHistory(encodeURIComponent(currentHistoryPartyNorm), currentHistoryPartyName);
+      } else {
+        showView(viewYarnDashboard);
+        loadYarnStock();
+      }
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1724,21 +1724,21 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
           </thead>
           <tbody>
             ${records.map(r => {
-              const warp = r.warpBags || 0;
-              const weft = r.weftBags || 0;
-              const qParts = [];
-              if (r.warpQuality && r.warpQuality.trim()) qParts.push(r.warpQuality.trim());
-              if (r.weftQuality && r.weftQuality.trim() && r.weftQuality.trim() !== (r.warpQuality || '').trim()) {
-                qParts.push(r.weftQuality.trim());
-              }
-              const qualityStr = qParts.join(' / ') || '—';
-              const isIssue = r.type === 'issue';
-              const sign = isIssue ? '−' : '';
-              const remW = r.remainingWarp ?? 0;
-              const remF = r.remainingWeft ?? 0;
-              const remT = r.remainingTotal ?? (remW + remF);
+      const warp = r.warpBags || 0;
+      const weft = r.weftBags || 0;
+      const qParts = [];
+      if (r.warpQuality && r.warpQuality.trim()) qParts.push(r.warpQuality.trim());
+      if (r.weftQuality && r.weftQuality.trim() && r.weftQuality.trim() !== (r.warpQuality || '').trim()) {
+        qParts.push(r.weftQuality.trim());
+      }
+      const qualityStr = qParts.join(' / ') || '—';
+      const isIssue = r.type === 'issue';
+      const sign = isIssue ? '−' : '';
+      const remW = r.remainingWarp ?? 0;
+      const remF = r.remainingWeft ?? 0;
+      const remT = r.remainingTotal ?? (remW + remF);
 
-              return `
+      return `
                 <tr class="${isIssue ? 'row-issue' : 'row-deduction'}">
                   <td>${formatDate(r.date)}</td>
                   <td class="col-quality" title="${escapeHtml(qualityStr)}">${escapeHtml(qualityStr)}</td>
@@ -1755,7 +1755,7 @@ async function openYarnHistory(partyNormEncoded, partyDisplayName) {
                   </td>
                 </tr>
               `;
-            }).join('')}
+    }).join('')}
           </tbody>
           <tfoot>
             <tr class="datagrid-summary-row">
@@ -2000,7 +2000,7 @@ async function loadCashbookDashboard() {
       try {
         const cihRes = await apiGet(`${CB_API}/cash-in-hand`);
         fallbackCih = cihRes.balance || 0;
-      } catch (e) {}
+      } catch (e) { }
 
       const totalEntries = rokers.reduce((sum, r) => sum + (r.entryCount || 0), 0);
       const totalBags = rokers.reduce((sum, r) => sum + (r.totalBags || 0), 0);
@@ -2023,8 +2023,8 @@ async function loadCashbookDashboard() {
       $('cbMainList').innerHTML = `
         <div class="cb-roker-list">
           ${rokers.map(r => {
-            const partiesStr = (r.parties && r.parties.length > 0) ? r.parties.filter(Boolean).join(', ') : 'No parties';
-            return `
+        const partiesStr = (r.parties && r.parties.length > 0) ? r.parties.filter(Boolean).join(', ') : 'No parties';
+        return `
               <div class="cb-roker-card" onclick="openRokerDetail(${r.rokerNo})">
                 <div class="cb-roker-card-left">
                   <span class="cb-roker-badge">#${r.rokerNo}</span>
@@ -2045,7 +2045,7 @@ async function loadCashbookDashboard() {
                 </div>
               </div>
             `;
-          }).join('')}
+      }).join('')}
         </div>
       `;
 
@@ -2076,9 +2076,9 @@ async function loadCashbookDashboard() {
       $('cbMainList').innerHTML = `
         <div class="cb-party-list">
           ${parties.map(p => {
-            const balClass = p.balance > 0 ? 'positive' : p.balance < 0 ? 'negative' : 'zero';
-            const balLabel = p.balance > 0 ? 'Jama Balance' : p.balance < 0 ? 'Banam Balance' : 'Settled';
-            return `
+        const balClass = p.balance > 0 ? 'positive' : p.balance < 0 ? 'negative' : 'zero';
+        const balLabel = p.balance > 0 ? 'Jama Balance' : p.balance < 0 ? 'Banam Balance' : 'Settled';
+        return `
               <div class="cb-party-card" onclick="openKhata(${p.khataNo})">
                 <div class="cb-party-card-left">
                   <div class="cb-party-info">
@@ -2104,7 +2104,7 @@ async function loadCashbookDashboard() {
                 </div>
               </div>
             `;
-          }).join('')}
+      }).join('')}
         </div>
       `;
 
@@ -2136,142 +2136,142 @@ async function loadCashbookDashboard() {
       $('cbMainList').innerHTML = `
         <div class="cb-purchase-list">
           ${filtered.map(p => {
-            if (p.isAggregateSummary) {
-              const statusIcon = p.isFullySold ? '✅' : '⏳';
-              const statusText = p.isFullySold ? 'Fully Sold' : `Partially Sold (${p.totalSoldQty}/${p.initialQty} ${p.unitLabel})`;
-              const statusClass = p.isFullySold ? 'ps-status-sold' : 'ps-status-partial';
+        if (p.isAggregateSummary) {
+          const statusIcon = p.isFullySold ? '✅' : '⏳';
+          const statusText = p.isFullySold ? 'Fully Sold' : `Partially Sold (${p.totalSoldQty}/${p.initialQty} ${p.unitLabel})`;
+          const statusClass = p.isFullySold ? 'ps-status-sold' : 'ps-status-partial';
 
-              let profitLossHtml = '';
-              if (p.profitLoss !== null) {
-                if (p.profitLoss > 0) {
-                  profitLossHtml = '<span class="ps-profit">🟢 Nafa: ' + fmtCurrency(p.profitLoss) + '</span>';
-                } else if (p.profitLoss < 0) {
-                  profitLossHtml = '<span class="ps-loss">🔴 Nuqsaan: ' + fmtCurrency(Math.abs(p.profitLoss)) + '</span>';
-                } else {
-                  profitLossHtml = '<span class="ps-breakeven">⚪ Break Even</span>';
-                }
-              }
-
-              const purRows = (p.purchases || []).map(pur => '<tr>' +
-                '<td>' + formatDate(pur.date) + '</td>' +
-                '<td><strong style="color: var(--accent-primary); cursor: pointer;" onclick="openKhata(' + pur.khataNo + ')">' + escapeHtml(pur.partyName) + ' ↗</strong></td>' +
-                '<td>R#' + pur.rokerNo + '</td>' +
-                '<td>' + (pur.bags > 0 ? pur.bags : '—') + '</td>' +
-                '<td>' + (pur.meters > 0 ? pur.meters : '—') + '</td>' +
-                '<td>' + (pur.ratePerBag || pur.rate ? fmtRate(pur.ratePerBag || pur.rate) : '—') + '</td>' +
-                '<td style="text-align:right">' + fmtCurrency((pur.naam || 0) + (pur.jama || 0)) + '</td>' +
-                '</tr>'
-              ).join('');
-
-              const sellRows = (p.sells || []).map(s => '<tr>' +
-                '<td>' + formatDate(s.date) + '</td>' +
-                '<td><strong style="color: var(--accent-primary); cursor: pointer;" onclick="openKhata(' + s.khataNo + ')">' + escapeHtml(s.partyName) + ' ↗</strong></td>' +
-                '<td>R#' + s.rokerNo + '</td>' +
-                '<td>' + (s.bags > 0 ? s.bags : '—') + '</td>' +
-                '<td>' + (s.meters > 0 ? s.meters : '—') + '</td>' +
-                '<td>' + (s.ratePerBag || s.rate ? fmtRate(s.ratePerBag || s.rate) : '—') + '</td>' +
-                '<td style="text-align:right">' + fmtCurrency((s.naam || 0) + (s.jama || 0)) + '</td>' +
-                '</tr>'
-              ).join('');
-
-              return '<div class="cb-purchase-card">' +
-                '<div class="cb-purchase-header" onclick="this.parentElement.classList.toggle(\'expanded\')">' +
-                  '<div class="cb-purchase-left">' +
-                    '<span class="cb-purchase-badge" style="background: rgba(13, 148, 136, 0.15); color: #0d9488;">🏁 R#' + p.rokerNo + '</span>' +
-                    '<div class="cb-purchase-info">' +
-                      '<div class="cb-purchase-party">' + escapeHtml(p.partyName) + '</div>' +
-                      '<div class="cb-purchase-meta">' + formatDate(p.date) + ' · Pur: ' + p.initialQty + ' ' + p.unitLabel + ' (' + fmtCurrency(p.purchaseAmount) + ') | Sell: ' + p.totalSoldQty + ' ' + p.unitLabel + ' (' + fmtCurrency(p.totalSellAmount) + ')</div>' +
-                    '</div>' +
-                  '</div>' +
-                  '<div class="cb-purchase-right">' +
-                    '<span class="ps-status ' + statusClass + '">' + statusIcon + ' ' + statusText + '</span>' +
-                    '<div class="cb-purchase-remaining">Remaining: <strong>' + p.remainingQty + '</strong> ' + p.unitLabel + '</div>' +
-                    profitLossHtml +
-                    '<span class="ps-expand-icon">▼</span>' +
-                  '</div>' +
-                '</div>' +
-                '<div class="cb-purchase-sells">' +
-                  '<h4 style="margin: 0.75rem 0 0.5rem; font-size: 0.875rem; color: #15803d;">🛒 Purchase Entries (' + (p.purchases || []).length + ') — Total: ' + fmtCurrency(p.purchaseAmount) + '</h4>' +
-                  '<div class="cb-khata-table-wrapper" style="margin-bottom: 1rem;"><table class="cb-khata-table">' +
-                    '<thead><tr><th>Date</th><th>Purchased From</th><th>Roker</th><th>Bags</th><th>Meters</th><th>Rate</th><th style="text-align:right">Amount</th></tr></thead>' +
-                    '<tbody>' + (purRows || '<tr><td colspan="7">No purchases</td></tr>') + '</tbody>' +
-                  '</table></div>' +
-                  '<h4 style="margin: 0.75rem 0 0.5rem; font-size: 0.875rem; color: #b91c1c;">🏷️ Sell Entries (' + (p.sells || []).length + ') — Total: ' + fmtCurrency(p.totalSellAmount) + '</h4>' +
-                  '<div class="cb-khata-table-wrapper"><table class="cb-khata-table">' +
-                    '<thead><tr><th>Date</th><th>Sold To</th><th>Roker</th><th>Bags</th><th>Meters</th><th>Rate</th><th style="text-align:right">Amount</th></tr></thead>' +
-                    '<tbody>' + (sellRows || '<tr><td colspan="7">No sells</td></tr>') + '</tbody>' +
-                  '</table></div>' +
-                  '<div style="margin-top: 0.75rem; padding: 0.5rem 0.75rem; background: var(--bg-surface-secondary); border-radius: 6px; font-weight: 700; font-size: 0.8125rem; text-align: right;">' +
-                    'Formula: Sell Total (' + fmtCurrency(p.totalSellAmount) + ') - Purchase Total (' + fmtCurrency(p.purchaseAmount) + ') = Net Nafa/Nuqsaan: ' + fmtCurrency(p.profitLoss || 0) +
-                  '</div>' +
-                '</div>' +
-              '</div>';
+          let profitLossHtml = '';
+          if (p.profitLoss !== null) {
+            if (p.profitLoss > 0) {
+              profitLossHtml = '<span class="ps-profit">🟢 Nafa: ' + fmtCurrency(p.profitLoss) + '</span>';
+            } else if (p.profitLoss < 0) {
+              profitLossHtml = '<span class="ps-loss">🔴 Nuqsaan: ' + fmtCurrency(Math.abs(p.profitLoss)) + '</span>';
+            } else {
+              profitLossHtml = '<span class="ps-breakeven">⚪ Break Even</span>';
             }
+          }
 
-            const isMeter = p.meters > 0 || (p.bags === 0);
-            const totalQty = isMeter ? (p.meters || 0) : (p.bags || 0);
-            const unit = isMeter ? 'meters' : 'bags';
-            const soldQty = isMeter ? (p.totalSoldMeters || 0) : (p.totalSoldBags || 0);
+          const purRows = (p.purchases || []).map(pur => '<tr>' +
+            '<td>' + formatDate(pur.date) + '</td>' +
+            '<td><strong style="color: var(--accent-primary); cursor: pointer;" onclick="openKhata(' + pur.khataNo + ')">' + escapeHtml(pur.partyName) + ' ↗</strong></td>' +
+            '<td>R#' + pur.rokerNo + '</td>' +
+            '<td>' + (pur.bags > 0 ? pur.bags : '—') + '</td>' +
+            '<td>' + (pur.meters > 0 ? pur.meters : '—') + '</td>' +
+            '<td>' + (pur.ratePerBag || pur.rate ? fmtRate(pur.ratePerBag || pur.rate) : '—') + '</td>' +
+            '<td style="text-align:right">' + fmtCurrency((pur.naam || 0) + (pur.jama || 0)) + '</td>' +
+            '</tr>'
+          ).join('');
 
-            const statusIcon = p.isFullySold ? '✅' : (p.sellCount > 0 ? '⏳' : '📦');
-            const statusText = p.isFullySold ? 'Fully Sold' : (p.sellCount > 0 ? `Partially Sold (${soldQty}/${totalQty} ${unit})` : 'Unsold');
-            const statusClass = p.isFullySold ? 'ps-status-sold' : (p.sellCount > 0 ? 'ps-status-partial' : 'ps-status-unsold');
+          const sellRows = (p.sells || []).map(s => '<tr>' +
+            '<td>' + formatDate(s.date) + '</td>' +
+            '<td><strong style="color: var(--accent-primary); cursor: pointer;" onclick="openKhata(' + s.khataNo + ')">' + escapeHtml(s.partyName) + ' ↗</strong></td>' +
+            '<td>R#' + s.rokerNo + '</td>' +
+            '<td>' + (s.bags > 0 ? s.bags : '—') + '</td>' +
+            '<td>' + (s.meters > 0 ? s.meters : '—') + '</td>' +
+            '<td>' + (s.ratePerBag || s.rate ? fmtRate(s.ratePerBag || s.rate) : '—') + '</td>' +
+            '<td style="text-align:right">' + fmtCurrency((s.naam || 0) + (s.jama || 0)) + '</td>' +
+            '</tr>'
+          ).join('');
 
-            let profitLossHtml = '';
-            if (p.isFullySold && p.profitLoss !== null) {
-              if (p.profitLoss > 0) {
-                profitLossHtml = '<span class="ps-profit">🟢 Nafa: ' + fmtCurrency(p.profitLoss) + '</span>';
-              } else if (p.profitLoss < 0) {
-                profitLossHtml = '<span class="ps-loss">🔴 Nuqsaan: ' + fmtCurrency(Math.abs(p.profitLoss)) + '</span>';
-              } else {
-                profitLossHtml = '<span class="ps-breakeven">⚪ Break Even</span>';
-              }
-            }
-
-            const sellRows = p.sells.map(s => '<tr>' +
-              '<td>' + formatDate(s.date) + '</td>' +
-              '<td><strong style="color: var(--accent-primary); cursor: pointer;" onclick="openKhata(' + s.khataNo + ')">' + escapeHtml(s.partyName) + ' ↗</strong></td>' +
-              '<td>R#' + s.rokerNo + '</td>' +
-              '<td>' + (s.bags > 0 ? s.bags : '—') + '</td>' +
-              '<td>' + (s.meters > 0 ? s.meters : '—') + '</td>' +
-              '<td>' + (s.ratePerBag || s.rate ? fmtRate(s.ratePerBag || s.rate) : '—') + '</td>' +
-              '<td style="text-align:right">' + fmtCurrency((s.naam || 0) + (s.jama || 0)) + '</td>' +
-              '<td><button class="btn-action delete" onclick="event.stopPropagation(); deleteCbEntry(\'' + s._id + '\')" title="Delete Sell">🗑️</button></td>' +
-              '</tr>'
-            ).join('');
-
-            const qtyText = isMeter ? `${p.meters} meters` : `${p.bags} bags`;
-
-            return '<div class="cb-purchase-card">' +
-              '<div class="cb-purchase-header" onclick="this.parentElement.classList.toggle(\'expanded\')">' +
-                '<div class="cb-purchase-left">' +
-                  '<span class="cb-purchase-badge">🛒 R#' + p.rokerNo + '</span>' +
-                  '<div class="cb-purchase-info">' +
-                    '<div class="cb-purchase-party">' + escapeHtml(p.partyName) + '</div>' +
-                    '<div class="cb-purchase-meta">' + formatDate(p.date) + ' · ' + qtyText + ' × ' + fmtRate(p.ratePerBag || 0) + ' = ' + fmtCurrency(p.purchaseAmount) + '</div>' +
-                  '</div>' +
-                '</div>' +
-                '<div class="cb-purchase-right">' +
-                  '<span class="ps-status ' + statusClass + '">' + statusIcon + ' ' + statusText + '</span>' +
-                  '<div class="cb-purchase-remaining">Remaining: <strong>' + (p.remainingQty !== undefined ? p.remainingQty : p.remainingBags) + '</strong> ' + unit + '</div>' +
-                  profitLossHtml +
-                  '<span class="ps-expand-icon">▼</span>' +
-                '</div>' +
-              '</div>' +
-              (p.sellCount > 0 ?
-                '<div class="cb-purchase-sells">' +
-                  '<h4 style="margin: 0.75rem 0 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">🏷️ Sell Entries (' + p.sellCount + ')</h4>' +
-                  '<div class="cb-khata-table-wrapper"><table class="cb-khata-table">' +
-                    '<thead><tr><th>Date</th><th>Sold To</th><th>Roker</th><th>Bags</th><th>Meters</th><th>Rate</th><th style="text-align:right">Amount</th><th>Actions</th></tr></thead>' +
-                    '<tbody>' + sellRows + '</tbody>' +
-                    '<tfoot><tr style="font-weight:700;"><td colspan="3">Totals</td><td>' + (p.totalSoldBags || '—') + '</td><td>' + (p.totalSoldMeters || '—') + '</td><td>—</td><td style="text-align:right">' + fmtCurrency(p.totalSellAmount) + '</td><td></td></tr></tfoot>' +
-                  '</table></div>' +
-                '</div>'
-              :
-                '<div class="cb-purchase-sells"><p style="padding: 0.75rem; color: var(--text-muted); font-size: 0.8125rem;">No sell entries linked.</p></div>'
-              ) +
+          return '<div class="cb-purchase-card">' +
+            '<div class="cb-purchase-header" onclick="this.parentElement.classList.toggle(\'expanded\')">' +
+            '<div class="cb-purchase-left">' +
+            '<span class="cb-purchase-badge" style="background: rgba(13, 148, 136, 0.15); color: #0d9488;">🏁 R#' + p.rokerNo + '</span>' +
+            '<div class="cb-purchase-info">' +
+            '<div class="cb-purchase-party">' + escapeHtml(p.partyName) + '</div>' +
+            '<div class="cb-purchase-meta">' + formatDate(p.date) + ' · Pur: ' + p.initialQty + ' ' + p.unitLabel + ' (' + fmtCurrency(p.purchaseAmount) + ') | Sell: ' + p.totalSoldQty + ' ' + p.unitLabel + ' (' + fmtCurrency(p.totalSellAmount) + ')</div>' +
+            '</div>' +
+            '</div>' +
+            '<div class="cb-purchase-right">' +
+            '<span class="ps-status ' + statusClass + '">' + statusIcon + ' ' + statusText + '</span>' +
+            '<div class="cb-purchase-remaining">Remaining: <strong>' + p.remainingQty + '</strong> ' + p.unitLabel + '</div>' +
+            profitLossHtml +
+            '<span class="ps-expand-icon">▼</span>' +
+            '</div>' +
+            '</div>' +
+            '<div class="cb-purchase-sells">' +
+            '<h4 style="margin: 0.75rem 0 0.5rem; font-size: 0.875rem; color: #15803d;">🛒 Purchase Entries (' + (p.purchases || []).length + ') — Total: ' + fmtCurrency(p.purchaseAmount) + '</h4>' +
+            '<div class="cb-khata-table-wrapper" style="margin-bottom: 1rem;"><table class="cb-khata-table">' +
+            '<thead><tr><th>Date</th><th>Purchased From</th><th>Roker</th><th>Bags</th><th>Meters</th><th>Rate</th><th style="text-align:right">Amount</th></tr></thead>' +
+            '<tbody>' + (purRows || '<tr><td colspan="7">No purchases</td></tr>') + '</tbody>' +
+            '</table></div>' +
+            '<h4 style="margin: 0.75rem 0 0.5rem; font-size: 0.875rem; color: #b91c1c;">🏷️ Sell Entries (' + (p.sells || []).length + ') — Total: ' + fmtCurrency(p.totalSellAmount) + '</h4>' +
+            '<div class="cb-khata-table-wrapper"><table class="cb-khata-table">' +
+            '<thead><tr><th>Date</th><th>Sold To</th><th>Roker</th><th>Bags</th><th>Meters</th><th>Rate</th><th style="text-align:right">Amount</th></tr></thead>' +
+            '<tbody>' + (sellRows || '<tr><td colspan="7">No sells</td></tr>') + '</tbody>' +
+            '</table></div>' +
+            '<div style="margin-top: 0.75rem; padding: 0.5rem 0.75rem; background: var(--bg-surface-secondary); border-radius: 6px; font-weight: 700; font-size: 0.8125rem; text-align: right;">' +
+            'Formula: Sell Total (' + fmtCurrency(p.totalSellAmount) + ') - Purchase Total (' + fmtCurrency(p.purchaseAmount) + ') = Net Nafa/Nuqsaan: ' + fmtCurrency(p.profitLoss || 0) +
+            '</div>' +
+            '</div>' +
             '</div>';
-          }).join('')}
+        }
+
+        const isMeter = p.meters > 0 || (p.bags === 0);
+        const totalQty = isMeter ? (p.meters || 0) : (p.bags || 0);
+        const unit = isMeter ? 'meters' : 'bags';
+        const soldQty = isMeter ? (p.totalSoldMeters || 0) : (p.totalSoldBags || 0);
+
+        const statusIcon = p.isFullySold ? '✅' : (p.sellCount > 0 ? '⏳' : '📦');
+        const statusText = p.isFullySold ? 'Fully Sold' : (p.sellCount > 0 ? `Partially Sold (${soldQty}/${totalQty} ${unit})` : 'Unsold');
+        const statusClass = p.isFullySold ? 'ps-status-sold' : (p.sellCount > 0 ? 'ps-status-partial' : 'ps-status-unsold');
+
+        let profitLossHtml = '';
+        if (p.isFullySold && p.profitLoss !== null) {
+          if (p.profitLoss > 0) {
+            profitLossHtml = '<span class="ps-profit">🟢 Nafa: ' + fmtCurrency(p.profitLoss) + '</span>';
+          } else if (p.profitLoss < 0) {
+            profitLossHtml = '<span class="ps-loss">🔴 Nuqsaan: ' + fmtCurrency(Math.abs(p.profitLoss)) + '</span>';
+          } else {
+            profitLossHtml = '<span class="ps-breakeven">⚪ Break Even</span>';
+          }
+        }
+
+        const sellRows = p.sells.map(s => '<tr>' +
+          '<td>' + formatDate(s.date) + '</td>' +
+          '<td><strong style="color: var(--accent-primary); cursor: pointer;" onclick="openKhata(' + s.khataNo + ')">' + escapeHtml(s.partyName) + ' ↗</strong></td>' +
+          '<td>R#' + s.rokerNo + '</td>' +
+          '<td>' + (s.bags > 0 ? s.bags : '—') + '</td>' +
+          '<td>' + (s.meters > 0 ? s.meters : '—') + '</td>' +
+          '<td>' + (s.ratePerBag || s.rate ? fmtRate(s.ratePerBag || s.rate) : '—') + '</td>' +
+          '<td style="text-align:right">' + fmtCurrency((s.naam || 0) + (s.jama || 0)) + '</td>' +
+          '<td><button class="btn-action delete" onclick="event.stopPropagation(); deleteCbEntry(\'' + s._id + '\')" title="Delete Sell">🗑️</button></td>' +
+          '</tr>'
+        ).join('');
+
+        const qtyText = isMeter ? `${p.meters} meters` : `${p.bags} bags`;
+
+        return '<div class="cb-purchase-card">' +
+          '<div class="cb-purchase-header" onclick="this.parentElement.classList.toggle(\'expanded\')">' +
+          '<div class="cb-purchase-left">' +
+          '<span class="cb-purchase-badge">🛒 R#' + p.rokerNo + '</span>' +
+          '<div class="cb-purchase-info">' +
+          '<div class="cb-purchase-party">' + escapeHtml(p.partyName) + '</div>' +
+          '<div class="cb-purchase-meta">' + formatDate(p.date) + ' · ' + qtyText + ' × ' + fmtRate(p.ratePerBag || 0) + ' = ' + fmtCurrency(p.purchaseAmount) + '</div>' +
+          '</div>' +
+          '</div>' +
+          '<div class="cb-purchase-right">' +
+          '<span class="ps-status ' + statusClass + '">' + statusIcon + ' ' + statusText + '</span>' +
+          '<div class="cb-purchase-remaining">Remaining: <strong>' + (p.remainingQty !== undefined ? p.remainingQty : p.remainingBags) + '</strong> ' + unit + '</div>' +
+          profitLossHtml +
+          '<span class="ps-expand-icon">▼</span>' +
+          '</div>' +
+          '</div>' +
+          (p.sellCount > 0 ?
+            '<div class="cb-purchase-sells">' +
+            '<h4 style="margin: 0.75rem 0 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">🏷️ Sell Entries (' + p.sellCount + ')</h4>' +
+            '<div class="cb-khata-table-wrapper"><table class="cb-khata-table">' +
+            '<thead><tr><th>Date</th><th>Sold To</th><th>Roker</th><th>Bags</th><th>Meters</th><th>Rate</th><th style="text-align:right">Amount</th><th>Actions</th></tr></thead>' +
+            '<tbody>' + sellRows + '</tbody>' +
+            '<tfoot><tr style="font-weight:700;"><td colspan="3">Totals</td><td>' + (p.totalSoldBags || '—') + '</td><td>' + (p.totalSoldMeters || '—') + '</td><td>—</td><td style="text-align:right">' + fmtCurrency(p.totalSellAmount) + '</td><td></td></tr></tfoot>' +
+            '</table></div>' +
+            '</div>'
+            :
+            '<div class="cb-purchase-sells"><p style="padding: 0.75rem; color: var(--text-muted); font-size: 0.8125rem;">No sell entries linked.</p></div>'
+          ) +
+          '</div>';
+      }).join('')}
         </div>
       `;
 
@@ -2500,7 +2500,7 @@ async function openRokerDetail(rokerNo) {
         const parties = await apiGet(`${CB_API}/parties`);
         const cih = parties.find(p => p.khataNo === 95 || (p.nameNorm && p.nameNorm === 'cash in hand'));
         if (cih) cashInHandVal = cih.balance;
-      } catch (e) {}
+      } catch (e) { }
     }
     const prevCashInHand = data.summary.previousCashRoker !== undefined ? data.summary.previousCashRoker : (cashInHandVal || 0);
     const totalCashJama = data.summary.totalCashJama !== undefined ? data.summary.totalCashJama : (data.entries || []).filter(e => e.isCash && (e.jama || 0) > 0).reduce((sum, e) => sum + (e.jama || 0), 0);
@@ -2678,7 +2678,7 @@ async function shareRokerAsPDF(rokerNo) {
         const parties = await apiGet(`${CB_API}/parties`);
         const cih = parties.find(p => p.khataNo === 95 || (p.nameNorm && p.nameNorm === 'cash in hand'));
         if (cih) cashInHandVal = cih.balance;
-      } catch (e) {}
+      } catch (e) { }
     }
     const cih = cashInHandVal || 0;
     const endVal = (data.summary.totalJama || 0) + cih;
@@ -3574,16 +3574,16 @@ async function loadContractsDashboard(search = '') {
     const listHtml = `
       <div class="cb-contracts-list" style="display: flex; flex-direction: column; gap: 10px;">
         ${contractsList.map(c => {
-          const isHazar = c.deliveryType === 'hazar';
-          const deliveryBadge = isHazar
-            ? `<span style="background: rgba(37,99,235,0.15); color: #60a5fa; border: 1px solid rgba(37,99,235,0.3); font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; font-weight: 700;">⚡ Hazar (${formatDate(c.date)})</span>`
-            : `<span style="background: rgba(217,119,6,0.15); color: #fbbf24; border: 1px solid rgba(217,119,6,0.3); font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; font-weight: 700;">📅 Amdan (${formatDate(c.deliveryDate || c.date)})</span>`;
+      const isHazar = c.deliveryType === 'hazar';
+      const deliveryBadge = isHazar
+        ? `<span style="background: rgba(37,99,235,0.15); color: #60a5fa; border: 1px solid rgba(37,99,235,0.3); font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; font-weight: 700;">⚡ Hazar (${formatDate(c.date)})</span>`
+        : `<span style="background: rgba(217,119,6,0.15); color: #fbbf24; border: 1px solid rgba(217,119,6,0.3); font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; font-weight: 700;">📅 Amdan (${formatDate(c.deliveryDate || c.date)})</span>`;
 
-          const specsText = (c.warpCount || c.weftCount || c.reed || c.pick)
-            ? `${c.warpCount}x${c.weftCount} / ${c.reed}x${c.pick} / ${c.width}"`
-            : (c.quality || '—');
+      const specsText = (c.warpCount || c.weftCount || c.reed || c.pick)
+        ? `${c.warpCount}x${c.weftCount} / ${c.reed}x${c.pick} / ${c.width}"`
+        : (c.quality || '—');
 
-          return `
+      return `
             <div class="cb-party-card" style="cursor: pointer; transition: all 0.2s ease; border-left: 4px solid ${isHazar ? '#2563eb' : '#d97706'};" onclick="openContractDetailModal('${c._id}')">
               <div class="cb-party-card-left" style="flex: 2;">
                 <div class="cb-party-info">
@@ -3616,7 +3616,7 @@ async function loadContractsDashboard(search = '') {
               </div>
             </div>
           `;
-        }).join('')}
+    }).join('')}
       </div>
     `;
 
@@ -4285,8 +4285,8 @@ async function openKhata(khataNo) {
             </thead>
             <tbody>
               ${data.entries.map(e => {
-                const remClass = e.remaining > 0 ? 'positive' : e.remaining < 0 ? 'negative' : '';
-                return `
+        const remClass = e.remaining > 0 ? 'positive' : e.remaining < 0 ? 'negative' : '';
+        return `
                   <tr>
                     <td>${formatDate(e.date)}</td>
                     <td class="col-roker">
@@ -4311,7 +4311,7 @@ async function openKhata(khataNo) {
                     </td>
                   </tr>
                 `;
-              }).join('')}
+      }).join('')}
               ${initialRowHtml}
             </tbody>
             <tfoot>
@@ -5157,20 +5157,20 @@ function openEndRokerModal() {
   const cashEntriesJama = (cs.jamaCashEntries && cs.jamaCashEntries.length > 0)
     ? cs.jamaCashEntries
     : entries.filter(e => e.isCash && (e.jama || 0) > 0).map(e => ({
-        partyName: e.partyName,
-        khataNo: e.khataNo,
-        description: e.description,
-        amount: e.jama
-      }));
+      partyName: e.partyName,
+      khataNo: e.khataNo,
+      description: e.description,
+      amount: e.jama
+    }));
 
   const cashEntriesNaam = (cs.naamCashEntries && cs.naamCashEntries.length > 0)
     ? cs.naamCashEntries
     : entries.filter(e => e.isCash && (e.naam || 0) > 0).map(e => ({
-        partyName: e.partyName,
-        khataNo: e.khataNo,
-        description: e.description,
-        amount: e.naam
-      }));
+      partyName: e.partyName,
+      khataNo: e.khataNo,
+      description: e.description,
+      amount: e.naam
+    }));
 
   const totalCashJama = cs.totalCashJama !== undefined ? cs.totalCashJama : cashEntriesJama.reduce((sum, e) => sum + (e.amount || 0), 0);
   const totalCashNaam = cs.totalCashNaam !== undefined ? cs.totalCashNaam : cashEntriesNaam.reduce((sum, e) => sum + (e.amount || 0), 0);
@@ -5233,9 +5233,9 @@ function openEndRokerModal() {
     const diffLabel = bs.difference > 0 ? '🟢 Net Bag Nafa' : bs.difference < 0 ? '🔴 Net Bag Nuqsaan' : '⚪ Break Even';
     const statusNotice = bs.bagsMatch
       ? (bs.isAlreadyPosted
-          ? `<div style="margin-top: 0.3rem; padding: 0.25rem 0.4rem; background: #dcfce7; color: #15803d; border-radius: 4px; font-weight: 700; font-size: 0.72rem; text-align: center;">✅ Bag Nafa/Nuqsaan Posted (${fmtCurrency(Math.abs(bs.difference))})</div>`
-          : `<button class="btn btn-success" style="width: 100%; margin-top: 0.3rem; background: #15803d; font-weight: 700; padding: 0.25rem; font-size: 0.75rem;" onclick="postBagNafaNuqsanToN(${rokerNo})">💾 Post Bag Nafa/Nuqsaan (${fmtCurrency(Math.abs(bs.difference))})</button>`
-        )
+        ? `<div style="margin-top: 0.3rem; padding: 0.25rem 0.4rem; background: #dcfce7; color: #15803d; border-radius: 4px; font-weight: 700; font-size: 0.72rem; text-align: center;">✅ Bag Nafa/Nuqsaan Posted (${fmtCurrency(Math.abs(bs.difference))})</div>`
+        : `<button class="btn btn-success" style="width: 100%; margin-top: 0.3rem; background: #15803d; font-weight: 700; padding: 0.25rem; font-size: 0.75rem;" onclick="postBagNafaNuqsanToN(${rokerNo})">💾 Post Bag Nafa/Nuqsaan (${fmtCurrency(Math.abs(bs.difference))})</button>`
+      )
       : `<div style="margin-top: 0.3rem; padding: 0.25rem 0.4rem; background: #fef3c7; color: #b45309; border-radius: 4px; font-size: 0.72rem; text-align: center;">⚠️ Bag Purchases (${bs.totalPurchaseBags}) & Sells (${bs.totalSellBags}) differ.</div>`;
 
     const bagPurListHtml = (bs.purchases || []).map(p => `<tr><td>${escapeHtml(p.partyName)}</td><td>${p.qty} bags</td><td>${fmtRate(p.rate)}</td><td style="text-align:right">${fmtCurrency(p.amount)}</td></tr>`).join('');
@@ -5289,9 +5289,9 @@ function openEndRokerModal() {
     const diffLabel = ms.difference > 0 ? '🟢 Net Meter Nafa' : ms.difference < 0 ? '🔴 Net Meter Nuqsaan' : '⚪ Break Even';
     const statusNotice = ms.metersMatch
       ? (ms.isAlreadyPosted
-          ? `<div style="margin-top: 0.3rem; padding: 0.25rem 0.4rem; background: #dcfce7; color: #15803d; border-radius: 4px; font-weight: 700; font-size: 0.72rem; text-align: center;">✅ Meter Nafa/Nuqsaan Posted (${fmtCurrency(Math.abs(ms.difference))})</div>`
-          : `<button class="btn btn-success" style="width: 100%; margin-top: 0.3rem; background: #0284c7; font-weight: 700; padding: 0.25rem; font-size: 0.75rem;" onclick="postBagNafaNuqsanToN(${rokerNo})">💾 Post Meter Nafa/Nuqsaan (${fmtCurrency(Math.abs(ms.difference))})</button>`
-        )
+        ? `<div style="margin-top: 0.3rem; padding: 0.25rem 0.4rem; background: #dcfce7; color: #15803d; border-radius: 4px; font-weight: 700; font-size: 0.72rem; text-align: center;">✅ Meter Nafa/Nuqsaan Posted (${fmtCurrency(Math.abs(ms.difference))})</div>`
+        : `<button class="btn btn-success" style="width: 100%; margin-top: 0.3rem; background: #0284c7; font-weight: 700; padding: 0.25rem; font-size: 0.75rem;" onclick="postBagNafaNuqsanToN(${rokerNo})">💾 Post Meter Nafa/Nuqsaan (${fmtCurrency(Math.abs(ms.difference))})</button>`
+      )
       : `<div style="margin-top: 0.3rem; padding: 0.25rem 0.4rem; background: #fef3c7; color: #b45309; border-radius: 4px; font-size: 0.72rem; text-align: center;">⚠️ Meter Purchases (${ms.totalPurchaseMeters}) & Sells (${ms.totalSellMeters}) differ.</div>`;
 
     const meterPurListHtml = (ms.purchases || []).map(p => `<tr><td>${escapeHtml(p.partyName)}</td><td>${p.qty} m</td><td>${fmtRate(p.rate)}</td><td style="text-align:right">${fmtCurrency(p.amount)}</td></tr>`).join('');
@@ -5416,7 +5416,7 @@ function scrollElementIntoComfortView(el) {
   setTimeout(() => {
     try {
       scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    } catch (err) {}
+    } catch (err) { }
 
     const rect = scrollTarget.getBoundingClientRect();
     const docScrollY = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
@@ -5693,8 +5693,8 @@ async function loadGazanaDashboard(search = '') {
       container.innerHTML = `
         <div class="gazana-party-grid">
           ${parties.map(p => {
-            const hasActive = p.activeCount > 0;
-            return `
+        const hasActive = p.activeCount > 0;
+        return `
               <div class="gazana-party-card" onclick="openPartyGazanaDetail('${escapeHtml(p.partyName)}')">
                 <div class="gazana-party-card-left">
                   <div class="gazana-party-avatar">👤</div>
@@ -5718,7 +5718,7 @@ async function loadGazanaDashboard(search = '') {
                 </div>
               </div>
             `;
-          }).join('')}
+      }).join('')}
         </div>
       `;
     } else {
@@ -5756,13 +5756,13 @@ async function loadGazanaDashboard(search = '') {
             </thead>
             <tbody>
               ${entries.map(e => {
-                const isCompleted = isGazanaEntryCompleted(e);
-                const displayRemaining = isCompleted ? 0 : Math.max(0, e.remaining || 0);
-                const installmentsSum = (e.paymentHistory || []).reduce((sum, p) => sum + (p.amount || 0), 0);
-                const calc = calcGazanaAmounts(e);
-                const totalWO = calc.totalWO;
-                const totalW = calc.totalW;
-                return `
+        const isCompleted = isGazanaEntryCompleted(e);
+        const displayRemaining = isCompleted ? 0 : Math.max(0, e.remaining || 0);
+        const installmentsSum = (e.paymentHistory || []).reduce((sum, p) => sum + (p.amount || 0), 0);
+        const calc = calcGazanaAmounts(e);
+        const totalWO = calc.totalWO;
+        const totalW = calc.totalW;
+        return `
                   <tr>
                     <td>${formatDate(e.date)}</td>
                     <td>
@@ -5837,7 +5837,7 @@ async function loadGazanaDashboard(search = '') {
                     </td>
                   </tr>
                 `;
-              }).join('')}
+      }).join('')}
             </tbody>
           </table>
         </div>
@@ -5966,8 +5966,8 @@ async function openPartyGazanaDetail(partyName, resetTab = true) {
           if (p.note && p.note.startsWith('[General]')) return;
 
           const isSettlement = p.note && (
-            p.note.includes('Paid Amount') || 
-            p.note.includes('Final Settlement') || 
+            p.note.includes('Paid Amount') ||
+            p.note.includes('Final Settlement') ||
             p.note.includes('مکمل ادائیگی')
           );
 
@@ -6095,14 +6095,14 @@ async function openPartyGazanaDetail(partyName, resetTab = true) {
                 </thead>
                 <tbody>
                   ${allPayments.map((p, idx) => {
-                    const typeLabel = p.type === 'general'
-                      ? '<span style="background: rgba(37,99,235,0.1); color: #2563eb; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">💵 General</span>'
-                      : p.type === 'advance'
-                        ? '<span style="background: rgba(124,58,237,0.1); color: #7c3aed; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">🔖 Advance</span>'
-                        : p.type === 'completed'
-                          ? '<span style="background: rgba(22,163,74,0.1); color: #16a34a; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">✅ Completed</span>'
-                          : '<span style="background: rgba(2,132,199,0.1); color: #0284c7; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">📝 Entry</span>';
-                    return `
+            const typeLabel = p.type === 'general'
+              ? '<span style="background: rgba(37,99,235,0.1); color: #2563eb; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">💵 General</span>'
+              : p.type === 'advance'
+                ? '<span style="background: rgba(124,58,237,0.1); color: #7c3aed; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">🔖 Advance</span>'
+                : p.type === 'completed'
+                  ? '<span style="background: rgba(22,163,74,0.1); color: #16a34a; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">✅ Completed</span>'
+                  : '<span style="background: rgba(2,132,199,0.1); color: #0284c7; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700;">📝 Entry</span>';
+            return `
                       <tr>
                         <td>${formatDate(p.date)}</td>
                         <td>${typeLabel}</td>
@@ -6123,7 +6123,7 @@ async function openPartyGazanaDetail(partyName, resetTab = true) {
                         </td>
                       </tr>
                     `;
-                  }).join('')}
+          }).join('')}
                 </tbody>
                 <tfoot>
                   <tr>
@@ -6180,13 +6180,13 @@ async function openPartyGazanaDetail(partyName, resetTab = true) {
               </thead>
               <tbody>
                 ${displayedEntries.map(e => {
-                  const isCompleted = isGazanaEntryCompleted(e);
-                  const displayRemaining = isCompleted ? 0 : Math.max(0, e.remaining || 0);
-                  const installmentsSum = (e.paymentHistory || []).reduce((sum, p) => sum + (p.amount || 0), 0);
-                  const calc = calcGazanaAmounts(e);
-                  const totalWO = calc.totalWO;
-                  const totalW = calc.totalW;
-                  return `
+          const isCompleted = isGazanaEntryCompleted(e);
+          const displayRemaining = isCompleted ? 0 : Math.max(0, e.remaining || 0);
+          const installmentsSum = (e.paymentHistory || []).reduce((sum, p) => sum + (p.amount || 0), 0);
+          const calc = calcGazanaAmounts(e);
+          const totalWO = calc.totalWO;
+          const totalW = calc.totalW;
+          return `
                     <tr>
                       <td>${formatDate(e.date)}</td>
                       <td>
@@ -6255,7 +6255,7 @@ async function openPartyGazanaDetail(partyName, resetTab = true) {
                       </td>
                     </tr>
                   `;
-                }).join('')}
+        }).join('')}
               </tbody>
             </table>
           </div>
@@ -6623,7 +6623,7 @@ async function openQuickPaymentModal(entryId, partyName, remaining) {
   let entryDetails = null;
   try {
     entryDetails = await apiGet(`${PARTY_ENTRIES_API}/${entryId}`);
-  } catch (err) {}
+  } catch (err) { }
 
   const totalAmount = entryDetails ? entryDetails.totalAmount : 0;
   const advance = entryDetails ? (entryDetails.advance || 0) : 0;
@@ -6895,13 +6895,13 @@ async function openPaymentHistoryModal(entryId) {
               </tr>
             ` : ''}
             ${history.map(p => {
-              const isAuto = p.note === 'Paid Amount' || 
-                             p.note === 'Paid Amount (مکمل ادائیگی)' || 
-                             p.note === 'مکمل ادائیگی (Final Settlement)' ||
-                             (p.note && p.note.includes('Final Settlement')) ||
-                             (p.note && p.note.includes('Paid Amount')) ||
-                             (p.note && p.note.includes('مکمل ادائیگی'));
-              return `
+      const isAuto = p.note === 'Paid Amount' ||
+        p.note === 'Paid Amount (مکمل ادائیگی)' ||
+        p.note === 'مکمل ادائیگی (Final Settlement)' ||
+        (p.note && p.note.includes('Final Settlement')) ||
+        (p.note && p.note.includes('Paid Amount')) ||
+        (p.note && p.note.includes('مکمل ادائیگی'));
+      return `
               <tr style="border-bottom: 1px solid var(--border);">
                 <td style="padding: 6px 8px;">${formatDate(p.date)}</td>
                 <td style="padding: 6px 8px;">
@@ -6926,7 +6926,8 @@ async function openPaymentHistoryModal(entryId) {
                   </button>
                 </td>
               </tr>
-            `;}).join('')}
+            `;
+    }).join('')}
             ${history.length === 0 && (!entry.advance || entry.advance <= 0) ? `
               <tr>
                 <td colspan="4" style="text-align: center; padding: 12px; color: var(--text-muted);">No payments recorded yet.</td>
@@ -7220,7 +7221,7 @@ function toggleGazanaActionMenu(event, entryId, partyName = '') {
   }
   const btn = event.currentTarget;
   const isSame = (activeGazanaMenuId === entryId);
-  
+
   closeAllGazanaMenus();
   if (isSame) return;
 
@@ -7900,7 +7901,7 @@ window.apiPut = apiPut;
 
 function getTodayDateFormatted() {
   const d = new Date();
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const day = d.getDate();
   const month = months[d.getMonth()];
   const year = String(d.getFullYear()).slice(-2);
@@ -8479,7 +8480,7 @@ if ($('btnTiReset')) {
       'Reset Invoice?',
       'Are you sure you want to reset all invoice fields, layout, and values back to the original default template?',
       () => {
-        try { localStorage.removeItem('temp_invoice_draft'); } catch (e) {}
+        try { localStorage.removeItem('temp_invoice_draft'); } catch (e) { }
         currentTempInvoice = null;
         initTempInvoice(true);
         saveTempInvoiceDraft(true);
@@ -8518,5 +8519,5 @@ try {
   if (savedTab === 'tempInvoice' && typeof viewTempInvoice !== 'undefined' && viewTempInvoice) {
     showView(viewTempInvoice);
   }
-} catch (e) {}
+} catch (e) { }
 
