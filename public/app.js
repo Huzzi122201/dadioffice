@@ -1878,6 +1878,12 @@ function getEntryRate(e) {
   return 0;
 }
 
+// ── Format Bags Display (e.g. "30+20" where 30 = Jama bags, 20 = Banam bags) ─
+function fmtBags(val) {
+  if (val == null || val === '' || val === 0 || val === '0') return '';
+  return String(val);
+}
+
 // ── Subnav Switcher (Rokers vs Khata vs Parties vs PurchaseSell vs Contracts vs Investors) ──
 function setCashbookSubtab(subtab) {
   currentCashbookSubtab = subtab;
@@ -2029,7 +2035,7 @@ async function loadCashbookDashboard() {
                     </div>
                     <div class="cb-roker-meta">
                       <span>${r.entryCount} ${r.entryCount === 1 ? 'entry' : 'entries'}</span>
-                      ${r.totalBags > 0 ? `<span> · 📦 ${r.totalBags} bags</span>` : ''}
+                      ${fmtBags(r.totalBags) ? `<span> · 📦 ${fmtBags(r.totalBags)} bags</span>` : ''}
                       ${r.totalMeters > 0 ? `<span> · 📏 ${r.totalMeters} meters</span>` : ''}
                     </div>
                   </div>
@@ -2084,7 +2090,7 @@ async function loadCashbookDashboard() {
                     <div class="cb-party-meta">
                       ${p.phone ? `<span>📞 ${escapeHtml(p.phone)}</span>` : ''}
                       <span>${p.txnCount || 0} entries</span>
-                      ${p.totalBags ? `<span> · 📦 ${p.totalBags} bags</span>` : ''}
+                      ${fmtBags(p.totalBags) ? `<span> · 📦 ${fmtBags(p.totalBags)} bags</span>` : ''}
                       ${p.totalMeters ? `<span> · 📏 ${p.totalMeters} meters</span>` : ''}
                     </div>
                   </div>
@@ -2327,7 +2333,7 @@ async function loadCashbookDashboard() {
                 <div class="cb-party-meta">
                   ${p.phone ? `<span>📞 ${escapeHtml(p.phone)}</span>` : ''}
                   <span>${p.txnCount || 0} entries</span>
-                  ${p.totalBags ? `<span> · 📦 ${p.totalBags} bags</span>` : ''}
+                  ${fmtBags(p.totalBags) ? `<span> · 📦 ${fmtBags(p.totalBags)} bags</span>` : ''}
                   ${p.totalMeters ? `<span> · 📏 ${p.totalMeters} meters</span>` : ''}
                 </div>
               </div>
@@ -2523,9 +2529,9 @@ async function openRokerDetail(rokerNo) {
           </div>
         </div>
         <div class="cb-roker-detail-stats">
-          ${data.summary.totalBags > 0 ? `
+          ${fmtBags(data.summary.totalBags) ? `
             <div class="cb-roker-stat-item">
-              <div class="cb-roker-stat-val">📦 ${data.summary.totalBags}</div>
+              <div class="cb-roker-stat-val">📦 ${fmtBags(data.summary.totalBags)}</div>
               <div class="cb-roker-stat-lbl">Total Bags</div>
             </div>
           ` : ''}
@@ -2613,7 +2619,7 @@ async function openRokerDetail(rokerNo) {
             <tfoot>
               <tr>
                 <td colspan="4"><strong>Totals for Roker #${rokerNo}</strong></td>
-                <td class="col-bags"><strong>${data.summary.totalBags > 0 ? data.summary.totalBags : '—'}</strong></td>
+                <td class="col-bags"><strong>${fmtBags(data.summary.totalBags) || '—'}</strong></td>
                 <td class="col-meters"><strong>${data.summary.totalMeters > 0 ? data.summary.totalMeters : '—'}</strong></td>
                 <td class="col-rate">—</td>
                 <td class="col-naam"><strong>${fmtCurrency(data.summary.totalNaam)}</strong></td>
@@ -2719,7 +2725,7 @@ async function shareRokerAsPDF(rokerNo) {
         <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-bottom: 12px;">
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px 4px; text-align: center;">
             <div style="font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase;">Total Bags</div>
-            <div style="font-size: 12px; font-weight: 800; color: #0f172a; margin-top: 2px;">${data.summary.totalBags > 0 ? data.summary.totalBags : '—'}</div>
+            <div style="font-size: 12px; font-weight: 800; color: #0f172a; margin-top: 2px;">${fmtBags(data.summary.totalBags) || '—'}</div>
           </div>
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px 4px; text-align: center;">
             <div style="font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase;">Total Meters</div>
@@ -2777,7 +2783,7 @@ async function shareRokerAsPDF(rokerNo) {
           <tfoot>
             <tr style="background: #f1f5f9; border-top: 2px solid #0f172a; font-weight: 800; font-size: 9.5px;">
               <td colspan="5" style="padding: 6px 6px; text-align: left;">Totals for Roker #${rokerNo}</td>
-              <td style="padding: 6px 3px; text-align: center;">${data.summary.totalBags > 0 ? data.summary.totalBags : '—'}</td>
+              <td style="padding: 6px 3px; text-align: center;">${fmtBags(data.summary.totalBags) || '—'}</td>
               <td style="padding: 6px 3px; text-align: center;">${data.summary.totalMeters > 0 ? data.summary.totalMeters : '—'}</td>
               <td style="padding: 6px 3px; text-align: right;">—</td>
               <td style="padding: 6px 3px; text-align: right; color: #b91c1c;">${fmtCurrency(data.summary.totalNaam)}</td>
@@ -4222,7 +4228,7 @@ async function openKhata(khataNo) {
               <span>Khata #${p.khataNo}</span>
               ${p.phone ? `<span>📞 ${escapeHtml(p.phone)}</span>` : ''}
               ${p.description ? `<span>${escapeHtml(p.description)}</span>` : ''}
-              ${s.totalBags > 0 ? `<span> · 📦 ${s.totalBags} bags</span>` : ''}
+              ${fmtBags(s.totalBags) ? `<span> · 📦 ${fmtBags(s.totalBags)} bags</span>` : ''}
               ${(s.totalMeters && s.totalMeters > 0) ? `<span> · 📏 ${s.totalMeters} meters</span>` : ''}
             </div>
           </div>
@@ -4311,7 +4317,7 @@ async function openKhata(khataNo) {
             <tfoot>
               <tr>
                 <td colspan="3"><strong>Cumulative Totals</strong></td>
-                <td class="col-bags"><strong>${s.totalBags > 0 ? s.totalBags : '—'}</strong></td>
+                <td class="col-bags"><strong>${fmtBags(s.totalBags) || '—'}</strong></td>
                 <td class="col-meters"><strong>${(s.totalMeters && s.totalMeters > 0) ? s.totalMeters : '—'}</strong></td>
                 <td class="col-rate">—</td>
                 <td class="col-naam"><strong>${fmtCurrency(s.totalNaam)}</strong></td>
@@ -4404,7 +4410,7 @@ async function shareKhataAsPDF(khataNo) {
             <p style="margin: 3px 0 0 0; font-size: 11.5px; color: #93c5fd;">
               Khata <strong>#${p.khataNo}</strong>
               ${p.phone ? ` · 📞 ${escapeHtml(p.phone)}` : ''}
-              ${s.totalBags > 0 ? ` · 📦 ${s.totalBags} bags` : ''}
+              ${fmtBags(s.totalBags) ? ` · 📦 ${fmtBags(s.totalBags)} bags` : ''}
               ${s.totalMeters > 0 ? ` · 📏 ${s.totalMeters} meters` : ''}
             </p>
           </div>
@@ -4418,7 +4424,7 @@ async function shareKhataAsPDF(khataNo) {
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px;">
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px 4px; text-align: center;">
             <div style="font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase;">Total Bags</div>
-            <div style="font-size: 12px; font-weight: 800; color: #0f172a; margin-top: 2px;">${s.totalBags > 0 ? s.totalBags : '—'}</div>
+            <div style="font-size: 12px; font-weight: 800; color: #0f172a; margin-top: 2px;">${fmtBags(s.totalBags) || '—'}</div>
           </div>
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px 4px; text-align: center;">
             <div style="font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase;">Total Meters</div>
@@ -4467,7 +4473,7 @@ async function shareKhataAsPDF(khataNo) {
           <tfoot>
             <tr style="background: #f1f5f9; border-top: 2px solid #0f172a; font-weight: 800; font-size: 9.5px;">
               <td colspan="3" style="padding: 6px 6px; text-align: left;">Cumulative Totals</td>
-              <td style="padding: 6px 3px; text-align: center;">${s.totalBags > 0 ? s.totalBags : '—'}</td>
+              <td style="padding: 6px 3px; text-align: center;">${fmtBags(s.totalBags) || '—'}</td>
               <td style="padding: 6px 3px; text-align: center;">${s.totalMeters > 0 ? s.totalMeters : '—'}</td>
               <td style="padding: 6px 3px; text-align: right;">—</td>
               <td style="padding: 6px 3px; text-align: right; color: #b91c1c;">${fmtCurrency(s.totalNaam)}</td>
